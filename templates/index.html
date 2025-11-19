@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+
+{{ top_container|safe }}
+
+{{ sidebar_menu|safe }}
+
+<!-- !PAGE CONTENT! -->
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    {{ intro_title|safe }}
+
+
+{% if intro %}
+  <br>
+  <div class="w3-row-padding w3-margin-bottom">
+    <div class="w3-quarter">
+      <div class="w3-container w3-red w3-padding-16">
+        <div class="w3-left"><i class="fa fa-line-chart w3-xxxlarge"></i></div>
+        <div class="w3-right">
+          <h3>{{ number_of_analysis }}</h3>
+        </div>
+        <div class="w3-clear"></div>
+        <h4>Analyses uploaded</h4>
+      </div>
+    </div>
+    <div class="w3-quarter">
+      <div class="w3-container w3-blue w3-padding-16">
+        <div class="w3-left"><i class="fa fa-user w3-xxxlarge"></i></div>
+        <div class="w3-right">
+          <h3>{{ number_of_owners }}</h3>
+        </div>
+        <div class="w3-clear"></div>
+        <h4>Owner counting</h4>
+      </div>
+    </div>
+    <div class="w3-quarter">
+      <div class="w3-container w3-teal w3-padding-16">
+        <div class="w3-left"><i class="fa fa-cogs w3-xxxlarge"></i></div>
+        <div class="w3-right">
+          <h3>{{ number_of_structured_analysis }}</h3>
+        </div>
+        <div class="w3-clear"></div>
+        <h4>Structured analyses</h4>
+      </div>
+    </div>
+    <div class="w3-quarter">
+      <div class="w3-container w3-orange w3-text-white w3-padding-16">
+        <div class="w3-left"><i class="fa fa-users w3-xxxlarge"></i></div>
+        <div class="w3-right">
+          <h3>{{ number_of_products }}</h3>
+        </div>
+        <div class="w3-clear"></div>
+        <h4>Products</h4>
+      </div>
+    </div>
+  </div>
+  <div class="w3-container">
+
+  <div class="w3-col w3-bar w3-text-projectcompass" style="padding: 10%;">
+  <div class="w3-padding w3-container w3-card-1">
+    {{ intro|safe }}
+    <br><br>
+    <h5><b><i class="fa fa-external-link"></i>    Useful links:</b></h5>
+    <ul>
+    {% for name, link in links.items() %}
+      <a href="{{ link }}">{{ name }}</a><br>
+    {% endfor %}
+    </ul>
+  <hr>
+    <h5>Products:</h5>
+    <center>
+    <div style="width:40%;">
+    <canvas id="myChart" width="400" height="400"></canvas>
+    </div>
+    </center>
+    <script>
+
+      // Append '4d' to the colors (alpha channel), except for the hovered index
+      function handleHover(evt, item, legend) {
+        legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
+          colors[index] = index === item.index || color.length === 9 ? color : color + '4D';
+        });
+        legend.chart.update();
+      }
+
+      // Removes the alpha channel from background colors
+      function handleLeave(evt, item, legend) {
+        legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
+          colors[index] = color.length === 9 ? color.slice(0, -2) : color;
+        });
+        legend.chart.update();
+      }
+
+      var ctx = document.getElementById("myChart").getContext('2d');
+      var myChart = new Chart(ctx, {
+        type: 'polarArea',
+        data: {
+          labels: [{{ product_labels|safe }}],
+          datasets: [{
+            label: '# of Analysis',
+            data: [{{ product_res|safe }}],
+            backgroundColor: [
+                        '#4dc9f6',
+                        '#f67019',
+                        '#f53794',
+                        '#537bc4',
+                        '#acc236',
+                        '#166a8f',
+                        '#00a950',
+                        '#58595b',
+                        '#8549ba'],
+            // borderColor: [{{ product_color2|safe }}],
+            borderWidth: 1
+          }]
+        },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+            onHover: handleHover,
+            onLeave: handleLeave
+          },
+          title: {
+            display: true,
+            text: 'Analysis by product'
+          }
+        }
+      },
+      });
+    </script>
+
+
+
+  </div>
+  </div>
+  </div>
+  <hr>
+{% endif %}
+
+
+  <!-- Footer -->
+  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+                <hr><br>
+                <strong>About ProjectCompass</strong><br>
+                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
+                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
+                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
+  </footer>
+
+  <!-- End page content -->
+</div>
+
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  {{ head|safe }}
+<body class="w3-light-grey">
+
+  {{ top_container|safe }}
+
+  {{ sidebar_menu|safe }}
+  <!-- !PAGE CONTENT! -->
+  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    <!-- Header -->
+
+    {% if title %}
+    <header class="w3-container" style="padding-top:22px">
+      <h5><b><i class="fa fa-dashboard"></i>    {{ title|safe }}</b></h5>
+    </header>
+    <br>
+    {% endif %}
+
+    {{ obj|safe }}
+
+    <iframe src="{{ url }}"  onload="MakeIframeFullHeight(this);" class ="ifr" id="iframe_embedded" style="{{ 'display:none;' if obj != '' else 'display: block;' }}height: 800px;"   marginheight="1" marginwidth="1" seamless="seamless" scrolling="no" frameborder="0" allowtransparency="true" crossorigin></iframe>
+
+
+    <script type="text/javascript">
+   function MakeIframeFullHeight(iframeElement){
+          iframeElement.style.width   = "100%";
+          var ifrD = iframeElement.contentDocument || iframeElement.contentWindow.document;
+          var mHeight = parseInt( window.getComputedStyle( ifrD.documentElement).height );  // Math.max( ifrD.body.scrollHeight, .. offsetHeight, ....clientHeight,
+          var margins = ifrD.body.style.margin + ifrD.body.style.padding + ifrD.documentElement.style.margin + ifrD.documentElement.style.padding;
+          if(margins=="") { margins=0;  ifrD.body.style.margin="0px"; }
+          (function(){
+             var interval = setInterval(function(){
+              if(ifrD.readyState  == 'complete' ){
+                  iframeElement.style.height  = (parseInt(window.getComputedStyle( ifrD.documentElement).height) + margins+1) +"px";
+                  if((parseInt(window.getComputedStyle( ifrD.documentElement).height) + margins+1)  < 800 ){
+                      iframeElement.style.height  = "800px";
+                  }
+                  setTimeout( function(){ clearInterval(interval); }, 1000 );
+              }
+             },1000)
+          })();
+      }
+    </script>
+
+  <!-- Footer -->
+  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+                <hr><br>
+
+                <strong>About ProjectCompass</strong><br>
+                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
+                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
+                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
+  </footer>
+
+  <!-- End page content -->
+</div>
+
+<script>
+// Get the Sidebar
+var mySidebar = document.getElementById("mySidebar");
+
+// Get the DIV with overlay effect
+var overlayBg = document.getElementById("myOverlay");
+
+// Toggle between showing and hiding the sidebar, and add overlay effect
+function w3_open() {
+  if (mySidebar.style.display === 'block') {
+    mySidebar.style.display = 'none';
+    overlayBg.style.display = "none";
+  } else {
+    mySidebar.style.display = 'block';
+    overlayBg.style.display = "block";
+  }
+}
+
+// Close the sidebar with the close button
+function w3_close() {
+  mySidebar.style.display = "none";
+  overlayBg.style.display = "none";
+}
+</script>
+
+</body>
+</html>

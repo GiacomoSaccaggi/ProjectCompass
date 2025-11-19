@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+  {{ head|safe }}
+
+  <style>
+
+    input[type=text], input[type=month], input[type=date], input[type=email], input[type=file], textarea {
+      padding: 6px 12px;
+      text-decoration: none;
+      margin: 4px 2px;
+      cursor: pointer;
+      width: 90%;
+      display: inline-block;
+      border-radius: 4px;
+      background-color: white;
+      color:  #005F81 ;
+      border: 2px solid  #00889B;
+      text-align: center;
+      transition: all 0.5s;
+      cursor: pointer;
+      margin: 5px;
+    }
+  /* Create two equal columns that floats next to each other */
+  .column {
+    float: left;
+    width: 50%;
+  }
+
+  /* Clear floats after the columns */
+  .row:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  </style>
+<body class="w3-light-grey">
+
+  {{ top_container|safe }}
+
+  {{ sidebar_menu|safe }}
+
+    <!-- !PAGE CONTENT! -->
+  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    <!-- Header -->
+    <header class="w3-container" style="padding-top:22px">
+      <h5><b><i class="fa fa-dashboard"></i>    {{ nome }}</b></h5>
+    </header>
+    <br>
+    <div class="w3-padding w3-container w3-card-1">
+      <ul>
+              <h5 class="product"><b><i class="fa fa-folder-open-o"></i>    {{ values['product'] }}</b></h5>
+              <h6><b><i class="fa fa-info-circle"></i>    Purpose and scope:</b></h6>
+              <ul class="description1">{{ values['description'] }}</ul>
+              <h6><b><i class="fa fa-sign-in"></i>    The inputs of the analysis:</b></h6>
+              <ul>
+              {% for name_var, var_info in values['inputs'].items() %}
+                <b>{{ name_var }} ({{ var_info['type'] }}):</b> {{ var_info['default'] }}<br>
+              {% endfor %}
+              </ul>
+              <h6 class="outcome"><b><i class="fa fa-sign-out"></i>    Outcome:</b> {{ values['output_type'] }}</h6>
+              <ul class="description2">{{ values['output description'] }}</ul>
+              <h6 class="people"><b><i class="fa fa-group"></i>    People:</b> {{ values['owner'] }} ({{ values['collaborators'] }})</h6>
+              <h6 class="countries"><b><i class="fa fa-map-o"></i>    Countries:</b> {{ values['countries'] }}</h6>
+              <h6><b><i class="fa fa-calendar-minus-o"></i>    Start date:</b> <div class="start_date">{{ values['start_date'] }}</div></h6>
+              <h6 ><b><i class="fa fa-calendar-plus-o"></i>    Last modified date:</b> <div class="last_mod_date">{{ values['last_modified'] }}</div></h6>
+              <div style="{{ 'display:none;' if values['links'] == {} else '' }}"><h6><b><i class="fa fa-external-link"></i>    Documentations links:</b></h6>
+              <ul>
+              {% for name_link, link in values['links'].items() %}
+                <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
+              {% endfor %}
+              </ul>
+              </div>
+              <div style="{{ 'display:none;' if values['slides'] == {} else '' }}"><h6><b><i class="fa fa-external-link"></i>    Google Slides presentations:</b></h6>
+              <ul>
+              {% for name_link, link in values['slides'].items() %}
+                <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
+              {% endfor %}
+              </ul>
+              </div>
+              {{ values['gitlab_link_viz']|safe }}
+              {{ values['gdrive_link_viz']|safe }}
+              {{ values['confluence_link_viz']|safe }}
+              <br>
+        </ul>
+    </div>
+    <header class="w3-container" style="padding-top:22px">
+      <h5><b><i class="fa fa-history"></i>    Versions</b></h5>
+    </header>
+    <br>
+    <div class="w3-padding w3-container w3-card-1">
+      <ul>
+
+
+              <div style="{{ 'display:none;' if values['dashboard link'] == '' else '' }}">
+              {% for name_link, link in values['versions_dashboard'].items() %}
+              <h6><b>{{ name_link }}</b></h6><br>
+                  <ul>
+                  <i class="fa fa-line-chart"></i>    <a href="{{'/iframe?name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512') if values['embedded'] == 'y' else link}}" target="{{'_blank' if values['embedded'] != 'y' else ''}}">Open the version</a>
+                  <br>
+                  <i class="fa fa-remove"></i>    <a href="{{'/delete_version?category=dashboard&name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Delete the version</a>
+                    </ul>
+              <br>
+              {% endfor %}
+
+
+                      <p><big>Upload new version:</big></p>
+                        <form action="/add_version/" method="post" style="width: 100%;left:25%;top:10%;">
+                          <p>
+                              <input type="text" id="name_dashboard" name="name" value="{{ nome.replace(' ','512') }}"  style="display:none;width: 40%;" readonly required>
+                              <input type="text" id="category_dashboard" name="category" value="dashboard"  style="display:none;width: 40%;" readonly required>
+                              <label for="new_name_link">Name of the version:</label><br>
+                              <input type="text" id="new_name_link" name="new_name_link" onkeypress="return blockSpecialChar(event)" required><br>
+                              <label for="new_link_dashboard">Tableau embedded link or dashboard link:</label><br>
+                              <input type="text" id="new_link_dashboard" name="new_link_dashboard" required><br>
+                              <input type="submit" value="Upload">
+                          </p>
+                        </form>
+
+              </div>
+
+
+              <div style="{{ 'display:none;' if values['physical_output'] == '' else '' }}">
+              {% for name_link, link in values['versions_output'].items() %}
+                  <h6><b>{{ name_link }}</b></h6><br>
+                  <ul>
+                   <i class="fa fa-bar-chart"></i>    <a href="{{'/physical_output?name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Open the version</a>
+                  <br>
+                  <i class="fa fa-remove"></i>    <a href="{{'/delete_version?category=output&name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Delete the version</a>
+                </ul>
+              <br>
+              {% endfor %}
+
+
+                      <p><big>Upload new version:</big></p>
+                        <form action="/add_version/" method="post" style="width: 100%;left:25%;top:10%;">
+                          <p>
+                              <input type="text" id="name_output" name="name" value="{{ nome.replace(' ','512') }}"  style="display:none;width: 40%;" readonly required>
+                              <input type="text" id="category_output" name="category" value="dashboard"  style="display:none;width: 40%;" readonly required>
+                              <p><big>physical output (.jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf):</big></p>
+                              <input type="file" name="output_file" size="40" accept=".jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf" required><br>
+                              <input type="submit" value="Upload">
+                          </p>
+                        </form>
+
+
+              </div>
+      </ul>
+                     <script type="text/javascript">
+                    function blockSpecialChar(e){
+                        var k;
+                        document.all ? k = e.keyCode : k = e.which;
+                        return ((k > 64 && k < 91) || (k > 96 && k < 123) || k == 8 || k == 32 || (k >= 48 && k <= 57));
+                      }
+                      </script>
+
+    </div>
+    <!-- Footer -->
+    <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+                <hr><br>
+
+                <strong>About ProjectCompass</strong><br>
+                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
+                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
+                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
+    </footer>
+
+    <!-- End page content -->
+  </div>
+</body>
+</html>
