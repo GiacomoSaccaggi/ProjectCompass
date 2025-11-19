@@ -1,0 +1,262 @@
+.rdg-cell {
+    display: inline-block;
+    position: absolute;
+    height: inherit;
+    padding: 0 8px;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    background-color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+#root .rdg-cell-frozen {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 1
+}
+
+#root .rdg-cell-frozen-last {
+    box-shadow: 2px 0 5px -2px hsla(0, 0%, 53.3%, .3)
+}
+
+#root .rdg-cell-mask {
+    position: absolute;
+    pointer-events: none;
+    outline: 0
+}
+
+#root .rdg-checkbox-label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0
+}
+
+#root .rdg-checkbox-label-disabled {
+    cursor: default
+}
+
+#root .rdg-checkbox-label-disabled .rdg-checkbox {
+    border-color: #ccc;
+    background: #ddd
+}
+
+#root .rdg-checkbox-input {
+    all: unset;
+    width: 0;
+    margin: 0
+}
+
+#root .rdg-checkbox {
+    content: "";
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    background: #fff
+}
+
+#root .rdg-checkbox-input:checked+.rdg-checkbox {
+    background: #005295;
+    box-shadow: inset 0 0 0 4px #fff
+}
+
+#root .rdg-checkbox-input:focus+.rdg-checkbox {
+    border-color: #62b8ff
+}
+
+#root .rdg {
+    position: relative;
+    z-index: 0;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: scroll;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-color: #fff;
+    font-size: 14px
+}
+
+#root .rdg *,
+#root .rdg :after,
+#root .rdg :before {
+    box-sizing: inherit
+}
+
+#root .rdg-editor-container {
+    position: absolute
+}
+
+#root .rdg-select-editor,
+#root .rdg-text-editor {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    width: calc(100% + 1px);
+    height: calc(100% + 1px);
+    padding: 1px 7px 0;
+    margin: -1px 0 0 -1px;
+    border: 2px solid #ccc;
+    background-color: #fff;
+    font-size: 14px;
+    line-height: 1.2
+}
+
+#root .rdg-select-editor::-webkit-input-placeholder,
+#root .rdg-text-editor::-webkit-input-placeholder {
+    color: #999;
+    opacity: 1
+}
+
+#root .rdg-select-editor:-ms-input-placeholder,
+#root .rdg-text-editor:-ms-input-placeholder {
+    color: #999;
+    opacity: 1
+}
+
+#root .rdg-select-editor::placeholder,
+#root .rdg-text-editor::placeholder {
+    color: #999;
+    opacity: 1
+}
+
+#root .rdg-select-editor:focus,
+#root .rdg-text-editor:focus {
+    border-color: #66afe9
+}
+
+#root .rdg-filter-row,
+#root .rdg-header-row {
+    width: var(--row-width);
+    position: -webkit-sticky;
+    position: sticky;
+    background-color: #f9f9f9;
+    font-weight: 700;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    z-index: 3
+}
+
+#root .rdg-header-row {
+    height: var(--header-row-height);
+    line-height: var(--header-row-height);
+    top: 0
+}
+
+#root .rdg-filter-row {
+    height: var(--filter-row-height);
+    line-height: var(--filter-row-height);
+    top: var(--header-row-height)
+}
+
+#root .rdg-header-cell-resizer {
+    cursor: col-resize;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 10px
+}
+
+#root .rdg-cell .Select {
+    max-height: 30px;
+    font-size: 12px;
+    font-weight: 400
+}
+
+#root .rdg-header-sort-cell {
+    cursor: pointer;
+    display: flex
+}
+
+#root .rdg-header-sort-name {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+#root .rdg-selected {
+    border: 2px solid #66afe9
+}
+
+#root .rdg-selected .drag-handle {
+    pointer-events: auto;
+    position: absolute;
+    bottom: -5px;
+    right: -4px;
+    background: #66afe9;
+    width: 8px;
+    height: 8px;
+    border: 1px solid #fff;
+    border-right: 0;
+    border-bottom: 0;
+    cursor: crosshair;
+    cursor: -webkit-grab;
+    cursor: grab
+}
+
+#root .rdg-selected:hover .drag-handle {
+    bottom: -8px;
+    right: -7px;
+    background: #fff;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #66afe9
+}
+
+#root .react-grid-cell-dragged-over-down,
+#root .react-grid-cell-dragged-over-up {
+    border: 1px dashed #000;
+    background: rgba(0, 0, 255, .2) !important
+}
+
+#root .react-grid-cell-dragged-over-up {
+    border-bottom-width: 0
+}
+
+#root .react-grid-cell-dragged-over-down {
+    border-top-width: 0
+}
+
+#root .rdg-cell-copied {
+    background: rgba(0, 0, 255, .2) !important
+}
+
+#root .rdg-row {
+    width: var(--row-width);
+    height: var(--row-height);
+    line-height: var(--row-height);
+    background-color: #fff
+}
+
+#root .rdg-row:hover {
+    background-color: #f5f5f5
+}
+
+#root .rdg-row-selected {
+    background-color: #dbecfa
+}
+
+#root .rdg-row-selected:hover {
+    background-color: #c9e3f8
+}
+
+#root .rdg-summary-row {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 3
+}
+
+#root .rdg-summary-row>.rdg-cell {
+    border-top: 2px solid #aaa
+}

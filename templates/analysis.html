@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+  {{ head|safe }}
+
+  <style>
+
+    input[type=text], input[type=month], input[type=date], input[type=email], input[type=file], textarea {
+      padding: 6px 12px;
+      text-decoration: none;
+      margin: 4px 2px;
+      cursor: pointer;
+      width: 90%;
+      display: inline-block;
+      border-radius: 4px;
+      background-color: white;
+      color:  #005F81 ;
+      border: 2px solid  #00889B;
+      text-align: center;
+      transition: all 0.5s;
+      cursor: pointer;
+      margin: 5px;
+    }
+  /* Create two equal columns that floats next to each other */
+  .column {
+    float: left;
+    width: 50%;
+  }
+
+  /* Clear floats after the columns */
+  .row:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  </style>
+<style>
+
+header{
+  position: relative;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-image: url(http://127.0.0.1:{{ port }}/{{ project_folder }}/static/img/background2.PNG);
+  height: 50%;
+  width:100%;
+  color: #F8F8F8;
+  text-align: left;
+  padding-top: 5%;
+  font-size:32px;
+}
+</style>
+<body class="w3-light-grey">
+
+  {{ top_container|safe }}
+
+  {{ sidebar_menu|safe }}
+
+    <!-- !PAGE CONTENT! -->
+  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    <!-- Header -->
+    <header class="w3-container" style="padding-top:22px">
+      <br>
+      <h1><b><i class="fa fa-dashboard"></i>    {{ title }}</b></h1>
+      <br>
+      <br>
+    </header>
+    <br>
+    <div class="w3-padding w3-container w3-card-1">
+      <div class="row">
+
+      <div class="column">
+        <div class="column">
+          <label for="from_date_input">From:</label><br>
+          <input type="date" id="from_date_input" name="from_date_input" onkeyup="search_function()" onkeypress="search_function()" onclick="search_function()"><br>
+        </div>
+        <div class="column">
+          <label for="to_date_input">To:</label><br>
+          <input type="date" id="to_date_input" name="to_date_input" onkeyup="search_function()" onkeypress="search_function()" onclick="search_function()"><br>
+        </div>
+      </div>
+      <div class="column">
+        <div class="column">
+          <label for="product_input">Product:</label><br>
+          <input type="text" list="product_types" id="product_input" name="product_input"  onkeyup="search_function()"><br>
+              <datalist id="product_types">
+                              {% for val in tool_choices['product'] %}
+                                    <option value="{{ val }}">
+                               {% endfor %}
+              </datalist>
+        </div>
+        <div class="column">
+        <label for="countries_input">Countries:</label><br>
+        <input type="text" list="list_countries" id="countries_input" name="countries_input"  onkeyup="search_function()"><br>
+            <datalist id="list_countries">
+                              {% for val in tool_choices['countries'] %}
+                                    <option value="{{ val }}">
+                               {% endfor %}
+            </datalist>
+        </div>
+      </div>
+
+        </div>
+      <label for="myInput">Search for a topic:</label><br>
+      <input type=text id="myInput" onkeyup="search_function()" placeholder= " Search for a topic "  title="Type in a name">
+      <div id="myUL">
+      {% for nome, values in analysis.items() %}
+        <ul>
+          <button class=accordion><li><a href="#{{ nome }}">{{ nome }}</a></li></button>
+          <div class=panel>
+            <p>
+              <h5 class="product"><b><i class="fa fa-folder-open-o"></i>    {{ values['product'] }}</b></h5>
+              <h6><b><i class="fa fa-info-circle"></i>    Purpose and scope:</b></h6>
+              <ul class="description1">{{ values['description'] }}</ul>
+              <h6><b><i class="fa fa-sign-in"></i>    The inputs of the analysis:</b></h6>
+              <ul>
+              {% for name_var, var_info in values['inputs'].items() %}
+                <b>{{ name_var }} ({{ var_info['type'] }}):</b> {{ var_info['default'] }}<br>
+              {% endfor %}
+              </ul>
+              <h6 class="outcome"><b><i class="fa fa-sign-out"></i>    Outcome:</b> {{ values['output_type'] }}</h6>
+              <ul class="description2">{{ values['output description'] }}</ul>
+              <h6 class="people"><b><i class="fa fa-group"></i>    People:</b> {{ values['owner'] }} ({{ values['collaborators'] }})</h6>
+              <h6 class="countries"><b><i class="fa fa-map-o"></i>    Countries:</b> {{ values['countries'] }}</h6>
+              <h6><b><i class="fa fa-calendar-minus-o"></i>    Start date:</b> <div class="start_date">{{ values['start_date'] }}</div></h6>
+              <h6 ><b><i class="fa fa-calendar-plus-o"></i>    Last modified date:</b> <div class="last_mod_date">{{ values['last_modified'] }}</div></h6>
+              <div style="{{ 'display:none;' if values['links'] == {} else '' }}"><h6><b><i class="fa fa-external-link"></i>    Documentations links:</b></h6>
+              <ul>
+              {% for name_link, link in values['links'].items() %}
+                <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
+              {% endfor %}
+              </ul>
+              </div>
+              {{ values['gitlab_link_viz']|safe }}
+              {{ values['gdrive_link_viz']|safe }}
+              <br>
+              <div style="{{ 'display:none;' if values['dashboard link'] == '' else '' }}">
+              <h6><b><i class="fa fa-line-chart"></i>    <a href="{{'/iframe?name=' + nome.replace(' ','512') if values['embedded'] == 'y' else values['dashboard link']}}" target="{{'_blank' if values['embedded'] != 'y' else ''}}">Open the dashboard</a></b></h6>
+              <br>
+              </div>
+              <div style="{{ 'display:none;' if values['physical_output'] == '' else '' }}">
+              <h6><b><i class="fa fa-bar-chart"></i>    <a href="{{'/physical_output?name=' + nome.replace(' ','512')}}">Open the output of the analysis</a></b></h6>
+              <br>
+              </div>
+              {% if values['structured_analysis'] != 'n' %}
+              <div style="{{ 'display:none;' if values['structured_analysis'] == 'n' else '' }}">
+              <h6><b><i class="fa fa-empire"></i>    <a href="{{'/create_investigations?name=' + nome.replace(' ','512')}}">Run the analysis</a></b></h6>
+              <br>
+              </div>
+              {% endif %}
+
+              <h6><b><i class="fa fa-history"></i>    <a href="/open_version?name={{ nome.replace(' ','512') }}">Open the analysis</a></b></h6>
+              <br>
+              <h6><b><i class="fa fa-edit"></i>    <a href="/load_analysis?name={{ nome.replace(' ','512') }}">Edit the analysis</a></b></h6>
+              <br>
+              <h6><b><i class="fa fa-download"></i>    <a href="/open_analysis?name={{ nome.replace(' ','512') }}">Download the analysis</a></b></h6>
+              <br>
+              <h6><b><i class="fa fa-recycle"></i>    <a href="/delete_analysis?name={{ nome.replace(' ','512') }}">Delete the analysis</a></b></h6>
+
+            </p>
+          </div>
+        </ul>
+      {% endfor %}
+    </div>
+    </div>
+
+    <script>
+    function search_function() {
+        var panel = document.getElementsByClassName("panel");
+        var i;
+        for (i = 0; i < panel.length; i++) {
+            panel[i].style.display = "none";
+        }
+
+        var input, filter, ul, li, a, i, button;
+        input = document.getElementById("myInput");
+        filter = input.value.toUpperCase();
+        product_input = document.getElementById("product_input").value.toUpperCase();
+        countries_input = document.getElementById("countries_input").value.toUpperCase();
+        from_date_input = document.getElementById("from_date_input").value;
+        if (from_date_input.length < 9 ) {
+           var from_date_input = new Date('1900-01-01');
+        } else {
+           var from_date_input = new Date(from_date_input);
+        }
+        to_date_input = document.getElementById("to_date_input").value;
+        if (to_date_input.length < 9 ) {
+           var to_date_input = new Date('2100-01-01');
+        } else {
+           var to_date_input = new Date(to_date_input);
+        }
+        console.log(from_date_input.toDateString());
+        console.log(to_date_input.toDateString());
+        ul = document.getElementById("myUL");
+        li = ul.getElementsByTagName("button");
+        description1 = ul.getElementsByClassName("description1");
+        description2 = ul.getElementsByClassName("description2");
+        product = ul.getElementsByClassName("product");
+        countries = ul.getElementsByClassName("countries");
+        start_date = ul.getElementsByClassName("start_date");
+        last_mod_date = ul.getElementsByClassName("last_mod_date");
+        for (i = 0; i < li.length; i++) {
+            a = li[i].getElementsByTagName("a")[0].innerHTML.toUpperCase();
+            d1 = description1[i].innerHTML.toUpperCase();
+            d2 = description2[i].innerHTML.toUpperCase();
+            p = product[i].innerHTML.toUpperCase();
+            c = countries[i].innerHTML.toUpperCase();
+            from_dt = new Date(start_date[i].innerHTML);
+            to_dt = new Date(last_mod_date[i].innerHTML);
+            if (
+                  (a.indexOf(filter) > -1 || d1.indexOf(filter) > -1 || d2.indexOf(filter) > -1)
+                  && (p.indexOf(product_input) > -1) && (c.indexOf(countries_input) > -1)
+                  && (from_date_input < from_dt && to_dt < to_date_input)
+                  ) {
+                li[i].style.display = "";
+            } else {
+                li[i].style.display = "none";
+
+            }
+        }
+    }
+    </script>
+    <script>
+    var acc = document.getElementsByClassName("accordion");
+    var i;
+
+    for (i = 0; i < acc.length; i++) {
+        acc[i].addEventListener("click", function() {
+
+            this.classList.toggle("active");
+            var panel = this.nextElementSibling;
+            if (panel.style.display === "block") {
+                panel.style.display = "none";
+
+            } else {
+                panel.style.display = "block";
+            }
+        });
+    }
+    </script>
+
+    <!-- Footer -->
+    <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+                <hr><br>
+                <strong>About ProjectCompass</strong><br>
+                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
+                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
+                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
+    </footer>
+
+    <!-- End page content -->
+    </div>
+  </div>
+</body>
+</html>
