@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>Logging</title>
+        <meta charset="UTF-8">
+        <meta name="keywords" content="HTML, CSS, JavaScript">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="description">
+        <meta name="author" content="Project Compass">
+        <meta http-equiv="refresh" content="60">
+        <link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
+        <link rel="stylesheet" href="http://www.w3schools.com/lib/w3-theme-blue-grey.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <style type="text/css">
+           html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
+           a {text-decoration:none;}
+           input{background-color: transparent;border: none;color: transparent;width: 100%;argin: 0 auto;}
+           input:focus {outline: none;}
+          .container {width:100%; margin-left:auto; margin-right:auto;}
+          .header {background-color:rgb(119, 151, 123);padding:0; margin:0;}
+          .header h1 {color:white; line-height:80px;padding:0; margin:0;}
+          .header img {float:left; height:70px; width:250px; padding:5px; margin-right:20px;}
+          .nav {width:10%; float:left;padding:0; margin:0;}
+          .nav ul {margin:15px; list-style-type:none;padding:0; margin:0;}
+          .content {float:left; width:80%; padding-left:15px;}
+          .right {background-color:rgb(119, 151, 123); float:left; width:8%;padding:0; margin:0;}
+          .footer {clear:left; }
+          .copy { color: #000; font-weight: bold; font-size: 14px; font-family: Arial, Helvetica, sans-serif; padding: 10px 10px; background-color: #e8eaf6 ; border-radius: 5px;  }
+          .copy:hover {  color: white; text-decoration: none; background-color: #666; border-radius: 0px; }
+          .collapsible {background-color: rgb(35, 75, 107);color: white;cursor: pointer;padding: 18px;width: 100%;border: none;text-align: left;outline: none;font-size: 15px;}
+          .active, .collapsible:hover {background-color: #555;}
+          .inside {padding: 0 18px;display: block;overflow: hidden;background-color: #f1f1f1;}
+        </style>
+    <script>
+        setInterval(function() {
+                  window.location.reload();
+                }, 7000);
+    </script>
+</head>
+<body>
+<div class="container w3-text-theme">
+          <div class="header w3-theme">
+           <h1> - ANALYSIS TOOL</h1>
+          </div>
+
+          <div class="nav">
+            <br>
+           <ul>
+               <A HREF="http://127.0.0.1:5000/"> BACK TO THE ANALYSIS TOOL</A><br><br>
+            Please when the analysis it's completed please remember to close thi tab/window because it makes a GET request every 6 seconds
+           </ul>
+          </div>
+
+          <div class="content">
+            <input type="text" id="testo">
+            <h1>Logging analysis tool</h1>
+            <button type="button" class="collapsible">Structured analysis:</button>
+            <div class="inside">
+                <ul>
+                    <div id="logger_result"></div>
+                </ul>
+            </div>
+          </div>
+</div>
+
+<script>
+    var rawFile = new XMLHttpRequest();
+    rawFile.open("GET", "http://127.0.0.1:5000/ProjectCompass/static/logs.log", false);
+    rawFile.onreadystatechange = function ()
+    {
+        if(rawFile.readyState === 4)
+        {
+            if(rawFile.status === 200 || rawFile.status == 0)
+            {
+                var allText = rawFile.responseText;
+                document.getElementById("logger_result").innerHTML = allText;
+            }
+        }
+    }
+    rawFile.send();
+</script>
+</body>
+</html>

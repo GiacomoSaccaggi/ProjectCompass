@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+
+    <!-- start head -->
+    <head>
+    <title>ProjectCompass</title>
+    <link rel = "icon" href = "http://127.0.0.1:{{ port }}/{{ project_folder }}static/img/logo.png" type = "image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="http://127.0.0.1:{{ port }}/{{ project_folder }}static/css/w3.css">
+    <script src="http://127.0.0.1:{{ port }}/{{ project_folder }}static/js/chartjs/chart.js"></script>
+
+    <link rel="stylesheet" href="http://127.0.0.1:{{ port }}/{{ project_folder }}static/css/css.css">
+    <link rel="stylesheet" href="http://127.0.0.1:{{ port }}/{{ project_folder }}static/css/font-awesome.min.css">
+    <script src="http://127.0.0.1:{{ port }}/{{ project_folder }}static/js/jquery.min.js" type="text/javascript"></script>
+    <style>
+    html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .w3-main, .w3-main * {
+        visibility: visible;
+      }
+      .w3-main {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+    }
+    .todo:hover{color:#000!important;background-color:#ccc!important}
+
+
+    .container {
+     font-family:
+     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans,
+      Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+     line-height: 1.4;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      padding-left: 10px;
+      padding-right: 10px;
+      color: #333;
+      height: 90vh;
+      margin-top: 5vh;
+      margin-bottom: 5vh;
+      overflow-y: auto;
+    }
+
+    .app-title {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 80px;
+      opacity: 0.5;
+    }
+
+    .container svg {
+      width: 64px;
+      height: 64px;
+    }
+
+    .todo-list {
+      list-style: none;
+      margin-bottom: 20px;
+    }
+
+    .todo-item {
+      margin-bottom: 10px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .todo-item span {
+      flex-grow: 1;
+      margin-left: 10px;
+      margin-right: 10px;
+      font-size: 22px;
+    }
+
+    .done span {
+      text-decoration: line-through;
+    }
+
+    .container input[type="checkbox"] {
+      display: none;
+    }
+
+    .tick {
+      width: 30px;
+      height: 30px;
+      border: 3px solid #333;
+      border-radius: 50%;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .tick::before {
+      content: '✓';
+      font-size: 20px;
+      display: none;
+    }
+
+    .done .tick::before {
+      display: inline;
+    }
+
+    .delete-todo {
+      border: none;
+      background-color: transparent;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .delete-todo svg {
+      width: 30px;
+      height: 30px;
+      pointer-events: none;
+    }
+
+    .container form {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .container input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 4px;
+      border: 3px solid #333;
+    }
+
+    /* Add this below all the other styles */
+
+    .empty-state {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      display: none;
+    }
+
+    .checklist-icon {
+      margin-bottom: 20px;
+    }
+
+    .empty-state__title, .empty-state__description {
+      margin-bottom: 20px;
+    }
+
+    /* Add this below the other styles */
+    .todo-list:empty {
+      display: none;
+    }
+
+    .todo-list:empty + .empty-state {
+      display: flex;
+    }
+
+
+    .accordion {
+        background-color: #FFFFFF; /*#eee;*/
+        color: #2D323A;
+        cursor: pointer;
+        padding: 18px;
+        width: 100%;
+
+        border: 1px solid #2D323A; /*#006500;*/
+        border-radius: 4px;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+        transition: 0.4s;
+    }
+
+
+    .active, .accordion:hover {
+        background-color: #DCD2FF; /*#ccc*/
+    }
+
+    .panel {
+        padding: 0 18px;
+        display: none;
+        background-color: white;
+         overflow: hidden;
+    }
+
+
+    * {
+      box-sizing: border-box;
+    }
+
+    #myInput {
+    background-position: 10px 12px;
+      background-repeat: no-repeat;
+      width: 100%;
+      font-size: 16px;
+      border-radius: 4px;
+      padding: 12px 20px 12px 40px;
+      border: 1px solid #ddd;
+      margin-bottom: 12px;
+    }
+     ul {
+     list-style-type: none;
+     }
+    #myUL {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #myUL li a {
+
+      margin-top: -1px; /* Prevent double borders */
+      overflow: hidden;
+      white-space:pre;
+      padding: 12px;
+      text-decoration: none;
+      font-size: 18px;
+      color: #222831;
+      /*display: block;
+      background-color: #f6f6f6;
+      border: 1px solid #ddd;*/
+    }
+
+    #myInput li a:hover:not(.header) {
+      background-color: #eee
+    }
+
+    .loader {
+      border: 16px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 16px solid #3498db;
+      width: 120px;
+      height: 120px;
+      -webkit-animation: spin 2s linear infinite; /* Safari */
+      animation: spin 2s linear infinite;
+    }
+
+    /* Safari */
+    @-webkit-keyframes spin {
+      0% { -webkit-transform: rotate(0deg); }
+      100% { -webkit-transform: rotate(360deg); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+
+
+
+    </style>
+</head>
+    <!-- end head -->
+    <body class="w3-light-grey">
+
+    <!-- start top_container -->
+    <div class="w3-bar w3-top w3-theme-d2 w3-large w3-color-projectcompass" style="z-index:4">
+      <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_nav_open();"><i class="fa fa-bars"></i>  Menu</button>
+      <span class="w3-bar-item w3-padding-large w3-theme-d4">
+          <a href="http://127.0.0.1:{{ port }}">
+              <!--<i class="fa fa-home w3-margin-right"></i>
+              <span id='date-time'></span>-->
+                  <img src="http://127.0.0.1:{{ port }}/{{ project_folder }}static/img/logo_icon.png" height="30"  width="auto" >
+          </a>
+      </span>
+      <a href="/todo" class="todo"><span class="w3-bar-item w3-padding-large w3-theme-d4 w3-center"><i class="fa fa-pencil w3-margin-right"></i>Todo</span></a>
+      <span class="w3-bar-item w3-padding-large w3-theme-d4 w3-right"><img src="http://127.0.0.1:{{ port }}/{{ project_folder }}static/img/logo_text.png" height="30"  width="auto" ></span>
+    </div>
+    <!-- end top_container -->
+
+    <!-- start sidebar_menu -->
+    <nav class="w3-sidebar w3-collapse w3-white w3-animate-left" style="z-index:3;width:300px;" id="mySidebar">
+        <div class="w3-container w3-row"><br>
+
+          <a href="http://127.0.0.1:{{ port }}">
+                <div class="w3-col s4 w3-text-projectcompass">
+                  <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100" height="100" rx="20" fill="#F0F4F8"/>
+                  <circle cx="50" cy="50" r="35" fill="#FFFFFF" stroke="#2D323A" stroke-width="4"/>
+                  <path d="M50 25L65 75L50 60L35 75L50 25Z" fill="#4DFFD6"/>
+                  <path d="M50 25L65 75L50 60L35 75L50 25Z" fill-opacity="0.2" stroke="#4DFFD6" stroke-width="2"/>
+                  <path d="M50 25L50 50L70 50" stroke="#2D323A" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M50 50L30 50L50 75" stroke="#2D323A" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="50" cy="50" r="5" fill="#2D323A"/>
+                  <path d="M75 50C75 63.8071 63.8071 75 50 75C36.1929 75 25 63.8071 25 50C25 36.1929 36.1929 25 50 25" stroke="#9E9E9E" stroke-width="2" stroke-dasharray="2 4"/>
+                  </svg>
+                </div>
+                <div class="w3-col s8 w3-bar w3-text-projectcompass">
+                    <span><strong><h2>   Analysis</h2></strong></span><br>
+                </div>
+          </a>
+      </div>
+      <hr>
+        <p style="color:red;padding: 10px;">DEMO Project Notice: This is a demonstration-only project intended for evaluation purposes. Although it may resemble a final product, the creators assume no liability for any errors, malfunctions, or damages resulting from its use.</p>
+      <hr>
+      <div class="w3-container">
+        <h5>MENU</h5>
+      </div>
+      <div class="w3-bar-block">
+        <a href="#" class="w3-bar-item w3-button w3-padding-16 w3-hide-large w3-dark-grey w3-hover-black" onclick="w3_nav_close()" title="close menu"><i class="fa fa-remove fa-fw"></i>  Close Menu</a>
+        <a href="/overview" class="w3-bar-item w3-button"><h5><i class="fa fa-eye w3-margin-right"></i>Overview </h5></a>
+
+
+        <a id="myBtn3" onclick="myFuncdownbar('analyses')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-map-signs w3-margin-right"></i>Analyses <i  id="analyses_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
+        <div id="analyses" class="w3-hide w3-animate-left w3-show">
+        <a href="/analysis" class="w3-bar-item w3-button w3-border-bottom test w3-hover-light-grey">
+            <div class="w3-container">
+                <i class="fa fa-sort-alpha-asc fa-fw"></i>  <span class="w3-opacity w3-large">Explorer</span>
+            </div>
+        </a>
+        <a href="/load_analysis?=" class="w3-bar-item w3-button w3-border-bottom test w3-hover-light-grey">
+            <div class="w3-container">
+                <i class="fa fa-space-shuttle fa-fw"></i>  <span class="w3-opacity w3-large">Upload</span>
+            </div>
+        </a>
+        </div>
+
+
+        <a id="myBtn2" onclick="myFuncdownbar('datatools')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-database w3-margin-right"></i>Data tools <i  id="datatools_arrow" style="display:none;"   class="fa fa-caret-down w3-margin-left"></i></h5></a>
+        <div id="datatools" class="w3-hide w3-animate-left w3-show">
+          <a href="/all_data" class="w3-bar-item w3-button w3-border-bottom test w3-hover-light-grey">
+            <div class="w3-container">
+              <i class="fa fa-wpexplorer fa-fw"></i>  <span class="w3-opacity w3-large">Data Explorer</span>
+            </div>
+          </a>
+           <a href="/rawgraphs" class="w3-bar-item w3-button w3-border-bottom test w3-hover-light-grey">
+            <div class="w3-container">
+              <i class="fa fa-cloud-download fa-fw"></i>  <span class="w3-opacity w3-large">RAWGraphs</span>
+            </div>
+          </a>
+        </div>
+
+
+        <script>
+
+        function w3_nav_open() {
+          document.getElementById("mySidebar").style.display = "block";
+          document.getElementById("myOverlay").style.display = "block";
+        }
+
+        function w3_nav_close() {
+          document.getElementById("mySidebar").style.display = "none";
+          document.getElementById("myOverlay").style.display = "none";
+        }
+
+        function myFuncdownbar(id) {
+          var x = document.getElementById(id);
+          var x_arrow = document.getElementById(id+'_arrow');
+          if (x.className.indexOf("w3-show") == -1) {
+            x.className += " w3-show";
+            x_arrow.style.display = "none";
+
+          } else {
+            x.className = x.className.replace(" w3-show", "");
+            x.previousElementSibling.className.replace(" w3-red", "");
+            x_arrow.style.display = "inline";
+          }
+        }
+
+        </script>
+          <br><br><br>
+      </div>
+    </nav>
+    <!-- Overlay effect when opening sidebar on small screens x.previousElementSibling.className += " w3-color-projectcompass"; -->
+    <div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" title="close side menu" id="myOverlay"></div>
+
+    <script>
+    // Get the Sidebar
+    var mySidebar = document.getElementById("mySidebar");
+
+    // Get the DIV with overlay effect
+    var overlayBg = document.getElementById("myOverlay");
+
+    // Toggle between showing and hiding the sidebar, and add overlay effect
+    function w3_open() {
+      if (mySidebar.style.display === 'block') {
+        mySidebar.style.display = 'none';
+        overlayBg.style.display = "none";
+      } else {
+        mySidebar.style.display = 'block';
+        overlayBg.style.display = "block";
+      }
+    }
+
+    // Close the sidebar with the close button
+    function w3_close() {
+      mySidebar.style.display = "none";
+      overlayBg.style.display = "none";
+    }
+    </script>
+
+
+    <div id="loader" class="w3-main" style="margin-left:400px;margin-top:60px;display: None;">
+        <i class="fa fa-gears w3-margin-right"></i> Ongoing process, please wait.
+        <br><br>
+        <div class="loader"></div>
+    </div>
+    <!-- end sidebar_menu -->
+
+
+    <!-- !PAGE CONTENT! -->
+    <div class="w3-main" style="margin-left:300px;margin-top:43px;">
+
+
+    </div>
+
+</body>
+</html>

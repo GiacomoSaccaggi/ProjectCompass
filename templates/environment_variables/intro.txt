@@ -1,0 +1,32 @@
+<p>
+    ProjectCompass is an intelligent aggregation and analysis platform designed to bring clarity and order to your software projects. It systematically gathers, organizes, and analyzes codebase data, providing a comprehensive overview that traditional tools often miss.
+</p>
+
+<h2>Key Features:</h2>
+
+<ul>
+    <li>
+        <strong>Holistic Codebase Aggregation:</strong> ProjectCompass consolidates analysis and project data from across your entire codebase, bringing disparate information into one cohesive view.
+    </li>
+    <li>
+        <strong>Intelligent Ordering & Structuring:</strong> Say goodbye to information overload. Our smart algorithms process and logically arrange all collected data, making it easy to navigate and understand complex project landscapes.
+    </li>
+    <li>
+        <strong>Comprehensive Link Discovery:</strong> Beyond static analysis, ProjectCompass actively seeks out and associates all relevant links – from documentation and external resources to dependency mappings – directly with your codebase elements.
+    </li>
+    <li>
+        <strong>Actionable Insight Extraction:</strong> Unlock the true potential of your data. ProjectCompass doesn't just present information; it extracts meaningful insights, highlighting critical patterns, potential issues, and optimization opportunities to guide your development decisions.
+    </li>
+    <li>
+        <strong>Enhanced Project Visibility:</strong> Gain unparalleled visibility into your project's health, dependencies, and evolutionary path, empowering teams to make informed decisions and maintain a clear direction.
+    </li>
+</ul>
+
+<h2>Why ProjectCompass?</h2>
+
+<p>
+    In today's fast-paced development environment, understanding the full scope and interconnectedness of your codebase is paramount. ProjectCompass acts as your definitive guide, transforming raw data into a strategic asset.
+</p>
+<p>
+    Navigate your projects with confidence, discover hidden opportunities, and steer your development towards success.
+</p>
