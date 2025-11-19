@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+
+<style>
+input[type=button], input[type=submit], input[type=reset] {
+  padding: 16px 32px;
+  text-decoration: none;
+  margin: 4px 2px;
+  cursor: pointer;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: white;
+  color:  #4614B4;
+  border: 2px solid  #2D323A;
+  text-align: center;
+  transition: all 0.5s;
+  cursor: pointer;
+  margin: 5px;
+}
+:root {
+  --radius: 2px;
+  --baseFg: dimgray;
+  --baseBg: white;
+  --accentFg: #222831;
+  --accentBg:  #2D323A;
+}
+input[type=button]:hover, input[type=submit]:hover, input[type=reset]:hover {
+      background-color:  #2D323A;
+      color: white;
+    }
+input[type=text], input[type=month], input[type=email], input[type=file], textarea {
+  padding: 6px 12px;
+  text-decoration: none;
+  margin: 4px 2px;
+  cursor: pointer;
+  width: 60%;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: white;
+  color:  #005F81 ;
+  border: 2px solid  #00889B;
+  text-align: center;
+  transition: all 0.5s;
+  cursor: pointer;
+  margin: 5px;
+}
+
+
+#table-wrapper {
+  position:relative;
+}
+#table-scroll {
+  height:500px;
+  overflow:auto;
+  margin-top:20px;
+}
+#table-wrapper table {
+  width:100%;
+
+}
+#table-wrapper table * {
+  color:black;
+}
+#table-wrapper table thead th .text {
+  position:absolute;
+  top:-20px;
+  z-index:2;
+  height:20px;
+  width:35%;
+  border:1px solid red;
+}
+.column_result_save {
+  float: left;
+  width: 50%;
+  padding: 10px;
+}
+
+</style>
+
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<style>
+
+header{
+  position: relative;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-image: url(http://127.0.0.1:{{ port }}/{{ project_folder }}/static/img/background1.PNG);
+  height: 50%;
+  width:100%;
+  color: #F8F8F8;
+  text-align: left;
+  padding-top: 5%;
+  font-size:32px;
+}
+button {
+  background-color: #8A2BE2;
+  margin-right: 5px;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #6B238E;
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.4);
+}
+</style>
+<body class="w3-light-grey">
+
+{{ top_container|safe }}
+
+{{ sidebar_menu|safe }}
+
+
+<!-- !PAGE CONTENT! -->
+<div class="w3-main" style="margin-left:300px;margin-top:43px;" id="main_body">
+  <!-- Header -->
+  <header class="w3-container" style="padding-top:22px">
+      <br>
+    <h1><b><i class="fa fa-dashboard"></i>    Data Explorer {{ message|safe }}</b></h1>
+      <br>
+      <br>
+  </header>
+
+    <br>
+
+  <div class="w3-padding w3-container w3-card-1">
+
+        <h2>Query History</h2>
+          <h6><b><i class="fa fa-recycle"></i>    <a href="#" onclick="deleteHistory();return false;">Clear the history</a></b></h6><br>
+          <div id="queryhistory">
+            <!-- Qui verrà inserito il bottone generato dinamicamente -->
+          </div>
+    <br><br>
+      <form action="/query_results/" method="post" id="query_form" style="width: 100%;left:25%;top:10%;"  onkeypress="return copy_query(event)" onkeyup="return copy_query(event)" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+
+          <label for="output_query">Query:</label><br>
+          <pre><code contenteditable="true" class="language-sql" id="query" >{{ query }}</code></pre>
+          <textarea rows="50000" cols="50000" id="output_query" name="output_query" style="display:none;">{{ query }}</textarea><br>
+          <br><input type="submit" value="Run query">
+      </form>
+      <script type="text/javascript">
+        function blockSpecialCharNoSpaces(e){
+            var k;
+            document.all ? k = e.keyCode : k = e.which;
+            return ((k > 64 && k < 91) || (k > 96 && k < 123) || k == 8 || k == 95 || (k >= 48 && k <= 57));
+          }
+        function copy_query(e){
+            var k;
+            document.all ? k = e.keyCode : k = e.which;
+            document.getElementById("output_query").innerHTML = document.getElementById("query").innerHTML ;
+            document.getElementById("output_query_to_save").innerHTML = document.getElementById("query").innerHTML ;
+            document.getElementById("output_query_to_save_data").innerHTML = document.getElementById("query").innerHTML ;
+            return k;
+          }
+
+
+        var input = document.getElementById("body");
+        input.addEventListener("keyup", function(event) {
+            document.getElementById("output_query").innerHTML = document.getElementById("query").innerHTML ;
+            document.getElementById("output_query_to_save").innerHTML = document.getElementById("query").innerHTML ;
+            document.getElementById("output_query_to_save_data").innerHTML = document.getElementById("query").innerHTML ;
+        });
+
+
+      </script>
+
+      <script>
+
+
+        function salvaTesto() {
+          var testo = document.getElementById("output_query").value.trim();
+          var timestamp = new Date().getTime();
+          var queryHistory = JSON.parse(localStorage.getItem("queryHistory")) || [];
+
+          if (testo !== "select * from database.table limit 10") {
+            var nome = "MyQuery_" + timestamp;
+            var query = {
+              nome: nome,
+              testo: testo
+            };
+
+            // Aggiungi la query alla lista delle query
+            queryHistory.push(query);
+
+            // Salva la lista delle query nello storage locale
+            localStorage.setItem("queryHistory", JSON.stringify(queryHistory));
+
+            // Aggiorna la sezione delle query history
+            aggiornaQueryHistory();
+          }
+        }
+
+        function copiaTesto(testo) {
+          navigator.clipboard.writeText(testo);
+          alert("Copy query to the clipboard!");
+        }
+
+        function aggiornaQueryHistory() {
+          var queryHistory = JSON.parse(localStorage.getItem("queryHistory")) || [];
+          var queryHistoryDiv = document.getElementById("queryhistory");
+          queryHistoryDiv.innerHTML = "";
+
+          // Crea un bottone per ogni query nella lista
+          for (var i = 0; i < queryHistory.length; i++) {
+            var query = queryHistory[i];
+            var button = document.createElement("button");
+            button.textContent = query.nome;
+            button.onclick = (function(query) {
+              return function() {
+                copiaTesto(query.testo);
+              };
+            })(query);
+            queryHistoryDiv.appendChild(button);
+          }
+        }
+
+        function deleteHistory() {
+            localStorage.clear();
+            aggiornaQueryHistory();
+            // document.getElementById("queryhistory").style.display = "none";
+        }
+
+
+        // Aggiorna la sezione delle query history all'avvio della pagina
+        salvaTesto();
+        aggiornaQueryHistory();
+
+
+      </script>
+
+      <script>
+
+        document.getElementById("query").addEventListener("keydown", function(event) {
+          if (event.ctrlKey && event.keyCode === 13) {
+                event.preventDefault(); // Impedisci il comportamento predefinito di invio del form
+                document.getElementById("query_form").submit(); // Invia il form con id
+          }
+            if (event.altKey && event.shiftKey && event.keyCode === 69) {
+                event.preventDefault(); // Impedisci il comportamento predefinito di invio del form
+                document.getElementById("query_form").submit(); // Invia il form con id
+          }
+        });
+      </script>
+
+    <div style="display:{{ show_res }};">
+     <h5><b><i class="fa fa-sign-out"></i>    Results:</b></h5>
+      <a href="#" onclick="download_table_as_csv('query_result');">Download as CSV</a>
+       <div id="table-wrapper"><div id="table-scroll">
+        <table id="query_result">
+          <thead>
+            <tr>
+              {% for col in colonne %}
+                    <th>{{ col }}</th>
+               {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+              {% for n, row in df.iterrows() %}
+                <tr>
+                    {% for item in row %}
+                        <td>{{item}}</td>
+                    {% endfor %}
+                </tr>
+               {% endfor %}
+            </tbody>
+        </table>
+
+       </div>
+
+       </div>
+    </div>
+    <br><br>
+    <div style="display:{{ show_res }};">
+        <br><h5><b><i class="fa fa-save"></i>    Save the query:</b></h5>
+    </div>
+
+    <div class ="column_result_save" style="display:{{ show_res }};">
+          <form action="/graph_analysis/" method="post" style="width: 100%;left:25%;top:10%;" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+
+              <textarea rows="50000" cols="50000" id="output_query_to_rawgraph" name="output_query_to_rawgraph" style="display:none;">{{ query }}</textarea>
+              <br><input type="submit" value="Open in RAWGraphs">
+          </form>
+      </div>
+    <div class ="column_result_save" style="display:{{ show_res }};">
+          <form action="/tmp_table/" method="post" style="width: 100%;left:25%;top:10%;" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+              <label for="name_table">Temporary table name:</label><br>
+              <input type="text" id="name_table"  name="name_table" maxlength="40" onkeypress="return blockSpecialCharNoSpaces(event)" required><br>
+              <textarea rows="50000" cols="50000" id="output_query_to_save_data" name="output_query_to_save_data" style="display:none;">{{ query }}</textarea>
+              <br><input type="submit" value="Create temporary table">
+          </form>
+      </div>
+
+
+</div>
+    <script>
+        // Quick and simple export target #table_id into a csv
+        function download_table_as_csv(table_id, separator = ',') {
+            // Select rows from table_id
+            var rows = document.querySelectorAll('table#' + table_id + ' tr');
+            // Construct csv
+            var csv = [];
+            for (var i = 0; i < rows.length; i++) {
+                var row = [], cols = rows[i].querySelectorAll('td, th');
+                for (var j = 0; j < cols.length; j++) {
+                    // Clean innertext to remove multiple spaces and jumpline (break csv)
+                    var data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ')
+                    // Escape double-quote with double-double-quote (see https://stackoverflow.com/questions/17808511/properly-escape-a-double-quote-in-csv)
+                    data = data.replace(/"/g, '""');
+                    // Push escaped string
+                    row.push('"' + data + '"');
+                }
+                csv.push(row.join(separator));
+            }
+            var csv_string = csv.join('\n');
+            // Download it
+            var filename = 'export_' + table_id + '_' + new Date().toLocaleDateString() + '.csv';
+            var link = document.createElement('a');
+            link.style.display = 'none';
+            link.setAttribute('target', '_blank');
+            link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+    </script>
+
+  <!-- Footer -->
+  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+                <hr><br>
+
+                <strong>About ProjectCompass</strong><br>
+                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
+                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
+                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
+  </footer>
+
+  <!-- End page content -->
+</div>
+
+</body>
+</html>

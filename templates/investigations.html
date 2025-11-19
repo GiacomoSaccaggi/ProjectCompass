@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  {{ head|safe }}
+<body class="w3-light-grey">
+
+  {{ top_container|safe }}
+
+  {{ sidebar_menu|safe }}
+<!-- !PAGE CONTENT! -->
+<div class="w3-main" id="main_body" style="margin-left:300px;margin-top:43px;">
+
+  <!-- Header -->
+  <header class="w3-container" style="padding-top:22px">
+      <h5><b><i class="fa fa-dashboard"></i>    Investigation</b></h5>
+
+  <div class="w3-container">
+    <div class="w3-row">
+        <div class="w3-container w3-blue-grey">
+        <h5><i class="fa fa-rebel w3-margin-right"></i>{{ title }}</h5>
+        </div>
+      <div class="w3-col m10 w3-container ">
+        <form action="/run_investigation/" class = "w3-padding w3-container w3-card-1" method="post">
+            {% for input in input_form %}
+              {{ input|safe }}
+            {% endfor %}
+            <br><br>
+          <button name="run_investigation" type="submit" class="w3-button w3-dark-grey" onclick="myloadershow()"><i class="fa fa-empire w3-margin-right"></i> Run the analysis</button>
+        </form>
+      </div>
+    </div>
+      <br>
+      <div class="loader" id="loader" style="display:none;"></div>
+      <script>
+          function myloadershow() {
+               let params = 'status=no,location=no,toolbar=no,menubar=no,width=600,height=600';
+               window.open('http://127.0.0.1:{{ port }}/{{ project_folder }}static/logging_page.html', params);
+               var x = document.getElementById("loader");
+               x.style.display = "block";
+               var main =  document.getElementById("main_body");
+               main.style.display = "none";
+               return true;
+            }
+      </script>
+
+  </div>
+
+    <br><br>
+  </header>
+
+
+
+  <!-- Footer -->
+  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+                <hr><br>
+
+                <strong>About ProjectCompass</strong><br>
+                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
+                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
+                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
+  </footer>
+
+  <!-- End page content -->
+</div>
+
+<script>
+// Get the Sidebar
+var mySidebar = document.getElementById("mySidebar");
+
+// Get the DIV with overlay effect
+var overlayBg = document.getElementById("myOverlay");
+
+// Toggle between showing and hiding the sidebar, and add overlay effect
+function w3_open() {
+  if (mySidebar.style.display === 'block') {
+    mySidebar.style.display = 'none';
+    overlayBg.style.display = "none";
+  } else {
+    mySidebar.style.display = 'block';
+    overlayBg.style.display = "block";
+  }
+}
+
+// Close the sidebar with the close button
+function w3_close() {
+  mySidebar.style.display = "none";
+  overlayBg.style.display = "none";
+}
+</script>
+
+</body>
+</html>
