@@ -26,8 +26,8 @@ class HTMLUtils:
                 self.tool_choices = yaml.safe_load(file)
             except yaml.YAMLError as exc:
                 print(exc)
-        if 'external_port' in os.environ:
-            self.constants['port'] = os.environ['external_port']
+        if 'PORT' in os.environ:
+            self.constants['port'] = os.environ['PORT']
         self.environments_info = {}
         for file in ['intro.txt', 'links.yaml', 'title.txt']:
             if '.yaml' in file:
