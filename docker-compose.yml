@@ -1,0 +1,36 @@
+services:
+  projectcompass:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      - PORT=8080
+      - USE_GITLAB_REPO=False
+      - USERNAME=docker_user
+      - OLLAMA_HOST=ollama:11434
+    volumes:
+      - ./Analyses:/app/Analyses
+      - ./Saved_data:/app/Saved_data
+      - ./Saved_queries:/app/Saved_queries
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./utils:/app/utils
+      - ./logs:/app/log
+    restart: unless-stopped
+    container_name: projectcompass_app
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    container_name: ollama
+
+volumes:
+  ollama_data:

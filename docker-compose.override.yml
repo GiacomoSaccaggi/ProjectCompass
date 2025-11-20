@@ -1,0 +1,15 @@
+# Docker Compose Override for Development
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.override.yml up
+
+version: '3.8'
+
+services:
+  projectcompass:
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+    volumes:
+      - .:/app  # Mount source code for hot reload
+    ports:
+      - "5000:5000"  # Direct Flask port for development
+    command: python app.py  # Use Flask dev server instead of Gunicorn
