@@ -35,8 +35,10 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 dir_path = os.path.dirname(path) + '/'
 print(dir_path)
 # Init WebApp
-app = Flask(__name__, template_folder=f'{dir_path}Templates', static_folder=f'{dir_path}/')
-CORS(app, resources={r"/*": {"origins": ["https://site_to_embedded_in.com"]}})
+# Usa templates minuscolo nel container Docker
+template_path = f'{dir_path}templates' if os.path.exists(f'{dir_path}templates') else f'{dir_path}Templates'
+app = Flask(__name__, template_folder=template_path, static_folder=f'{dir_path}/')
+CORS(app, resources={r"/*": {"origins": ["http://localhost", "*"]}})
 #CORS(app, resources={r"/*": {"origins": "*"}})
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 gunicorn_error_logger = logging.getLogger('gunicorn.error')
@@ -1110,5 +1112,10 @@ def after_request_func(response):
 
 
 if __name__ == '__main__':
-    app.run(port=webapp.constants["port"], debug='true' in str(webapp.constants["debug"]).strip().lower())
+    # Docker configuration
+    port = int(os.environ.get('PORT', webapp.constants["port"]))
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    host = '0.0.0.0' if os.environ.get('FLASK_ENV') == 'production' else '127.0.0.1'
+    
+    app.run(host=host, port=port, debug=debug)
 

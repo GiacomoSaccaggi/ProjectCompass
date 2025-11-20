@@ -177,6 +177,79 @@ Application uses Python logging with Gunicorn integration for production deploym
 
 Copyright ©2024 ProjectCompass. All rights reserved. Confidential and Proprietary.
 
+## Docker Deployment
+
+### Quick Start with Docker Compose
+
+```bash
+# Start both ProjectCompass and Ollama
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Manual Docker Setup
+
+```bash
+# Build and run with automatic Ollama setup
+./docker_build_and_run.sh
+
+# Or setup only Ollama
+./setup_ollama.sh
+```
+
+### Docker Services
+
+#### ProjectCompass Application
+- **Port**: 8080 (external) → 5000 (internal)
+- **Volumes**: 
+  - `./Analyses` → `/app/Analyses` (persistent data)
+  - `./logs` → `/app/log` (application logs)
+- **Environment**: Production mode with Gunicorn
+
+#### Ollama LLM Service
+- **Port**: 11434 (LLM API)
+- **Models**: 
+  - `llama3` (Large Language Model)
+  - `nomic-embed-text` (Embedding Model)
+- **Volume**: `ollama_data` (persistent model storage)
+
+### Docker Commands
+
+```bash
+# View application logs
+docker logs projectcompass_app
+
+# View Ollama logs
+docker logs ollama
+
+# Access application container
+docker exec -it projectcompass_app bash
+
+# Test Ollama API
+curl http://localhost:11434/api/tags
+
+# Stop all containers
+docker stop projectcompass_app ollama
+
+# Remove containers
+docker rm projectcompass_app ollama
+
+# Remove volumes (WARNING: deletes all data)
+docker volume rm ollama_data
+```
+
+### Production Considerations
+
+- **Resource Requirements**: Ollama requires significant RAM (8GB+ recommended)
+- **Model Storage**: LLM models require several GB of disk space
+- **Network**: Ensure ports 8080 and 11434 are available
+- **Backup**: Regularly backup `./Analyses` directory and `ollama_data` volume
+
 ## Support
 
 For issues and questions, please refer to the project documentation or contact the development team.
