@@ -1,0 +1,15 @@
+title: Website Traffic Analysis
+description: Monthly web analytics report tracking visitor behavior, conversion funnels, and content performance. Used to optimize marketing spend and UX decisions.
+product: Digital Marketing
+owner: Bob Smith
+collaborators: Eva Martinez, Grace Kim
+countries: Global
+start_date: 2024-03-01
+output_type: Interactive Report
+output description: Web analytics dashboard with traffic sources, page performance metrics, conversion rates, and A/B test results.
+dashboard link: ""
+gitlab: ""
+gdrive: ""
+inputs:
+links:
+  Web Analytics: https://en.wikipedia.org/wiki/Web_analytics
