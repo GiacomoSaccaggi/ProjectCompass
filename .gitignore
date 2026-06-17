@@ -4,8 +4,8 @@
 *.xlsx
 *.csv
 */output*
-*/data*
-data
+*/data/
+data/
 develop
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
