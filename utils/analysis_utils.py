@@ -1,16 +1,13 @@
 
 
 # Import Pkg
+import datetime
 import os
 import re
-import jwt
-import yaml
 import shutil
-import datetime
-import zlib
-import base64
-import pandas as pd
-from typing import Union
+
+import yaml
+
 
 class AnalysisUtils:
     def __init__(self, dir_path, **kwargs):
@@ -30,12 +27,12 @@ class AnalysisUtils:
         archive_from = os.path.dirname(source)
         archive_to = os.path.basename(source.strip(os.sep))
         shutil.make_archive(name, format, archive_from, archive_to)
-        shutil.move('%s.%s' % (name, format), destination)
+        shutil.move(f'{name}.{format}', destination)
 
 
     def read_single_analysis(self, main_folder, folder):
         analysis = {}
-        with open(f"{main_folder}/{folder}/metadata.yaml", 'r') as file:
+        with open(f"{main_folder}/{folder}/metadata.yaml") as file:
             try:
                 analysis = yaml.safe_load(file)
                 analysis['start_date'] = analysis['start_date'].strftime("%Y-%m-%d")
@@ -45,11 +42,12 @@ class AnalysisUtils:
                     'gitlab'] + '" target="_blank">Gitlab repository</a></b></h6>' if analysis['gitlab'] != '' and \
                                                                                       analysis[
                                                                                           'gitlab'] is not None else ''
-                analysis['gdrive_link_viz'] = '<br><h6><b><i class="fa fa-google"></i>    <a href="' + analysis[
-                    'gdrive'] + '" target="_blank">Google drive workspace</a></b></h6>' if analysis[
-                                                                                               'gdrive'] != '' and \
-                                                                                           analysis[
-                                                                                               'gdrive'] is not None else ''
+                gdrive = analysis['gdrive']
+                analysis['gdrive_link_viz'] = (
+                    '<br><h6><b><i class="fa fa-google"></i>    <a href="'
+                    + gdrive + '" target="_blank">Google drive workspace</a></b></h6>'
+                    if gdrive and gdrive != '' else ''
+                )
                 analysis['inputs'] = {} if analysis['inputs'] is None else analysis['inputs']
                 analysis['inline_inputs'] = ';'.join(
                     [f"{k}:{v['type']}={v['default']}" for k, v in analysis['inputs'].items()])
@@ -63,7 +61,7 @@ class AnalysisUtils:
             except yaml.YAMLError as exc:
                 print(exc)
         analysis['versions_dashboard'] = {}
-        with open(f"{main_folder}/{folder}/output_versions.yaml", 'r') as file:
+        with open(f"{main_folder}/{folder}/output_versions.yaml") as file:
             try:
                 verions = yaml.safe_load(file)
             except yaml.YAMLError as exc:
@@ -81,7 +79,7 @@ class AnalysisUtils:
                                                   [i for i in
                                                    os.listdir(f"{main_folder}/{folder}/physical_output/main") if
                                                    '.ini' not in i][0]
-                    # analysis['versions_output']['main'] = f'{self.analysis_folder}/{folder}/physical_output/main/'+[i for i in os.listdir(f"{main_folder}/{folder}/physical_output/main") if '.ini' not in i][0]
+                    # versions_output main path removed for brevity
                 elif '.' in f and '.ini' not in f:
                     analysis['versions_output'][
                         f.split('.')[0]] = f'{self.analysis_folder}/{folder}/physical_output/' + f
@@ -91,7 +89,7 @@ class AnalysisUtils:
                 f"{main_folder}/{folder}/analysis") and 'metadata_automatic_report.yaml' in os.listdir(
                 f"{main_folder}/{folder}/analysis"):
             analysis['structured_analysis'] = 'y'
-            with open(f"{main_folder}/{folder}/analysis/metadata_automatic_report.yaml", 'r') as file:
+            with open(f"{main_folder}/{folder}/analysis/metadata_automatic_report.yaml") as file:
                 try:
                     metadata_struct = yaml.safe_load(file)
                 except yaml.YAMLError as exc:
@@ -105,9 +103,9 @@ class AnalysisUtils:
                 file.write(f"# {analysis['title']}\n")
                 file.write(f"### Author: {analysis['owner']} ({analysis['collaborators']})\n")
                 file.write(f"### Product: {analysis['product']} ({analysis['countries']})\n")
-                file.write(f"## Description\n")
+                file.write("## Description\n")
                 file.write(f"> {analysis['description']}\n")
-                file.write(f"## Output description:\n")
+                file.write("## Output description:\n")
                 file.write(f"> {analysis['output description']}\n")
         except Exception:
             pass
@@ -140,8 +138,8 @@ class AnalysisUtils:
                               <circle cx="50" cy="50" r="5" fill="#2D323A"/>
                               <path d="M75 50C75 63.8071 63.8071 75 50 75C36.1929 75 25 63.8071 25 50C25 36.1929 36.1929 25 50 25" stroke="#9E9E9E" stroke-width="2" stroke-dasharray="2 4"/>
                               </svg>\n\n\n""")
-                file.write(f"# ProjectCompass - Analysis catalog\n")
-                for k, v in analyses.items():
+                file.write("# ProjectCompass - Analysis catalog\n")
+                for _k, v in analyses.items():
                     file.write(f"### {v['product']}: {v['title']} ({v['owner']})\n")
         except Exception:
             pass
@@ -177,7 +175,7 @@ class AnalysisUtils:
                 f.write(f"collaborators: {collaborators}\n")
                 f.write(f"product: {product}\n")
                 f.write(f"countries: {countries}\n")
-                f.write(f"inputs:\n")
+                f.write("inputs:\n")
                 if listinputs != ['']:
                     for single_input in [i for i in listinputs if i != '' and ':' in i and '=' in i]:
                         var = single_input.split(':')[0]
@@ -185,7 +183,7 @@ class AnalysisUtils:
                         f.write(f"    {var}:\n")
                         f.write(f'        default: "{var_default}"\n')
                         f.write(f"        type: {var_type}\n")
-                f.write(f"links:\n")
+                f.write("links:\n")
                 if listlinks != ['']:
                     for single_link in [i for i in listlinks if i != '' and ':' in i]:
                         name, link = single_link.split("===")
@@ -206,7 +204,7 @@ class AnalysisUtils:
             files_py = []
             files_sql = []
             for file in request.files.getlist('upload_files'):
-                if '/' in file.filename and '/.' not in file.filename and type(file.filename) == str:
+                if '/' in file.filename and '/.' not in file.filename and isinstance(file.filename, str):
                     file_name = '/'.join(file.filename.split('/')[1:])
                     files.append(f"{self.save_folder_path}/{title}/analysis/{file_name}")
                     if '.py' == file_name[-3:] or '.ipynb' == file_name[-6:]:
@@ -234,28 +232,28 @@ class AnalysisUtils:
             if files_py:
                 try:
                     res = os.system(f" cd {self.save_folder_path}/{title} && " +
-                                    f"set PYTHONPATH=analysis && " +
-                                    f"python -m pdoc --html --output-dir documentation analysis --force --skip-errors")
+                                    "set PYTHONPATH=analysis && " +
+                                    "python -m pdoc --html --output-dir documentation analysis --force --skip-errors")
                     if res == 1:
                         os.system(f" cd {self.save_folder_path}/{title} && " +
-                                  f"export PYTHONPATH=analysis && " +
-                                  f"python -m pdoc --html --output-dir documentation analysis --force --skip-errors")
-                except:
+                                  "export PYTHONPATH=analysis && " +
+                                  "python -m pdoc --html --output-dir documentation analysis --force --skip-errors")
+                except Exception:
                     try:
                         res = os.system(f" cd {self.save_folder_path}/{title} && " +
-                                        f"set PYTHONPATH=analysis && " +
-                                        f"python -m pdoc --output-dir documentation analysis")
+                                        "set PYTHONPATH=analysis && " +
+                                        "python -m pdoc --output-dir documentation analysis")
                         if res == 1:
                             os.system(f" cd {self.save_folder_path}/{title} && " +
-                                      f"export PYTHONPATH=analysis && " +
-                                      f"python -m pdoc --output-dir documentation analysis")
-                    except:
+                                      "export PYTHONPATH=analysis && " +
+                                      "python -m pdoc --output-dir documentation analysis")
+                    except Exception:
                         os.mkdir(f"{self.save_folder_path}/{title}/documentation")
                 # if files_py != []:
                 requirements = []
                 queries = []
                 for file in files_py:
-                    with open(file, 'r', encoding="utf-8") as f:
+                    with open(file, encoding="utf-8") as f:
                         texts = '\n'.join(f.readlines())
                         requirements.extend([i[1] if i[0] == '' and i[1] != '' else i[0]
                                              for i in re.findall(
@@ -274,7 +272,7 @@ class AnalysisUtils:
                                            .replace('"""', ' ###PARAGRAPH### ').replace("'''", ' ###PARAGRAPH### ')
                                            )) if 'select' in i.lower() and 'from' in i.lower() and n % 2 != 1])
                 with open(f"{self.save_folder_path}/{title}/requirements.txt", 'w') as f:
-                    f.write(f'# Requirements extract automatically from analysis tool')
+                    f.write('# Requirements extract automatically from analysis tool')
                     for pkg in set(requirements):
                         f.write(f'{pkg}\n')
                 for n, q in enumerate(queries):
@@ -318,7 +316,7 @@ class AnalysisUtils:
                 f.write(f"collaborators: {collaborators}\n")
                 f.write(f"product: {product}\n")
                 f.write(f"countries: {countries}\n")
-                f.write(f"inputs:\n")
+                f.write("inputs:\n")
                 if listinputs != ['']:
                     for single_input in [i for i in listinputs if i != '' and ':' in i and '=' in i]:
                         var = single_input.split(':')[0]
@@ -326,7 +324,7 @@ class AnalysisUtils:
                         f.write(f"    {var}:\n")
                         f.write(f'        default: "{var_default}"\n')
                         f.write(f"        type: {var_type}\n")
-                f.write(f"links:\n")
+                f.write("links:\n")
                 if listlinks != ['']:
                     for single_link in [i for i in listlinks if i != '' and ':' in i]:
                         name, link = single_link.split("===")
@@ -337,7 +335,7 @@ class AnalysisUtils:
                 f.write(f"output_type: {output_type}\n")
                 f.write(f"output description:\n    {output_description}\n")
             try:
-                with open(f"{self.save_folder_path}/{title}/output_versions.yaml", 'r') as file:
+                with open(f"{self.save_folder_path}/{title}/output_versions.yaml") as file:
                     try:
                         versions = yaml.safe_load(file)
                     except yaml.YAMLError as exc:
@@ -356,7 +354,7 @@ class AnalysisUtils:
                         f'{self.save_folder_path}/{title}/physical_output/{file_name}')
                     request.files['output_file'].save(
                         f"{self.save_folder_path}/{title}/physical_output/main/{file_name}")
-            except Exception as e:
+            except Exception:
                 pass
         except Exception as e:
             error += str(e)
