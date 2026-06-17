@@ -1,0 +1,15 @@
+title: Employee Satisfaction Survey
+description: Annual employee engagement analysis measuring satisfaction scores across departments, identifying key drivers of retention and areas requiring improvement.
+product: Human Resources
+owner: Iris Chen
+collaborators: Frank Lee
+countries: Global
+start_date: 2024-02-01
+output_type: PDF Report
+output description: Comprehensive report with department-level satisfaction scores, trend analysis vs previous year, and actionable recommendations.
+dashboard link: ""
+gitlab: ""
+gdrive: ""
+inputs:
+links:
+  Employee Engagement: https://en.wikipedia.org/wiki/Employee_engagement

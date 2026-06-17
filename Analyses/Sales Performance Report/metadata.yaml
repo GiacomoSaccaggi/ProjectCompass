@@ -1,0 +1,15 @@
+title: Sales Performance Report
+description: Quarterly analysis of sales metrics across regions and product categories. Identifies top performers, trends, and opportunities for growth.
+product: Business Intelligence
+owner: Alice Johnson
+collaborators: Bob Smith, David Brown
+countries: Global
+start_date: 2024-01-15
+output_type: Dashboard + CSV export
+output description: Interactive dashboard showing revenue trends, regional breakdowns, and product performance with exportable data tables.
+dashboard link: ""
+gitlab: ""
+gdrive: ""
+inputs:
+links:
+  Sales Methodology: https://en.wikipedia.org/wiki/Sales_management

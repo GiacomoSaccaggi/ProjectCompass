@@ -22,6 +22,8 @@ COPY templates/ templates/
 COPY static/ static/
 COPY utils/ utils/
 COPY blueprints/ blueprints/
+COPY Saved_data/ Saved_data/
+COPY Analyses/ Analyses/
 
 COPY docker_startup.sh /usr/local/bin/startup.sh
 RUN chmod +x /usr/local/bin/startup.sh

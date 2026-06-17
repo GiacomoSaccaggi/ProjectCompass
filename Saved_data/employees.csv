@@ -1,0 +1,11 @@
+employee_id,name,department,role,salary,hire_date,performance_score
+1001,Alice Johnson,Engineering,Senior Developer,95000,2019-03-15,4.5
+1002,Bob Smith,Marketing,Campaign Manager,72000,2020-07-01,3.8
+1003,Carol Williams,Engineering,Tech Lead,115000,2017-11-20,4.8
+1004,David Brown,Sales,Account Executive,68000,2021-01-10,4.1
+1005,Eva Martinez,Engineering,Junior Developer,62000,2022-06-15,3.9
+1006,Frank Lee,Marketing,Content Writer,58000,2021-09-01,3.5
+1007,Grace Kim,Sales,Sales Director,125000,2016-04-22,4.7
+1008,Henry Wilson,Engineering,DevOps Engineer,98000,2018-08-30,4.3
+1009,Iris Chen,Marketing,Marketing Director,110000,2017-02-14,4.6
+1010,Jack Taylor,Sales,Business Analyst,75000,2020-11-05,4.0

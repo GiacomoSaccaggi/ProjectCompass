@@ -3,6 +3,7 @@
 ### data files
 *.xlsx
 *.csv
+!Saved_data/*.csv
 */output*
 */data/
 data/
