@@ -12,17 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-cov ruff
+        run: uv sync
 
       - name: Lint with ruff
-        run: ruff check . --ignore E501
+        run: uv run ruff check .
 
       - name: Run tests
-        run: pytest --cov=. --cov-report=term-missing -v
+        run: uv run pytest --cov=. --cov-report=term-missing -v
