@@ -2,6 +2,23 @@
 
 All notable changes to ProjectCompass will be documented in this file.
 
+## [1.0.0] - 2026-06-17
+
+### Added
+- **Docker image on ghcr.io**: `ghcr.io/giacomosaccaggi/projectcompass:latest`
+- **GitHub Actions**: Auto-publish Docker image on version tags (`v*`)
+- **`docker-compose.public.yml`**: One-command install for end users (no build required)
+
+### Changed
+- **CI**: Switched from pip to `uv` for consistent lint/test across local and CI
+- **CI**: Lint and tests now run only on tag push (not every commit)
+- **docker-compose.yml**: Uses published ghcr.io image by default (build commented out)
+- **Ruff config**: Added per-file-ignores and additional rule suppressions for legacy code
+
+### Fixed
+- **`.gitignore`**: `*/data*` rule was excluding `blueprints/data.py` — changed to `*/data/`
+- **Linting**: Resolved all 70+ ruff errors (import sorting, type comparisons, bare excepts, etc.)
+
 ## [0.1.0] - 2026-06-16
 
 ### Added
