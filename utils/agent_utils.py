@@ -24,11 +24,11 @@ def _initialize_llm(folder_data: str, file_data: str):
 
     try:
         from llama_index.core import Settings, SimpleDirectoryReader, VectorStoreIndex
-        from llama_index.core.tools import QueryEngineTool, ToolMetadata
         from llama_index.core.query_engine import RouterQueryEngine
         from llama_index.core.selectors import LLMSingleSelector
-        from llama_index.llms.ollama import Ollama
+        from llama_index.core.tools import QueryEngineTool, ToolMetadata
         from llama_index.embeddings.ollama import OllamaEmbedding
+        from llama_index.llms.ollama import Ollama
 
         ollama_host = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
         Settings.llm = Ollama(model="llama3", base_url=ollama_host)
