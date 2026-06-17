@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat - ProjectCompass</title>
+    {{ head | safe }}
+    <style>
+        .chat-container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .chat-messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
+        .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; max-width: 80%; }
+        .msg-user { background: #e3f2fd; margin-left: auto; text-align: right; }
+        .msg-bot { background: #f5f5f5; }
+        .msg-expr { font-family: monospace; font-size: 0.85em; color: #666; margin-top: 4px; }
+        .chat-input { display: flex; gap: 10px; }
+        .chat-input input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .chat-input button { padding: 10px 20px; background: #3F51B5; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .chat-input button:hover { background: #303F9F; }
+        .chat-input button:disabled { background: #ccc; }
+        select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+{{ top_container | safe }}
+{{ sidebar_menu | safe }}
+<div style="margin-left:300px">
+    <div class="chat-container">
+        <h2>🤖 Data Chat Assistant</h2>
+        <p style="color:#666">Ask questions about your datasets in natural language. The AI will generate and execute pandas queries safely.</p>
+        <div style="margin-bottom:10px">
+            <label for="dataset">Dataset: </label>
+            <select id="dataset">
+                {% for ds in datasets %}
+                <option value="{{ ds }}">{{ ds }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="chat-messages" id="messages"></div>
+        <div class="chat-input">
+            <input type="text" id="question" placeholder="Ask about your data..." onkeypress="if(event.key==='Enter')sendMsg()">
+            <button onclick="sendMsg()" id="sendBtn">Send</button>
+        </div>
+    </div>
+</div>
+<script>
+function sendMsg() {
+    const q = document.getElementById('question');
+    const ds = document.getElementById('dataset').value;
+    const msgs = document.getElementById('messages');
+    const btn = document.getElementById('sendBtn');
+    if (!q.value.trim()) return;
+    
+    msgs.innerHTML += `<div class="msg msg-user">${q.value}</div>`;
+    btn.disabled = true;
+    
+    fetch('/chat/ask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question: q.value, dataset: ds})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            msgs.innerHTML += `<div class="msg msg-bot" style="color:red">⚠️ ${data.error}</div>`;
+        } else {
+            msgs.innerHTML += `<div class="msg msg-bot"><pre>${data.answer}</pre><div class="msg-expr">Expression: ${data.expression}</div></div>`;
+        }
+        msgs.scrollTop = msgs.scrollHeight;
+    })
+    .catch(e => {
+        msgs.innerHTML += `<div class="msg msg-bot" style="color:red">Error: ${e}</div>`;
+    })
+    .finally(() => { btn.disabled = false; });
+    
+    q.value = '';
+}
+</script>
+</body>
+</html>

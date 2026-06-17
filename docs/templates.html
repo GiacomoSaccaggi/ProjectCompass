@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Templates – ProjectCompass Docs</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
+    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5;margin-top:2.5rem}
+    h3{color:#2d323a;margin-top:1.5rem;font-size:1rem}
+    p,li{line-height:1.7;font-size:.95rem}
+    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.85rem}
+    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.84rem;line-height:1.6}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.07);margin:1rem 0 2rem}
+    th{background:#3F51B5;color:#fff;padding:.65rem 1rem;text-align:left;font-size:.85rem}
+    td{padding:.6rem 1rem;border-bottom:1px solid #eef;font-size:.85rem;vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Templates Guide</h1>
+  <p>Jinja2 templates, variables, and the header injection system</p>
+</header>
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="overview.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="routes.html">API Routes</a>
+  <a href="core_classes.html">Core Classes</a>
+  <a href="templates.html">Templates</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="docker.html">Docker</a>
+</nav>
+<main>
+
+  <h2>Header Injection System</h2>
+  <p>
+    Rather than Jinja2 template inheritance, ProjectCompass uses a custom partial-injection approach.
+    <code>header.html</code> is parsed once at startup by <code>HTMLUtils.__init__()</code> using HTML comment markers:
+  </p>
+  <pre>&lt;!-- start head --&gt;        ...CSS/JS includes...   &lt;!-- end head --&gt;
+&lt;!-- start top_container --&gt;  ...top bar HTML...   &lt;!-- end top_container --&gt;
+&lt;!-- start sidebar_menu --&gt;   ...sidebar HTML...   &lt;!-- end sidebar_menu --&gt;</pre>
+  <p>
+    Each section is stored in <code>self.html_parts</code>. Before every render, <code>substitute_html(port=..., project_folder=...)</code>
+    replaces <code>{{ port }}</code> and <code>{{ project_folder }}</code> placeholders and returns the three rendered strings,
+    which are passed as <code>head</code>, <code>top_container</code>, and <code>sidebar_menu</code> to <code>render_template()</code>.
+  </p>
+  <p>Every template injects them with the <code>|safe</code> filter:</p>
+  <pre>{{ head|safe }}
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}</pre>
+
+  <h2>Common Variables</h2>
+  <p>These variables are passed to almost every template:</p>
+  <table>
+    <tr><th>Variable</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>head</code></td><td>str (HTML)</td><td>Rendered <code>&lt;head&gt;</code> section with CSS/JS includes</td></tr>
+    <tr><td><code>top_container</code></td><td>str (HTML)</td><td>Top navigation bar</td></tr>
+    <tr><td><code>sidebar_menu</code></td><td>str (HTML)</td><td>Left sidebar with navigation links</td></tr>
+    <tr><td><code>title</code></td><td>str</td><td>Page title from <code>title.txt</code></td></tr>
+    <tr><td><code>port</code></td><td>int</td><td>Application port (from <code>constants.yaml</code>)</td></tr>
+    <tr><td><code>project_folder</code></td><td>str</td><td>URL-safe project folder prefix (e.g. <code>ProjectCompass/</code>)</td></tr>
+    <tr><td><code>intro</code></td><td>str or False</td><td>Intro text from <code>intro.txt</code>; <code>False</code> hides the stats block</td></tr>
+    <tr><td><code>links</code></td><td>dict</td><td>Useful links from <code>links.yaml</code></td></tr>
+  </table>
+
+  <h2>Template Reference</h2>
+
+  <h3>index.html – Dashboard</h3>
+  <p>The main landing page. When <code>intro</code> is truthy it renders four KPI cards (analyses count, owners, structured analyses, products) and a polar-area Chart.js chart of analyses by product.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>intro_title</code></td><td>Raw HTML injected above the stats (hero image or overview text)</td></tr>
+    <tr><td><code>number_of_analysis</code></td><td>Total analyses count</td></tr>
+    <tr><td><code>number_of_owners</code></td><td>Distinct owner count</td></tr>
+    <tr><td><code>number_of_structured_analysis</code></td><td>Analyses with execution engine enabled</td></tr>
+    <tr><td><code>number_of_products</code></td><td>Distinct product count</td></tr>
+    <tr><td><code>product_labels</code></td><td>JS-safe comma-separated quoted product names</td></tr>
+    <tr><td><code>product_res</code></td><td>Comma-separated counts per product</td></tr>
+    <tr><td><code>product_color1/2</code></td><td>Randomly generated RGBA colour strings for the chart</td></tr>
+  </table>
+
+  <h3>analysis.html – Analysis Catalog</h3>
+  <p>Renders an accordion list of all analyses with search/filter controls (text, product, country, date range). Each accordion panel shows full metadata and action links.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>analysis</code></td><td>Dict of analysis dicts keyed by folder name (from <code>read_multiple_analysis()</code>)</td></tr>
+    <tr><td><code>tool_choices</code></td><td>Dict from <code>tool_choices.yaml</code> used to populate datalist dropdowns</td></tr>
+  </table>
+  <p>The client-side <code>search_function()</code> filters accordion items in real time across name, description, product, country, and date fields without any server round-trip.</p>
+
+  <h3>create_analysis.html – Upload / Edit Form</h3>
+  <p>Multi-field form for creating or editing an analysis. Pre-filled when <code>new_analysis=False</code>.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>new_analysis</code></td><td>Boolean – controls form mode (create vs edit)</td></tr>
+    <tr><td><code>analysis</code></td><td>Existing analysis dict for pre-filling (empty dict for new)</td></tr>
+    <tr><td><code>tool_choices</code></td><td>Dropdown options for product, countries, output type</td></tr>
+  </table>
+
+  <h3>query_results.html – SQL Runner</h3>
+  <p>Rich-text SQL editor (with syntax highlighting) and a results table. Action buttons send the query to <code>/query_results/</code>, <code>/save_query/</code>, <code>/tmp_table/</code>, or <code>/graph_analysis/</code>.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>query</code></td><td>Pre-filled SQL string</td></tr>
+    <tr><td><code>df</code></td><td>pandas DataFrame with query results</td></tr>
+    <tr><td><code>columns</code></td><td>Column names list</td></tr>
+    <tr><td><code>show_res</code></td><td><code>'block'</code> or <code>'none'</code> – controls result panel visibility</td></tr>
+    <tr><td><code>message</code></td><td>Status/error message (e.g. truncation warning)</td></tr>
+  </table>
+
+  <h3>data_upload.html – File Upload</h3>
+  <p>Form for uploading CSV/TSV/text files. Accepts separator and header-row configuration.</p>
+
+  <h3>data_list.html – Data List</h3>
+  <p>Lists all available datasets with links to open them in the SQL runner.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>all_data</code></td><td>List of dataset names from <code>list_data()</code></td></tr>
+  </table>
+
+  <h3>investigations.html – Execution Form</h3>
+  <p>Dynamically generated form for running a structured analysis. Input fields are built server-side from <code>metadata_automatic_report.yaml</code>.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>input_form</code></td><td>List of HTML input strings injected into the form</td></tr>
+  </table>
+
+  <h3>iframetemplate.html – Iframe Wrapper</h3>
+  <p>Generic wrapper that either embeds a URL in an <code>&lt;iframe&gt;</code> or injects raw HTML (for embedded dashboards containing <code>&lt;script&gt;</code> tags).</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>url</code></td><td>URL to load in the iframe (empty if using <code>obj</code>)</td></tr>
+    <tr><td><code>obj</code></td><td>Raw HTML to inject directly (empty if using <code>url</code>)</td></tr>
+    <tr><td><code>title</code></td><td>Page title / direct link anchor</td></tr>
+  </table>
+
+  <h3>versions_single_analysis.html – Version Manager</h3>
+  <p>Shows all dashboard link versions and physical output versions for one analysis, with add/delete controls.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>values</code></td><td>Full analysis dict from <code>read_single_analysis()</code></td></tr>
+    <tr><td><code>nome</code></td><td>Analysis folder name</td></tr>
+  </table>
+
+  <h3>RAWGraphs.html – Visualisation</h3>
+  <p>Embeds the RAWGraphs charting library. When <code>input_data</code> is provided (CSV string from a query), it is pre-loaded into the tool.</p>
+  <table>
+    <tr><th>Variable</th><th>Description</th></tr>
+    <tr><td><code>input_data</code></td><td>CSV string with newlines escaped as <code>\n</code></td></tr>
+  </table>
+
+  <h3>Other Templates</h3>
+  <table>
+    <tr><th>Template</th><th>Purpose</th></tr>
+    <tr><td><code>login_page.html</code></td><td>Login form (username + password)</td></tr>
+    <tr><td><code>process_complete.html</code></td><td>Success confirmation after analysis upload</td></tr>
+    <tr><td><code>internal_error.html</code></td><td>Error page shown when analysis upload fails</td></tr>
+    <tr><td><code>not_found_error.html</code></td><td>404 error page</td></tr>
+    <tr><td><code>loader.html</code></td><td>Spinning loader shown during long operations</td></tr>
+    <tr><td><code>todopage.html</code></td><td>Personal notes / to-do list page</td></tr>
+  </table>
+
+</main>
+<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+</body>
+</html>

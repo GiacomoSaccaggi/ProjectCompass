@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration – ProjectCompass Docs</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
+    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5;margin-top:2.5rem}
+    h3{color:#2d323a;margin-top:1.5rem;font-size:1rem}
+    p,li{line-height:1.7;font-size:.95rem}
+    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.85rem}
+    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.84rem;line-height:1.6}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.07);margin:1rem 0 2rem}
+    th{background:#3F51B5;color:#fff;padding:.65rem 1rem;text-align:left;font-size:.85rem}
+    td{padding:.6rem 1rem;border-bottom:1px solid #eef;font-size:.85rem;vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Configuration Reference</h1>
+  <p>YAML files, config.py classes, and environment variables</p>
+</header>
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="overview.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="routes.html">API Routes</a>
+  <a href="core_classes.html">Core Classes</a>
+  <a href="templates.html">Templates</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="docker.html">Docker</a>
+</nav>
+<main>
+
+  <h2>constants.yaml</h2>
+  <p>Path: <code>templates/environment_variables/constants.yaml</code><br>
+  Loaded by <code>HTMLUtils.__init__()</code> into <code>self.constants</code>. Read on every application start.</p>
+  <table>
+    <tr><th>Key</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>port</code></td><td>5000</td><td>Port the Flask development server listens on. Overridden by the <code>PORT</code> environment variable.</td></tr>
+    <tr><td><code>debug</code></td><td>False</td><td>Flask debug mode flag.</td></tr>
+    <tr><td><code>logo_svg</code></td><td>(SVG string)</td><td>Inline SVG used as the application logo in download/result pages.</td></tr>
+  </table>
+
+  <h2>tool_choices.yaml</h2>
+  <p>Path: <code>templates/environment_variables/tool_choices.yaml</code><br>
+  Loaded into <code>self.tool_choices</code>. Drives all dropdown and datalist options in the UI.</p>
+  <table>
+    <tr><th>Key</th><th>Description</th></tr>
+    <tr><td><code>product</code></td><td>List of product categories shown in the analysis filter and upload form.</td></tr>
+    <tr><td><code>countries</code></td><td>List of country options for the analysis filter and upload form.</td></tr>
+    <tr><td><code>input type</code></td><td>Allowed variable types for analysis inputs (string, double, date, integer).</td></tr>
+    <tr><td><code>output type</code></td><td>Allowed output type descriptions for an analysis.</td></tr>
+  </table>
+  <p>To add a new product or country, append a value to the relevant list and restart the application.</p>
+
+  <h2>links.yaml</h2>
+  <p>Path: <code>templates/environment_variables/links.yaml</code><br>
+  Loaded into <code>self.environments_info['links']</code>. Rendered as a list of anchor tags on the dashboard.</p>
+  <pre>ProjectCompass: https://github.com/GiacomoSaccaggi/ProjectCompass
+Giacomo Saccaggi: https://giacomosaccaggi.github.io/</pre>
+  <p>Add any key-value pair to expose a new link on the dashboard sidebar.</p>
+
+  <h2>intro.txt and title.txt</h2>
+  <p>Path: <code>templates/environment_variables/</code><br>
+  Plain text files read into <code>self.environments_info['intro']</code> and <code>self.environments_info['title']</code>.
+  Edit these to customise the dashboard welcome text and the browser/page title without touching any Python code.</p>
+
+  <h2>config.py – Python Configuration</h2>
+  <p>Uses environment variables loaded via <code>python-dotenv</code> from a <code>.env</code> file. All secrets come from environment — never hardcoded.</p>
+  <table>
+    <tr><th>Setting</th><th>Env Variable</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>SECRET_KEY</code></td><td><code>SECRET_KEY</code></td><td>(random hex)</td><td>Flask session signing key. Set a fixed value in production.</td></tr>
+    <tr><td><code>DEBUG</code></td><td><code>FLASK_DEBUG</code></td><td>False</td><td>Enables Flask debug mode and auto-reloader.</td></tr>
+    <tr><td><code>PORT</code></td><td><code>PORT</code></td><td>5000</td><td>Application port.</td></tr>
+    <tr><td><code>ADMIN_USERNAME</code></td><td><code>ADMIN_USERNAME</code></td><td>admin</td><td>Login username.</td></tr>
+    <tr><td><code>ADMIN_PASSWORD_HASH</code></td><td><code>ADMIN_PASSWORD_HASH</code></td><td>(empty)</td><td>Werkzeug-hashed password. Generate with: <code>python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('pass'))"</code></td></tr>
+    <tr><td><code>USE_GITLAB_REPO</code></td><td><code>USE_GITLAB_REPO</code></td><td>False</td><td>Enables automatic git add/commit/push on every POST request.</td></tr>
+    <tr><td><code>OLLAMA_HOST</code></td><td><code>OLLAMA_HOST</code></td><td>http://localhost:11434</td><td>Ollama LLM endpoint (optional, app works without it).</td></tr>
+    <tr><td><code>ALLOWED_ORIGINS</code></td><td><code>ALLOWED_ORIGINS</code></td><td>*</td><td>Comma-separated list of allowed CORS origins for API routes.</td></tr>
+  </table>
+
+  <h2>Environment Variables Summary</h2>
+  <table>
+    <tr><th>Variable</th><th>Used by</th><th>Description</th></tr>
+    <tr><td><code>SECRET_KEY</code></td><td><code>config.py</code></td><td>Flask session encryption key.</td></tr>
+    <tr><td><code>ADMIN_USERNAME</code></td><td><code>config.py</code></td><td>Login username.</td></tr>
+    <tr><td><code>ADMIN_PASSWORD_HASH</code></td><td><code>config.py</code></td><td>Werkzeug-hashed login password.</td></tr>
+    <tr><td><code>PORT</code></td><td><code>config.py</code>, <code>HTMLUtils</code></td><td>Overrides the port in <code>constants.yaml</code> and the Flask run port.</td></tr>
+    <tr><td><code>FLASK_DEBUG</code></td><td><code>config.py</code></td><td>Set to <code>true</code> to enable debug mode.</td></tr>
+    <tr><td><code>FLASK_ENV</code></td><td><code>app.py</code></td><td>Set to <code>production</code> to bind on <code>0.0.0.0</code>.</td></tr>
+    <tr><td><code>OLLAMA_HOST</code></td><td><code>blueprints/agent.py</code></td><td>Ollama LLM endpoint. Optional.</td></tr>
+    <tr><td><code>ALLOWED_ORIGINS</code></td><td><code>app.py</code></td><td>CORS allowed origins for API routes.</td></tr>
+    <tr><td><code>USE_GITLAB_REPO</code></td><td><code>config.py</code></td><td>Enables GitLab auto-sync.</td></tr>
+  </table>
+
+  <h2>Analysis metadata.yaml Structure</h2>
+  <p>Each analysis folder contains a <code>metadata.yaml</code> file written by <code>upload_new_analysis()</code>:</p>
+  <pre>title: My Analysis
+start_date: 2024-01-15
+description:
+    Detailed description of the analysis purpose.
+owner: owner@example.com
+collaborators: collaborator@example.com
+product: Research project
+countries: Italy
+inputs:
+    start_month:
+        default: "2024-01"
+        type: date
+links:
+    Report: https://example.com/report
+gitlab: https://gitlab.com/repo
+gdrive: https://drive.google.com/folder
+dashboard link: "https://example.com/dashboard"
+output_type: Static report
+output description:
+    Description of what the output contains.</pre>
+
+  <h2>metadata_automatic_report.yaml (Structured Analyses)</h2>
+  <p>Present in <code>Analyses/&lt;name&gt;/analysis/</code> for analyses that support the execution engine. Defines the input form fields:</p>
+  <pre>input:
+  start_date:
+    HTML_input_type: date
+  environment:
+    HTML_input_type: radio
+    list:
+      - production
+      - research
+  region:
+    HTML_input_type: datalist
+    list:
+      - EU
+      - US</pre>
+  <p>Supported <code>HTML_input_type</code> values: <code>text</code>, <code>date</code>, <code>month</code>, <code>datetime-local</code>, <code>week</code>, <code>time</code>, <code>number</code>, <code>email</code>, <code>password</code>, <code>tel</code>, <code>url</code>, <code>color</code>, <code>radio</code>, <code>datalist</code>.</p>
+
+</main>
+<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+</body>
+</html>

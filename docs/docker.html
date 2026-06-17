@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker – ProjectCompass Docs</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
+    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5;margin-top:2.5rem}
+    h3{color:#2d323a;margin-top:1.5rem;font-size:1rem}
+    p,li{line-height:1.7;font-size:.95rem}
+    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.85rem}
+    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.84rem;line-height:1.6}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.07);margin:1rem 0 2rem}
+    th{background:#3F51B5;color:#fff;padding:.65rem 1rem;text-align:left;font-size:.85rem}
+    td{padding:.6rem 1rem;border-bottom:1px solid #eef;font-size:.85rem;vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    .warn{background:#fff8e1;border-left:4px solid #f9a825;padding:.8rem 1rem;border-radius:4px;font-size:.9rem;margin:1rem 0}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Docker Deployment</h1>
+  <p>Running ProjectCompass and Ollama with Docker Compose</p>
+</header>
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="overview.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="routes.html">API Routes</a>
+  <a href="core_classes.html">Core Classes</a>
+  <a href="templates.html">Templates</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="docker.html">Docker</a>
+</nav>
+<main>
+
+  <h2>Services Overview</h2>
+  <table>
+    <tr><th>Service</th><th>Image</th><th>External Port</th><th>Internal Port</th><th>Purpose</th></tr>
+    <tr><td><code>projectcompass_app</code></td><td>Custom (Dockerfile)</td><td>8080</td><td>5000</td><td>Flask app served by Gunicorn</td></tr>
+    <tr><td><code>ollama</code></td><td>ollama/ollama</td><td>11434</td><td>11434</td><td>Local LLM API (llama3 + nomic-embed-text)</td></tr>
+  </table>
+
+  <h2>Quick Start</h2>
+  <pre># Start both services
+docker-compose up -d
+
+# Follow logs
+docker-compose logs -f
+
+# Stop and remove containers
+docker-compose down</pre>
+
+  <h2>Volumes</h2>
+  <table>
+    <tr><th>Host Path</th><th>Container Path</th><th>Description</th></tr>
+    <tr><td><code>./Analyses</code></td><td><code>/app/Analyses</code></td><td>Analysis repository – persisted across restarts</td></tr>
+    <tr><td><code>./logs</code></td><td><code>/app/log</code></td><td>Application and Gunicorn logs</td></tr>
+    <tr><td><code>ollama_data</code> (named)</td><td><code>/root/.ollama</code></td><td>Downloaded LLM model weights</td></tr>
+  </table>
+
+  <h2>Environment Variables (Docker)</h2>
+  <table>
+    <tr><th>Variable</th><th>Value in Docker</th><th>Description</th></tr>
+    <tr><td><code>FLASK_ENV</code></td><td>production</td><td>Binds Flask on <code>0.0.0.0</code></td></tr>
+    <tr><td><code>PORT</code></td><td>5000</td><td>Internal port Gunicorn listens on</td></tr>
+    <tr><td><code>FLASK_DEBUG</code></td><td>False</td><td>Disables debug mode in production</td></tr>
+  </table>
+
+  <h2>Manual Setup Scripts</h2>
+  <pre># Build image and start containers automatically
+./docker_build_and_run.sh
+
+# Pull and configure Ollama models only
+./setup_ollama.sh
+
+# Docker maintenance (cleanup, rebuild)
+./scripts/docker_maintenance.sh</pre>
+
+  <h2>Useful Docker Commands</h2>
+  <pre># View application logs
+docker logs projectcompass_app
+
+# View Ollama logs
+docker logs ollama
+
+# Open a shell inside the app container
+docker exec -it projectcompass_app bash
+
+# Test Ollama API
+curl http://localhost:11434/api/tags
+
+# Stop containers without removing them
+docker stop projectcompass_app ollama
+
+# Remove containers
+docker rm projectcompass_app ollama
+
+# Remove the Ollama model volume (WARNING: deletes all downloaded models)
+docker volume rm ollama_data</pre>
+
+  <h2>Health Check</h2>
+  <p>The application exposes a health check endpoint at <code>GET /check</code> which returns <code>{"success": true}</code> with HTTP 200. The <code>.dockerhealthcheck</code> file configures Docker to poll this endpoint.</p>
+  <pre>curl http://localhost:8080/check</pre>
+
+  <h2>Production Considerations</h2>
+  <div class="warn">
+    Set <code>SECRET_KEY</code> and <code>ADMIN_PASSWORD_HASH</code> environment variables before deploying. Generate a password hash with: <code>python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('your-password'))"</code>
+  </div>
+  <ul>
+    <li><strong>RAM:</strong> Ollama with llama3 requires at least 8 GB of available RAM.</li>
+    <li><strong>Disk:</strong> LLM model weights require several GB of disk space in the <code>ollama_data</code> volume.</li>
+    <li><strong>Ports:</strong> Ensure ports 8080 and 11434 are not blocked by a firewall.</li>
+    <li><strong>Backups:</strong> Regularly back up the <code>./Analyses</code> directory and the <code>ollama_data</code> volume.</li>
+    <li><strong>CORS:</strong> Update <code>ALLOWED_ORIGINS</code> in <code>config.py</code> or via environment variable to restrict cross-origin access.</li>
+    <li><strong>Gunicorn:</strong> The production image uses Gunicorn as the WSGI server. Tune workers and timeout in <code>docker-compose.prod.yml</code> as needed.</li>
+  </ul>
+
+  <h2>Compose File Variants</h2>
+  <table>
+    <tr><th>File</th><th>Purpose</th></tr>
+    <tr><td><code>docker-compose.yml</code></td><td>Base configuration for both services</td></tr>
+    <tr><td><code>docker-compose.prod.yml</code></td><td>Production overrides (resource limits, restart policies)</td></tr>
+    <tr><td><code>docker-compose.override.yml</code></td><td>Local development overrides (auto-applied by Docker Compose)</td></tr>
+  </table>
+  <pre># Run with production overrides
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d</pre>
+
+</main>
+<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+</body>
+</html>

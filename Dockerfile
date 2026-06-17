@@ -3,33 +3,30 @@ FROM python:3.12-slim
 EXPOSE 8080
 ENV FLASK_ENV=production
 ENV FLASK_DEBUG=False
-ENV GUNICORN_ENDPOINT=0.0.0.0:8080
+ENV PORT=8080
 
 WORKDIR /app
-RUN mkdir -p log Analyses Saved_data Saved_queries templates static utils
+RUN mkdir -p log Analyses Saved_data Saved_queries templates static utils blueprints tmp
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y git build-essential && rm -rf /var/lib/apt/lists/*
-
-# Upgrade pip
-RUN pip install --upgrade pip
+RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install -r requirements.txt --no-cache-dir
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY app.py .
-COPY basefun.py .
-COPY config.py .
-COPY __init__.py .
-COPY run.py .
+COPY app.py basefun.py config.py logging_config.py run.py ./
+COPY pyproject.toml ./
 COPY templates/ templates/
 COPY static/ static/
 COPY utils/ utils/
+COPY blueprints/ blueprints/
 
-# Create startup script
 COPY docker_startup.sh /usr/local/bin/startup.sh
 RUN chmod +x /usr/local/bin/startup.sh
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["startup.sh"]
