@@ -70,3 +70,21 @@ uv run pytest tests/test_api.py -v
 - Reference any related issues
 - Ensure all tests pass and linter is clean
 - Update documentation if API or architecture changes
+
+## Releasing a New Version
+
+CI and Docker publish run only when you push a tag:
+
+```bash
+# 1. Commit your changes
+git add .
+git commit -m "feat: description"
+git push origin main
+
+# 2. Tag and push — this triggers lint, tests, and Docker image build
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The workflow publishes to `ghcr.io/giacomosaccaggi/projectcompass:latest` automatically.
+See [PUBLISHING.md](PUBLISHING.md) for full details.

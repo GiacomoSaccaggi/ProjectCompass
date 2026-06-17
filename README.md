@@ -25,33 +25,76 @@ ProjectCompass is a Python-based tool for teams that produce data analyses. It s
 
 ---
 
-## Quick Start
+## Quick Start with Docker
 
-### Local Development
+The fastest way to run ProjectCompass — no cloning or building required:
 
 ```bash
-# Clone and install
+# Download the compose file
+curl -O https://raw.githubusercontent.com/GiacomoSaccaggi/ProjectCompass/main/docker-compose.public.yml
+
+# Start
+docker compose -f docker-compose.public.yml up -d
+
+# Open browser
+open http://localhost:8080
+```
+
+To enable AI chat (optional):
+```bash
+docker exec ollama ollama pull llama3
+docker exec ollama ollama pull nomic-embed-text
+```
+
+To update to the latest version:
+```bash
+docker compose -f docker-compose.public.yml pull
+docker compose -f docker-compose.public.yml up -d
+```
+
+---
+
+## Local Development
+
+```bash
 git clone https://github.com/GiacomoSaccaggi/ProjectCompass.git
 cd ProjectCompass
 uv sync
 
-# Configure
 cp .env.example .env
 # Edit .env with your settings
 
-# Run
 uv run python app.py
 ```
 
 The app is available at `http://127.0.0.1:5000`
 
-### Docker
+### Running Tests
 
 ```bash
-docker-compose up -d
+uv run pytest -v
 ```
 
-Services: ProjectCompass on `:8080`, Ollama on `:11434`.
+### Linting
+
+```bash
+uv run ruff check .
+uv run ruff check --fix .  # auto-fix
+```
+
+---
+
+## Docker (Development)
+
+To build and run from source:
+
+```bash
+docker compose up -d
+```
+
+This uses `docker-compose.yml` which builds the image locally. Services: ProjectCompass on `:8080`, Ollama on `:11434`.
+
+See [DOCKER.md](DOCKER.md) for volumes, environment variables, health checks, and production settings.
 
 ---
 
@@ -84,12 +127,12 @@ ProjectCompass/
 
 ### Tech Stack
 
-- **Backend**: Flask 3.0, Gunicorn, Python 3.10+
+- **Backend**: Flask 3.0, Gunicorn, Python 3.12
 - **Data**: DuckDB (in-memory SQL on CSV), pandas
 - **AI**: Ollama + LLaMA 3 (optional, lazy-loaded)
 - **Frontend**: W3.CSS, Chart.js, RAWGraphs, jQuery
-- **Security**: werkzeug password hashing, AST-validated code sandbox, CORS, CSRF
-- **DevOps**: Docker, GitHub Actions CI, ruff linting, pytest
+- **Security**: werkzeug password hashing, AST-validated code sandbox, CORS
+- **CI/CD**: GitHub Actions (ruff + pytest on tags), Docker image auto-published to ghcr.io
 
 ---
 
@@ -134,13 +177,13 @@ All endpoints return JSON. Authentication is session-based (same as web UI).
 
 ```bash
 # List all analyses
-curl http://localhost:5000/api/analyses
+curl http://localhost:8080/api/analyses
 
 # Search analyses
-curl http://localhost:5000/api/analyses?q=marketing&product=Research
+curl http://localhost:8080/api/analyses?q=marketing&product=Research
 
 # Query data
-curl -X POST http://localhost:5000/api/query \
+curl -X POST http://localhost:8080/api/query \
   -H "Content-Type: application/json" \
   -d '{"sql": "SELECT * FROM wine_quality LIMIT 5"}'
 ```
@@ -163,35 +206,9 @@ curl -X POST http://localhost:5000/api/query \
 
 ---
 
-## Development
+## Contributing
 
-### Running Tests
-
-```bash
-uv run pytest -v
-```
-
-### Linting
-
-```bash
-uv run ruff check .
-uv run ruff check --fix .  # auto-fix
-```
-
-### Adding a New Feature
-
-1. Create or extend a blueprint in `blueprints/`
-2. Add corresponding template in `templates/` if needed
-3. Write tests in `tests/`
-4. Run `uv run pytest && uv run ruff check .`
-
-### Project Conventions
-
-- All configuration from environment (never hardcoded secrets)
-- Business logic in `utils/`, routing in `blueprints/`
-- Structured logging via `logging_config.logger`
-- No `eval()` — use `safe_execute_pandas()` for dynamic expressions
-- Temporary files in `tmp/` (gitignored)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, code style, and testing guidelines.
 
 ---
 
@@ -202,23 +219,6 @@ uv run ruff check --fix .  # auto-fix
 - **CORS**: Restricted to configured origins for API routes
 - **Secrets**: Environment variables, never in code or YAML
 - **Input Sanitization**: HTML cleaning on query editor input
-
----
-
-## Docker Deployment
-
-See [DOCKER.md](DOCKER.md) for detailed Docker documentation.
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Check health
-curl http://localhost:8080/health
-
-# View logs
-docker-compose logs -f
-```
 
 ---
 
