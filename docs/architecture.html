@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture – ProjectCompass Docs</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
+    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5}
+    h3{color:#2d323a;margin-top:1.8rem}
+    p,li{line-height:1.7;font-size:.95rem}
+    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.88rem}
+    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.85rem;line-height:1.6}
+    .layer{background:#fff;border-radius:8px;padding:1.2rem 1.5rem;margin:.8rem 0;box-shadow:0 2px 6px rgba(0,0,0,.07);border-left:4px solid #3F51B5}
+    .layer h4{margin:0 0 .4rem;color:#3F51B5}
+    .layer p{margin:0;font-size:.9rem;color:#555}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>System Architecture</h1>
+  <p>How the components of ProjectCompass fit together</p>
+</header>
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="overview.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="routes.html">API Routes</a>
+  <a href="core_classes.html">Core Classes</a>
+  <a href="templates.html">Templates</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="docker.html">Docker</a>
+</nav>
+<main>
+
+  <h2>High-Level Structure</h2>
+  <p>ProjectCompass uses a <strong>Flask Blueprint</strong> architecture with an application factory pattern.</p>
+
+  <div class="layer">
+    <h4>Application Factory – <code>app.py</code></h4>
+    <p><code>create_app()</code> initialises Flask, loads configuration from environment, and registers 5 blueprints: auth, catalog, data, agent, and api.</p>
+  </div>
+  <div class="layer">
+    <h4>Blueprints – <code>blueprints/</code></h4>
+    <p><code>auth.py</code> (login/logout with werkzeug hashing), <code>catalog.py</code> (analysis CRUD, search, pagination), <code>data.py</code> (query runner, uploads), <code>agent.py</code> (LLM chat with sandboxed execution), <code>api.py</code> (REST JSON endpoints).</p>
+  </div>
+  <div class="layer">
+    <h4>Business Logic – <code>basefun.py</code> + <code>utils/</code></h4>
+    <p>The <code>ProjectCompass</code> class aggregates three utility classes via multiple inheritance: <code>DataUtils</code>, <code>AnalysisUtils</code>, and <code>HTMLUtils</code>. Business logic (reading/writing analyses, executing SQL, generating HTML partials) lives here.</p>
+  </div>
+  <div class="layer">
+    <h4>View – <code>templates/</code></h4>
+    <p>Jinja2 HTML templates. A shared <code>header.html</code> partial is parsed at startup and injected into every page via <code>substitute_html()</code>, providing the top bar, sidebar, and CSS/JS includes.</p>
+  </div>
+  <div class="layer">
+    <h4>Storage – File System</h4>
+    <p>No relational database. Analyses are stored as folders under <code>Analyses/</code>, each containing <code>metadata.yaml</code>, <code>output_versions.yaml</code>, and subdirectories for code, outputs, and SQL extractions. Data files live in <code>Saved_data/</code> and queries in <code>Saved_queries/</code>.</p>
+  </div>
+
+  <h2>Class Inheritance Chain</h2>
+  <pre>
+object
+  └── HTMLUtils          (reads header.html, constants.yaml, loads env info)
+        └── DataUtils    (DuckDB SQL engine, file upload, data listing)
+              └── AnalysisUtils  (read/write analyses, metadata, archive)
+                    └── ProjectCompass  (project_folder, create_job_request)
+  </pre>
+  <p>Each class calls <code>super().__init__(dir_path=dir_path, **kwargs)</code>, so the chain initialises cleanly from a single <code>dir_path</code> argument.</p>
+
+  <h2>Request Lifecycle</h2>
+  <pre>
+Browser Request
+  → @app.before_request   (session auth check, optional git pull)
+  → Flask route function  (app.py)
+      → webapp.substitute_html()   (inject header partials)
+      → webapp.read_multiple_analysis() / webapp.sql() / etc.
+  → render_template()     (Jinja2 fills variables into HTML template)
+  → @app.after_request    (optional git add/commit/push for POST)
+  → HTTP Response
+  </pre>
+
+  <h2>Directory Layout</h2>
+  <pre>
+ProjectCompass/
+├── app.py                  # Application factory
+├── basefun.py              # ProjectCompass class + crypto helpers
+├── config.py               # Config from environment (.env)
+├── logging_config.py       # Unified structured logging
+├── blueprints/
+│   ├── auth.py             # Authentication (hashed passwords, sessions)
+│   ├── catalog.py          # Analysis CRUD, search, filter, pagination
+│   ├── data.py             # Query runner, data upload, RAWGraphs
+│   ├── agent.py            # LLM chat with sandboxed execution
+│   └── api.py              # REST API (JSON endpoints)
+├── utils/
+│   ├── html_utils.py       # HTMLUtils – header injection, YAML loading
+│   ├── data_utils.py       # DataUtils – DuckDB, file upload
+│   ├── analysis_utils.py   # AnalysisUtils – catalog CRUD
+│   └── agent_utils.py      # LLM agent (lazy-loaded Ollama)
+├── templates/
+│   ├── header.html         # Shared layout partial (top bar + sidebar)
+│   ├── chat.html           # AI data assistant
+│   ├── index.html          # Dashboard
+│   ├── analysis.html       # Analysis catalog
+│   ├── query_results.html  # SQL runner
+│   └── environment_variables/
+│       ├── constants.yaml  # Port, logo SVG
+│       ├── links.yaml      # Sidebar useful links
+│       ├── tool_choices.yaml # Dropdown options
+│       ├── intro.txt       # Dashboard intro text
+│       └── title.txt       # Application title
+├── tests/                  # pytest test suite
+├── static/                 # CSS, JS, images, fonts
+├── Analyses/               # Analysis repository (file-based)
+├── Saved_data/             # Uploaded CSV / SQLite files
+└── Saved_queries/          # Saved .sql files
+  </pre>
+
+  <h2>LLM Chat Layer</h2>
+  <p>
+    The <code>blueprints/agent.py</code> blueprint provides an AI chat interface at <code>/chat</code>.
+    Ollama is <strong>lazy-loaded</strong> — the application starts and works fully without it.
+    User questions are converted to pandas expressions by the LLM, then executed via <code>safe_execute_pandas()</code>
+    which uses AST validation to block <code>import</code>, <code>open()</code>, <code>exec()</code>, and <code>eval()</code>.
+  </p>
+
+</main>
+<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+</body>
+</html>

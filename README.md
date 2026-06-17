@@ -1,259 +1,231 @@
 # ProjectCompass
 
-## Overview
+**Analysis catalog, execution engine, and data exploration platform.**
 
 ![Overview](static/img/overview_page.png)
 
-ProjectCompass is a user-friendly Python-based tool developed to address common challenges encountered beyond the initial creation of data analyses or projects. After completing significant analytical work, three critical questions often emerge:
-
-- **How can we effectively organize and categorize these analyses or projects?**
-- **How can we ensure accessible and standardized documentation for everyone involved?**
-- **How can we consistently execute processes or pipelines within a common, reliable environment?**
-
-Initially exploring various organizational structures (by product, owner, or project type), we developed a flexible **tag-based structure** enabling comprehensive searching and sorting across all relevant dimensions. The platform centralizes all associated documents, presentations, and versions to foster shareable knowledge while providing a unified execution environment.
-
-![Description Process](static/img/description1.png)
-
-## Core Functionalities
-
-![Four Functions](static/img/description2.png)
-
-ProjectCompass performs four primary functions:
-
-### 📂 **Catalog**
-The core functionality that collects all available analyses and projects with comprehensive information and documentation, automatically extracting valuable details such as:
-- Queries and technical requirements
-- Metadata and project specifications  
-- Tag-based flexible organization
-- Cross-dimensional searching and sorting
-
-### 🔍 **Data Exploration & Storage Tools**
-Allows users to perform exploratory analyses directly within specified saved data environments:
-- Interactive analysis environment
-- Direct integration with data storage
-- Results persistence in the same environment
-- Seamless data workflow management
-
-### ⚙️ **Execution Engine**
-Enables consistent launching of analyses that produce physical outputs:
-- Reports and data extractions generation
-- Complex workflow execution using existing API integrations
-- Environment compatibility management
-- Consistent process execution
-
-### 🔗 **Analysis Shareability**
-Facilitates easy sharing of generated analyses, reports, and data extractions:
-- Internal stakeholder communication via integrated channels
-- Tracking of consumption and feedback on shared outputs
-- Collaborative analysis review and distribution
-- Stakeholder engagement monitoring
-
-![Implementation](static/img/description3.png)
-
-## Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd ProjectCompass
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-## Configuration
-
-1. Set up your project directory structure
-2. Configure `basefun.py` with your environment settings
-3. Update Flask secret key and CORS settings in `app.py`
-4. Configure GitLab integration (optional)
-
-## Usage
-
-### Starting the Application
-
-```bash
-python app.py
-```
-
-The application will be available at `http://127.0.0.1:<port>`
-
-### Main Routes
-
-- `/` - Dashboard with project statistics and overview
-- `/overview` - Detailed platform description and capabilities
-- `/list_of_data/` - Data management interface
-- `/produce_analysis/` - Analysis creation and upload
-
-### Project Structure
-
-```
-ProjectCompass/
-├── app.py                 # Main Flask application
-├── basefun.py            # Core ProjectCompass class
-├── Templates/            # HTML templates
-├── static/              # Static assets (CSS, JS, images)
-├── Analyses/            # Analysis storage directory
-└── requirements.txt     # Python dependencies
-```
-
-## Key Components
-
-### ProjectCompass Class
-Core functionality including:
-- Analysis reading and writing
-- HTML template substitution
-- Environment configuration
-- Data encryption and compression
-
-### Flask Web Interface
-- Responsive web UI
-- Multi-step forms for analysis upload
-- Real-time project statistics
-- Interactive dashboards
-
-## Features in Detail
-
-### Analysis Management
-- **Upload**: Multi-step form for comprehensive analysis documentation
-- **Categorization**: Tag-based flexible organization system
-- **Search**: Cross-dimensional filtering by product, owner, date, tags
-- **Documentation**: Automatic metadata extraction and standardization
-- **Shareability**: Integrated communication and feedback tracking
-
-### Security
-- Session management with automatic reset
-- CORS configuration for secure embedding
-- Data encryption for sensitive information
-- GitLab integration for version control
-
-### Visualization
-- Dynamic charts for project statistics
-- Product distribution analytics
-- Timeline visualizations
-- Owner and collaboration metrics
-
-## Configuration Options
-
-### Environment Variables
-- `use_gitlab_repo`: Enable/disable GitLab integration
-- `username`: Default user configuration
-- Port and directory configurations
-
-### CORS Settings
-```python
-CORS(app, resources={r"/*": {"origins": ["https://your-domain.com"]}})
-```
-
-## Development
-
-### Adding New Features
-1. Extend the `ProjectCompass` class in `basefun.py`
-2. Add new routes in `app.py`
-3. Create corresponding HTML templates
-4. Update static assets as needed
-
-### Database Integration
-The system uses file-based storage but can be extended with database backends for larger deployments.
-
-## Troubleshooting
-
-### Common Issues
-- **Session Reset**: Sessions automatically clear on application restart
-- **GitLab Lock Files**: Automatic cleanup of `.git/index.lock`
-- **Port Conflicts**: Configure custom port in constants
-
-### Logging
-Application uses Python logging with Gunicorn integration for production deployments.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## License
-
-Copyright ©2024 ProjectCompass. All rights reserved. Confidential and Proprietary.
-
-## Docker Deployment
-
-### Quick Start with Docker Compose
-
-```bash
-# Start both ProjectCompass and Ollama
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-### Manual Docker Setup
-
-```bash
-# Build and run with automatic Ollama setup
-./docker_build_and_run.sh
-
-# Or setup only Ollama
-./setup_ollama.sh
-```
-
-### Docker Services
-
-#### ProjectCompass Application
-- **Port**: 8080 (external) → 5000 (internal)
-- **Volumes**: 
-  - `./Analyses` → `/app/Analyses` (persistent data)
-  - `./logs` → `/app/log` (application logs)
-- **Environment**: Production mode with Gunicorn
-
-#### Ollama LLM Service
-- **Port**: 11434 (LLM API)
-- **Models**: 
-  - `llama3` (Large Language Model)
-  - `nomic-embed-text` (Embedding Model)
-- **Volume**: `ollama_data` (persistent model storage)
-
-### Docker Commands
-
-```bash
-# View application logs
-docker logs projectcompass_app
-
-# View Ollama logs
-docker logs ollama
-
-# Access application container
-docker exec -it projectcompass_app bash
-
-# Test Ollama API
-curl http://localhost:11434/api/tags
-
-# Stop all containers
-docker stop projectcompass_app ollama
-
-# Remove containers
-docker rm projectcompass_app ollama
-
-# Remove volumes (WARNING: deletes all data)
-docker volume rm ollama_data
-```
-
-### Production Considerations
-
-- **Resource Requirements**: Ollama requires significant RAM (8GB+ recommended)
-- **Model Storage**: LLM models require several GB of disk space
-- **Network**: Ensure ports 8080 and 11434 are available
-- **Backup**: Regularly backup `./Analyses` directory and `ollama_data` volume
-
-## Support
-
-For issues and questions, please refer to the project documentation or contact the development team.
+ProjectCompass is a Python-based tool for teams that produce data analyses. It solves three problems that emerge after the analytical work is done:
+
+1. **Organization** — a tag-based catalog of all analyses with metadata, documentation, and version tracking
+2. **Execution** — a unified environment to run structured analyses consistently
+3. **Exploration** — SQL queries on local datasets via DuckDB, with visualization and LLM-powered chat
 
 ---
 
-**ProjectCompass** - *Organization Is Everything®*
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| 📂 **Catalog** | Tag-based analysis repository with search, filter, and pagination |
+| 🔍 **Data Explorer** | SQL queries on CSV/SQLite via DuckDB, RAWGraphs visualization |
+| ⚙️ **Execution Engine** | Run structured analyses with dynamic forms and physical outputs |
+| 🤖 **AI Chat** | Ask questions about your data in natural language (Ollama/LLaMA) |
+| 🔗 **REST API** | JSON endpoints for all catalog, data, and query operations |
+| 🐳 **Docker** | One-command deployment with Ollama LLM service |
+
+---
+
+## Quick Start
+
+### Local Development
+
+```bash
+# Clone and install
+git clone https://github.com/GiacomoSaccaggi/ProjectCompass.git
+cd ProjectCompass
+uv sync
+
+# Configure
+cp .env.example .env
+# Edit .env with your settings
+
+# Run
+uv run python app.py
+```
+
+The app is available at `http://127.0.0.1:5000`
+
+### Docker
+
+```bash
+docker-compose up -d
+```
+
+Services: ProjectCompass on `:8080`, Ollama on `:11434`.
+
+---
+
+## Architecture
+
+```
+ProjectCompass/
+├── app.py                  # Application factory (Flask)
+├── config.py               # Configuration from environment
+├── logging_config.py       # Unified structured logging
+├── basefun.py              # Core ProjectCompass class
+├── blueprints/
+│   ├── auth.py             # Authentication (hashed passwords, sessions)
+│   ├── catalog.py          # Analysis CRUD, search, filter, pagination
+│   ├── data.py             # Query runner, data upload, RAWGraphs
+│   ├── agent.py            # LLM chat with sandboxed execution
+│   └── api.py              # REST API (JSON endpoints)
+├── utils/
+│   ├── analysis_utils.py   # Analysis metadata management
+│   ├── data_utils.py       # DuckDB SQL, file operations
+│   ├── html_utils.py       # Template utilities
+│   └── agent_utils.py      # LLM agent (lazy-loaded, sandboxed)
+├── templates/              # Jinja2 HTML templates
+├── static/                 # CSS, JS, images, fonts
+├── tests/                  # pytest test suite
+├── Analyses/               # Analysis storage
+├── Saved_data/             # Uploaded datasets
+└── Saved_queries/          # Saved SQL queries
+```
+
+### Tech Stack
+
+- **Backend**: Flask 3.0, Gunicorn, Python 3.10+
+- **Data**: DuckDB (in-memory SQL on CSV), pandas
+- **AI**: Ollama + LLaMA 3 (optional, lazy-loaded)
+- **Frontend**: W3.CSS, Chart.js, RAWGraphs, jQuery
+- **Security**: werkzeug password hashing, AST-validated code sandbox, CORS, CSRF
+- **DevOps**: Docker, GitHub Actions CI, ruff linting, pytest
+
+---
+
+## Configuration
+
+All configuration is via environment variables (`.env` file):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | random | Flask session encryption key |
+| `ADMIN_USERNAME` | `admin` | Login username |
+| `ADMIN_PASSWORD_HASH` | *(empty)* | Werkzeug-hashed password |
+| `PORT` | `5000` | Server port |
+| `FLASK_DEBUG` | `False` | Debug mode |
+| `USE_GITLAB_REPO` | `False` | GitLab integration |
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama LLM endpoint |
+| `ALLOWED_ORIGINS` | `*` | CORS allowed origins |
+
+### Generate a password hash
+
+```bash
+uv run python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('your-password'))"
+```
+
+---
+
+## REST API
+
+All endpoints return JSON. Authentication is session-based (same as web UI).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check |
+| GET | `/api/analyses` | List analyses (supports `?q=`, `?product=`, `?owner=`, `?page=`, `?per_page=`) |
+| GET | `/api/analyses/<name>` | Get single analysis details |
+| GET | `/api/data` | List available datasets |
+| GET | `/api/data/<name>/preview?limit=10` | Preview dataset rows |
+| POST | `/api/query` | Execute SQL query (`{"sql": "SELECT ..."}`) |
+| GET | `/health` | Application health check |
+
+### Example
+
+```bash
+# List all analyses
+curl http://localhost:5000/api/analyses
+
+# Search analyses
+curl http://localhost:5000/api/analyses?q=marketing&product=Research
+
+# Query data
+curl -X POST http://localhost:5000/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"sql": "SELECT * FROM wine_quality LIMIT 5"}'
+```
+
+---
+
+## Web Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Dashboard with statistics |
+| `/analysis` | Analysis catalog with search/filter |
+| `/load_analysis/` | Create or edit an analysis |
+| `/query_runner/` | SQL query editor |
+| `/all_data/` | Browse uploaded datasets |
+| `/upload_data/` | Upload new data files |
+| `/rawgraphs` | Data visualization |
+| `/chat` | AI data assistant |
+| `/todo` | Notes/todo page |
+
+---
+
+## Development
+
+### Running Tests
+
+```bash
+uv run pytest -v
+```
+
+### Linting
+
+```bash
+uv run ruff check .
+uv run ruff check --fix .  # auto-fix
+```
+
+### Adding a New Feature
+
+1. Create or extend a blueprint in `blueprints/`
+2. Add corresponding template in `templates/` if needed
+3. Write tests in `tests/`
+4. Run `uv run pytest && uv run ruff check .`
+
+### Project Conventions
+
+- All configuration from environment (never hardcoded secrets)
+- Business logic in `utils/`, routing in `blueprints/`
+- Structured logging via `logging_config.logger`
+- No `eval()` — use `safe_execute_pandas()` for dynamic expressions
+- Temporary files in `tmp/` (gitignored)
+
+---
+
+## Security
+
+- **Authentication**: Session-based with werkzeug-hashed passwords
+- **Code Execution**: AST-validated sandbox blocks `import`, `open()`, `exec()`, `eval()`
+- **CORS**: Restricted to configured origins for API routes
+- **Secrets**: Environment variables, never in code or YAML
+- **Input Sanitization**: HTML cleaning on query editor input
+
+---
+
+## Docker Deployment
+
+See [DOCKER.md](DOCKER.md) for detailed Docker documentation.
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Check health
+curl http://localhost:8080/health
+
+# View logs
+docker-compose logs -f
+```
+
+---
+
+## License
+
+Copyright ©2024 ProjectCompass. All rights reserved.
+
+---
+
+**ProjectCompass** — *Organization Is Everything®*
