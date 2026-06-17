@@ -1,11 +1,7 @@
 import os
-import pandas as pd
-from typing import Union
+
 import duckdb
-import os
-import pandas as pd  # Still useful for displaying the final result as a DataFrame
-
-
+import pandas as pd
 
 
 class DataUtils:
@@ -125,7 +121,7 @@ class DataUtils:
     def read_data(
             file_path: str,  # Path to the uploaded file
             separator: str = ',',  # Value from the form's 'separator' field
-            header: Union[int, None] = 0  # Value from the form's 'header' field
+            header: int | None = 0  # Value from the form's 'header' field
     ) -> pd.DataFrame:
         """
         Reads a data file (CSV, TSV, text) into a pandas DataFrame

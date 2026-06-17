@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+
+<style>
+.btn {
+  background-color: DodgerBlue;
+  border: none;
+  color: white;
+  padding: 12px 16px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Darker background on mouse-over */
+.btn:hover {
+  background-color: RoyalBlue;
+}
+input[type=text] {
+  padding: 6px 12px;
+  text-decoration: none;
+  margin: 4px 2px;
+  cursor: pointer;
+  width: 60%;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: white;
+  color:  #005F81 ;
+  border: 2px solid  #00889B;
+  text-align: center;
+  transition: all 0.5s;
+  cursor: pointer;
+  margin: 5px;
+}
+
+
+.table-wrapper {
+  position:relative;
+}
+.table-scroll {
+  height:250px;
+  overflow:auto;
+  margin-top:20px;
+}
+.table-wrapper table {
+  width:100%;
+
+}
+.table-wrapper table * {
+  color:black;
+}
+.table-wrapper table thead th .text {
+  position:absolute;
+  top:-20px;
+  z-index:2;
+  height:20px;
+  width:35%;
+  border:1px solid red;
+}
+</style>
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<style>
+
+header{
+  position: relative;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-image: url(http://127.0.0.1:{{ port }}/{{ project_folder }}/static/img/background1.PNG);
+  height: 50%;
+  width:100%;
+  color: #F8F8F8;
+  text-align: left;
+  padding-top: 5%;
+  font-size:32px;
+}
+</style>
+<body class="w3-light-grey">
+
+{{ top_container|safe }}
+
+{{ sidebar_menu|safe }}
+
+<!-- !PAGE CONTENT! -->
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+  <!-- Header -->
+  <header class="w3-container" style="padding-top:22px">
+      <br>
+    <h1><b><i class="fa fa-dashboard"></i>    Data Explorer</b></h1>
+      <br>
+      <br>
+  </header>
+
+    <br>
+
+  <div class="w3-padding w3-container w3-card-1">
+        <form action="/upload_data_file/" method="post" style="width: 100%;left:25%;top:10%;" enctype = "multipart/form-data">
+            <h2>Data File Uploader and Settings</h2>
+
+            <label for="ctrl_file">Select data files (.csv, .tsv, text):</label><br>
+            <input type="file"
+                   name="upload_files"
+                   size="40"
+                   id="ctrl_file"
+                   multiple
+                   accept=".csv, .tsv, text/plain" /><br><br>
+
+            <label for="separator">Separator (e.g., ',' or '\t' for tab):</label><br>
+            <input type="text"
+                   name="separator"
+                   id="separator"
+                   value=","
+                   placeholder="Enter the delimiter" /><br><br>
+
+            <label for="header">Header Row (0 for first row, -1 or empty for no header):</label><br>
+            <input type="number"
+                   name="header"
+                   id="header"
+                   value="0"
+                   min="-1" /><br><br>
+
+            <label for="encoding">File Encoding (e.g., utf-8, latin-1):</label><br>
+            <input type="text"
+                   name="encoding"
+                   id="encoding"
+                   value="utf-8"
+                   placeholder="Enter file encoding" /><br><br>
+
+            <button type="submit">Upload and Read Data</button>
+                      <!--<br><input type="submit" value="Upload">-->
+        </form>
+
+
+  </div>
+
+
+
+
+  <!-- Footer -->
+  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+                <hr><br>
+
+                <strong>About ProjectCompass</strong><br>
+                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
+                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
+                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
+     </footer>
+
+  <!-- End page content -->
+</div>
+
+</body>
+</html>
