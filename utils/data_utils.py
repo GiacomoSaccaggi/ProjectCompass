@@ -70,29 +70,29 @@ class DataUtils:
                 print(f"Mapped table alias '{table_alias}' to file: {file_full_path}")
             elif filename.lower().endswith(('.sqlite', '.db')):
                 try:
-                    # 1.1 Carica l'estensione SQLite
+                    # 1.1 Load the SQLite extension
                     conn.sql("INSTALL sqlite;")
                     conn.sql("LOAD sqlite;")
                 except Exception as e:
-                    # Gestisce il caso in cui l'estensione non sia disponibile (raro, ma possibile)
-                    print(f"AVVISO: Impossibile installare/caricare l'estensione SQLite: {e}")
-                # Mappatura per i file SQLite/DB
-                # DuckDB non può usare read_csv_auto() per SQLite.
-                # Invece, usiamo ATTACH, creando uno schema 'sqlite_db'
+                    # Handle the case where the extension is not available (rare, but possible)
+                    print(f"WARNING: Unable to install/load the SQLite extension: {e}")
+                # Mapping for SQLite/DB files
+                # DuckDB cannot use read_csv_auto() for SQLite.
+                # Instead, we use ATTACH, creating a 'sqlite_db' schema
 
-                # Attacchiamo il database SQLite come uno SCHEMA separato
+                # Attach the SQLite database as a separate SCHEMA
                 sqlite_schema_name = f"sqlite_{table_alias}"
                 try:
                     conn.sql(f"ATTACH '{file_full_path}' AS {sqlite_schema_name} (TYPE sqlite);")
                     print(f"Attached SQLite DB '{filename}' as schema: {sqlite_schema_name}")
 
-                    # Qui si potrebbe aggiungere logica per elencare le tabelle
-                    # nello schema e mostrare all'utente come referenziarle:
+                    # Additional logic could be added here to list the tables
+                    # in the schema and show the user how to reference them:
                     # SELECT * FROM sqlite_db.my_table;
 
                 except Exception as e:
-                    print(f"ERRORE nell'ATTACH di SQLite DB '{filename}': {e}")
-                    # Continua con il prossimo file se l'attach fallisce
+                    print(f"ERROR attaching SQLite DB '{filename}': {e}")
+                    # Continue with the next file if attach fails
                     continue
 
         # 3. Process the SQL query to replace aliases with DuckDB's file reading syntax

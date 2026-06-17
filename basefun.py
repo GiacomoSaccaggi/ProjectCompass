@@ -66,7 +66,7 @@ class ProjectCompass(DataUtils, AnalysisUtils, HTMLUtils):
 
 
 def encrypt_and_compress(text, key='key'):
-    # Crittografia della stringa utilizzando la chiave di crittografia fornita
+    # Encrypt the string using the provided encryption key
     encoded = text.encode('utf-8')
     encrypted = bytearray()
     for i in range(len(encoded)):
@@ -74,31 +74,31 @@ def encrypt_and_compress(text, key='key'):
         encrypted_c = (encoded[i] + ord(key_c)) % 256
         encrypted.append(encrypted_c)
 
-    # Compressione della stringa utilizzando l'algoritmo di compressione zlib
+    # Compress the string using zlib compression
     compressed = zlib.compress(bytes(encrypted))
 
-    # Codifica della stringa utilizzando il metodo di codifica Base64
+    # Encode the string using Base64 encoding
     encrypted_string = base64.b64encode(compressed)
 
-    # Restituzione della stringa crittografata e compressa
+    # Return the encrypted and compressed string
     return encrypted_string.decode('utf-8')
 
 def decrypt_and_decompress(encrypted_string, key='key'):
-    # Decodifica della stringa utilizzando il metodo di codifica Base64
+    # Decode the string using Base64 encoding
     decoded = base64.b64decode(encrypted_string.encode('utf-8'))
 
-    # Decompressione della stringa utilizzando l'algoritmo di compressione zlib
+    # Decompress the string using zlib decompression
     decompressed = zlib.decompress(decoded)
 
-    # Decrittografia della stringa utilizzando la chiave di crittografia fornita
+    # Decrypt the string using the provided encryption key
     decrypted = bytearray()
     for i in range(len(decompressed)):
         key_c = key[i % len(key)]
         decrypted_c = (decompressed[i] - ord(key_c)) % 256
         decrypted.append(decrypted_c)
 
-    # Decodifica della stringa decrittografata in una stringa di testo
+    # Decode the decrypted string into a text string
     text = decrypted.decode('utf-8')
 
-    # Restituzione della stringa decrittografata e decompressa
+    # Return the decrypted and decompressed string
     return text

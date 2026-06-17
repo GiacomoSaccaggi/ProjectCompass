@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overview – ProjectCompass Docs</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
+    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5}
+    h3{color:#2d323a;margin-top:1.8rem}
+    p,li{line-height:1.7;font-size:.95rem}
+    .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1.5rem 0}
+    .feature-card{background:#fff;border-radius:8px;padding:1.2rem 1.4rem;box-shadow:0 2px 6px rgba(0,0,0,.07);border-left:4px solid #3F51B5}
+    .feature-card h4{margin:0 0 .5rem;color:#3F51B5;font-size:1rem}
+    .feature-card p{margin:0;font-size:.88rem;color:#555}
+    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.88rem}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Platform Overview</h1>
+  <p>What ProjectCompass is and what problems it solves</p>
+</header>
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="overview.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="routes.html">API Routes</a>
+  <a href="core_classes.html">Core Classes</a>
+  <a href="templates.html">Templates</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="docker.html">Docker</a>
+</nav>
+<main>
+
+  <h2>What is ProjectCompass?</h2>
+  <p>
+    ProjectCompass is a Python-based web application built on Flask that addresses the lifecycle management of data analyses and projects.
+    After completing analytical work, three recurring problems emerge:
+  </p>
+  <ul>
+    <li>How to <strong>organize and categorize</strong> analyses in a way that is searchable across multiple dimensions.</li>
+    <li>How to provide <strong>accessible, standardized documentation</strong> for all stakeholders, technical and non-technical.</li>
+    <li>How to <strong>execute analyses consistently</strong> without environment compatibility issues.</li>
+  </ul>
+  <p>
+    ProjectCompass solves all three by combining a tag-based catalog, an interactive data exploration environment, a structured execution engine, and shareability tooling into a single unified platform.
+  </p>
+
+  <h2>Core Functionalities</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4>📂 Catalog</h4>
+      <p>Centralized repository of all analyses with metadata, tags, owners, products, and version history. Supports full-text and multi-dimensional search.</p>
+    </div>
+    <div class="feature-card">
+      <h4>🔍 Data Exploration</h4>
+      <p>Interactive SQL query runner powered by DuckDB. Run queries against uploaded CSV/SQLite files, save queries, and push results directly to RAWGraphs for visualization.</p>
+    </div>
+    <div class="feature-card">
+      <h4>⚙️ Execution Engine</h4>
+      <p>Launch structured analyses that produce physical outputs (HTML reports, CSV extractions, downloadable files) from a web form, with real-time logging.</p>
+    </div>
+    <div class="feature-card">
+      <h4>🔗 Shareability</h4>
+      <p>Download analysis packages as ZIP archives, embed dashboards via iframe, and manage versioned outputs and dashboard links per analysis.</p>
+    </div>
+  </div>
+
+  <h2>Target Users</h2>
+  <ul>
+    <li><strong>Data Scientists</strong> – catalog, document, and execute analytical workflows.</li>
+    <li><strong>Research Teams</strong> – collaborate with standardized metadata and version control.</li>
+    <li><strong>Project Managers</strong> – track analysis progress and manage deliverables.</li>
+    <li><strong>Business Stakeholders</strong> – access results and documentation without technical setup.</li>
+  </ul>
+
+  <h2>Technology at a Glance</h2>
+  <ul>
+    <li><strong>Backend:</strong> Python 3, Flask, Jinja2</li>
+    <li><strong>Data layer:</strong> DuckDB (in-memory SQL on CSV/SQLite), pandas</li>
+    <li><strong>Frontend:</strong> W3.CSS, Chart.js, NVD3/D3.js, jQuery, RAWGraphs</li>
+    <li><strong>Security:</strong> werkzeug password hashing, AST-validated code sandbox, CORS, CSRF</li>
+    <li><strong>Storage:</strong> File-based (<code>Analyses/</code>, <code>Saved_data/</code>, <code>Saved_queries/</code>)</li>
+    <li><strong>Optional LLM:</strong> Ollama (llama3 + nomic-embed-text) via llama-index</li>
+  </ul>
+
+</main>
+<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+</body>
+</html>

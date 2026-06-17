@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Routes – ProjectCompass Docs</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:960px;margin:2.5rem auto;padding:0 2rem}
+    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5;margin-top:2.5rem}
+    p,li{line-height:1.7;font-size:.95rem}
+    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.85rem}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.07);margin:1rem 0 2rem}
+    th{background:#3F51B5;color:#fff;padding:.7rem 1rem;text-align:left;font-size:.88rem}
+    td{padding:.65rem 1rem;border-bottom:1px solid #eef;font-size:.88rem;vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#f8f9ff}
+    .method-get{background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:4px;font-weight:700;font-size:.8rem}
+    .method-post{background:#fff3e0;color:#e65100;padding:2px 7px;border-radius:4px;font-weight:700;font-size:.8rem}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>API Routes Reference</h1>
+  <p>All Flask routes defined in <code>app.py</code></p>
+</header>
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="overview.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="routes.html">API Routes</a>
+  <a href="core_classes.html">Core Classes</a>
+  <a href="templates.html">Templates</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="docker.html">Docker</a>
+</nav>
+<main>
+
+  <p>All routes are served via Flask Blueprints (<code>auth</code>, <code>catalog</code>, <code>data</code>, <code>agent</code>, <code>api</code>). Authentication is enforced globally via <code>@auth_bp.before_app_request</code>: any unauthenticated request is redirected to the login page (except <code>/health</code>, <code>/api/</code>, and static files).</p>
+
+  <h2>Dashboard &amp; Navigation</h2>
+  <table>
+    <tr><th>Route</th><th>Method</th><th>Description</th><th>Template</th></tr>
+    <tr>
+      <td><code>/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Main dashboard. Reads all analyses, computes statistics (total count, owners, products, structured analyses), and renders a polar-area Chart.js chart of analyses by product.</td>
+      <td><code>index.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/overview</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Platform description page with inline HTML content describing the four core functionalities. Reuses <code>index.html</code> with <code>intro=False</code>.</td>
+      <td><code>index.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/todo</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Personal notes / to-do page.</td>
+      <td><code>todopage.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/documentation/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Embeds the GitHub repository page in an iframe.</td>
+      <td><code>iframetemplate.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/license/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Embeds the GitHub repository license page in an iframe.</td>
+      <td><code>iframetemplate.html</code></td>
+    </tr>
+  </table>
+
+  <h2>Authentication</h2>
+  <table>
+    <tr><th>Route</th><th>Method</th><th>Description</th><th>Template</th></tr>
+    <tr>
+      <td><code>/login/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Validates <code>uname</code> and <code>psw</code> form fields against the <code>ADMIN_PASSWORD_HASH</code> environment variable using werkzeug. On success sets <code>session['authenticated'] = True</code> and redirects to dashboard.</td>
+      <td><code>index.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/reset/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Clears the Flask session. Returns <code>{"success": true}</code>.</td>
+      <td>JSON</td>
+    </tr>
+  </table>
+
+  <h2>Analysis Catalog</h2>
+  <table>
+    <tr><th>Route</th><th>Method</th><th>Description</th><th>Template</th></tr>
+    <tr>
+      <td><code>/analysis</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Lists all analyses from <code>Analyses/</code>. Each entry is an accordion with metadata, links, and action buttons (open, edit, download, delete, run).</td>
+      <td><code>analysis.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/load_analysis/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Wrapper that embeds <code>/load_analysis_internal/</code> in an iframe. Accepts optional <code>?name=</code> query param for editing an existing analysis.</td>
+      <td><code>iframetemplate.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/load_analysis_internal/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Renders the analysis creation/edit form. If <code>?name=</code> is provided, pre-fills the form with existing metadata.</td>
+      <td><code>create_analysis.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/produce_analysis/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Creates a new analysis (<code>new_analysis=new</code>) or updates an existing one. Calls <code>webapp.upload_new_analysis()</code> or <code>webapp.modify_analysis()</code>. Optionally commits to GitLab.</td>
+      <td><code>process_complete.html</code> / <code>internal_error.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/delete_analysis/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Deletes the analysis folder identified by <code>?name=</code>. Uses <code>shutil.rmtree</code>. Optionally pushes deletion to GitLab.</td>
+      <td><code>analysis.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/open_analysis/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Packages the analysis folder as a ZIP archive and sends it as a file download.</td>
+      <td>File download</td>
+    </tr>
+    <tr>
+      <td><code>/iframe/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Opens the dashboard link of an analysis. If the link contains <code>&lt;script</code> it is injected as raw HTML; otherwise it is loaded in an iframe.</td>
+      <td><code>iframetemplate.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/physical_output/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Opens or downloads the physical output file of an analysis. HTML outputs are shown in an iframe; other formats are sent as file downloads.</td>
+      <td><code>iframetemplate.html</code> / File download</td>
+    </tr>
+    <tr>
+      <td><code>/open_version/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Shows the version management page for a single analysis (dashboard versions + output versions).</td>
+      <td><code>versions_single_analysis.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/add_version/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Adds a new dashboard link version or uploads a new output file version for an analysis.</td>
+      <td><code>versions_single_analysis.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/delete_version/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Removes a specific version (output file or dashboard link) from an analysis.</td>
+      <td><code>versions_single_analysis.html</code></td>
+    </tr>
+  </table>
+
+  <h2>Structured Analysis Execution</h2>
+  <table>
+    <tr><th>Route</th><th>Method</th><th>Description</th><th>Template</th></tr>
+    <tr>
+      <td><code>/create_investigations/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Dynamically builds an HTML form from <code>metadata_automatic_report.yaml</code> input definitions. Supports text, datalist, radio, date, and other HTML5 input types.</td>
+      <td><code>investigations.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/run_investigation/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Executes <code>structured_analysis_main.structured_analysis()</code> from the analysis folder. Streams logs to a file, then returns the output (HTML iframe, file download, or download link).</td>
+      <td><code>iframetemplate.html</code> / File download</td>
+    </tr>
+    <tr>
+      <td><code>/loading/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Displays a loading spinner page used while an analysis is running.</td>
+      <td><code>loader.html</code></td>
+    </tr>
+  </table>
+
+  <h2>Data Tools</h2>
+  <table>
+    <tr><th>Route</th><th>Method</th><th>Description</th><th>Template</th></tr>
+    <tr>
+      <td><code>/list_of_data/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Shows the data upload form.</td>
+      <td><code>data_upload.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/upload_data_file/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Accepts file uploads. Calls <code>webapp.upload_text_files(request)</code> which reads the file with pandas using the specified separator and header row, then saves it as a normalised CSV in <code>Saved_data/</code>.</td>
+      <td><code>data_list.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/all_data/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Lists all available datasets (CSV and SQLite files) in <code>Saved_data/</code>.</td>
+      <td><code>data_list.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/open_data</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Runs <code>SELECT * FROM &lt;name&gt;</code> via DuckDB and shows the result. Truncates to 2000 rows if the result is too large.</td>
+      <td><code>query_results.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/query_runner/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Opens the SQL editor with an empty result panel.</td>
+      <td><code>query_results.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/query_results/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Sanitises the submitted SQL (strips HTML tags from the rich-text editor), executes it via <code>webapp.sql()</code>, and returns the result table.</td>
+      <td><code>query_results.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/save_query/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Saves the query as a <code>.sql</code> file in <code>Saved_queries/</code> with auto-extracted table names and a timestamp header.</td>
+      <td><code>query_results.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/tmp_table/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Executes a query and saves the result as a new CSV in <code>Saved_data/</code> under the provided table name.</td>
+      <td><code>query_results.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/graph_analysis/</code></td>
+      <td><span class="method-post">POST</span></td>
+      <td>Executes a query and passes the CSV result directly to the RAWGraphs visualisation interface.</td>
+      <td><code>RAWGraphs.html</code></td>
+    </tr>
+    <tr>
+      <td><code>/rawgraphs</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Opens the RAWGraphs visualisation page with an empty dataset.</td>
+      <td><code>RAWGraphs.html</code></td>
+    </tr>
+  </table>
+
+  <h2>Utility Routes</h2>
+  <table>
+    <tr><th>Route</th><th>Method</th><th>Description</th><th>Response</th></tr>
+    <tr>
+      <td><code>/check</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Health check endpoint. Returns <code>{"success": true}</code> with HTTP 200.</td>
+      <td>JSON</td>
+    </tr>
+    <tr>
+      <td><code>/post_repo</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>When GitLab integration is enabled, performs a hard git reset to sync the Analyses folder with the remote.</td>
+      <td>JSON</td>
+    </tr>
+    <tr>
+      <td><code>/show_site/</code></td>
+      <td><span class="method-get">GET</span></td>
+      <td>Embeds any external URL (passed as <code>?url=</code>) in an iframe.</td>
+      <td><code>iframetemplate.html</code></td>
+    </tr>
+  </table>
+
+  <h2>Request Hooks</h2>
+  <table>
+    <tr><th>Hook</th><th>Behaviour</th></tr>
+    <tr>
+      <td><code>@app.before_request</code></td>
+      <td>Checks <code>session['authenticated']</code>. Unauthenticated requests (except <code>/login/</code>) are redirected to <code>login_page.html</code>. When GitLab is enabled, performs a <code>git reset --hard</code> before every non-static request.</td>
+    </tr>
+    <tr>
+      <td><code>@app.after_request</code></td>
+      <td>When GitLab is enabled, performs <code>git add . &amp;&amp; git commit &amp;&amp; git push</code> after every POST request to keep the remote in sync.</td>
+    </tr>
+  </table>
+
+</main>
+<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+</body>
+</html>

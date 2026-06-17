@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProjectCompass – Documentation</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:2rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.95rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:1100px;margin:2.5rem auto;padding:0 2rem}
+    h2{margin-bottom:.3rem}
+    .subtitle{color:#666;margin-top:0;margin-bottom:1.5rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+    .card{background:#fff;border-radius:8px;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-top:4px solid #3F51B5;display:flex;flex-direction:column}
+    .card h3{margin:.4rem 0 .6rem;font-size:1.05rem;color:#3F51B5}
+    .card p{font-size:.9rem;line-height:1.6;color:#555;flex:1;margin:0}
+    .card a{display:inline-block;margin-top:1rem;color:#3F51B5;font-weight:600;text-decoration:none;font-size:.9rem}
+    .card a:hover{text-decoration:underline}
+    .badge{display:inline-block;font-size:.72rem;background:#e8eaf6;color:#3F51B5;border-radius:4px;padding:2px 8px;margin-bottom:.4rem;font-weight:600;letter-spacing:.03em}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>ProjectCompass – Documentation</h1>
+  <p>Complete technical and functional reference for the ProjectCompass platform</p>
+</header>
+<nav>
+  <a href="index.html">Home</a>
+  <a href="docs/overview.html">Overview</a>
+  <a href="docs/architecture.html">Architecture</a>
+  <a href="docs/routes.html">API Routes</a>
+  <a href="docs/core_classes.html">Core Classes</a>
+  <a href="docs/templates.html">Templates</a>
+  <a href="docs/configuration.html">Configuration</a>
+  <a href="docs/docker.html">Docker</a>
+</nav>
+<main>
+  <h2>Documentation Index</h2>
+  <p class="subtitle">Select a section to explore the full technical documentation of ProjectCompass.</p>
+  <div class="grid">
+    <div class="card">
+      <span class="badge">General</span>
+      <h3>Platform Overview</h3>
+      <p>What ProjectCompass is, the core functionalities (Catalog, Data Exploration, Execution Engine, AI Chat, REST API), and the problems it solves for data teams.</p>
+      <a href="docs/overview.html">Read &rarr;</a>
+    </div>
+    <div class="card">
+      <span class="badge">Architecture</span>
+      <h3>System Architecture</h3>
+      <p>Flask Blueprint architecture, the ProjectCompass class, utility modules, and the file-based storage layer. Includes data flow and directory layout.</p>
+      <a href="docs/architecture.html">Read &rarr;</a>
+    </div>
+    <div class="card">
+      <span class="badge">Backend</span>
+      <h3>API Routes Reference</h3>
+      <p>Every route across all blueprints: URL, HTTP method, parameters, and responses. Covers web UI routes and REST API JSON endpoints.</p>
+      <a href="docs/routes.html">Read &rarr;</a>
+    </div>
+    <div class="card">
+      <span class="badge">Backend</span>
+      <h3>Core Classes</h3>
+      <p>Reference for <code>ProjectCompass</code>, <code>AnalysisUtils</code>, <code>DataUtils</code>, <code>HTMLUtils</code>, and the sandboxed LLM agent.</p>
+      <a href="docs/core_classes.html">Read &rarr;</a>
+    </div>
+    <div class="card">
+      <span class="badge">Frontend</span>
+      <h3>Templates Guide</h3>
+      <p>Description of every Jinja2 HTML template, the variables they expect, and how the header partial injection system works.</p>
+      <a href="docs/templates.html">Read &rarr;</a>
+    </div>
+    <div class="card">
+      <span class="badge">Configuration</span>
+      <h3>Configuration Reference</h3>
+      <p>Environment variables, <code>.env</code> file, YAML config files, and how to set up authentication with hashed passwords.</p>
+      <a href="docs/configuration.html">Read &rarr;</a>
+    </div>
+    <div class="card">
+      <span class="badge">Deployment</span>
+      <h3>Docker Deployment</h3>
+      <p>Docker Compose setup, Ollama LLM service, health checks, volumes, and production considerations.</p>
+      <a href="docs/docker.html">Read &rarr;</a>
+    </div>
+  </div>
+</main>
+<footer>
+  ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026. All rights reserved.
+</footer>
+</body>
+</html>
