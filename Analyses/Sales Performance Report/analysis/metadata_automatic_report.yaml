@@ -1,0 +1,18 @@
+title: Sales Performance Report
+description: Generate a summary report of sales metrics by region and product
+inputs:
+  start_date:
+    type: date
+    default: "2024-01-15"
+    description: Start date for the analysis period
+  end_date:
+    type: date
+    default: "2024-01-21"
+    description: End date for the analysis period
+  region:
+    type: text
+    default: "all"
+    description: Filter by region (North, South, East, West, or all)
+output:
+  type: csv
+  description: Aggregated sales summary with revenue, cost, and profit by product and region

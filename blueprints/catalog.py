@@ -274,3 +274,61 @@ def todo():
 @catalog_bp.route('/check', methods=['GET'])
 def check():
     return jsonify(success=True)
+
+
+@catalog_bp.route('/create_investigations', methods=['GET'])
+def create_investigations():
+    import yaml
+    webapp = get_webapp()
+    html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
+    name = request.args.get('name', '').replace('512', ' ')
+    metadata_path = f"{webapp.extract_main_folder()}/{name}/analysis/metadata_automatic_report.yaml"
+    with open(metadata_path) as f:
+        metadata = yaml.safe_load(f)
+
+    # Build form inputs from metadata
+    input_form = [f'<input type="hidden" name="analysis_name" value="{name}">']
+    for field_name, field_info in metadata.get('inputs', {}).items():
+        field_type = field_info.get('type', 'text')
+        default = field_info.get('default', '')
+        desc = field_info.get('description', field_name)
+        html_type = 'date' if field_type == 'date' else 'text'
+        input_form.append(
+            f'<label><b>{desc}</b></label><br>'
+            f'<input type="{html_type}" name="{field_name}" value="{default}" '
+            f'style="padding:6px 12px;margin:4px;border:2px solid #00889B;border-radius:4px;width:90%"><br><br>'
+        )
+
+    return render_template('investigations.html',
+                           title=metadata.get('title', name),
+                           input_form=input_form,
+                           head=html_part['head'],
+                           top_container=html_part['top_container'],
+                           sidebar_menu=html_part['sidebar_menu'],
+                           port=webapp.constants["port"],
+                           project_folder=webapp.project_folder)
+
+
+@catalog_bp.route('/run_investigation/', methods=['POST'])
+def run_investigation():
+    import importlib.util
+    webapp = get_webapp()
+    name = request.form.get('analysis_name', '')
+    inputs = {k: v for k, v in request.form.items() if k not in ('analysis_name', 'run_investigation')}
+
+    # Run the structured analysis
+    script_path = f"{webapp.extract_main_folder()}/{name}/analysis/structured_analysis_main.py"
+    output_dir = f"{webapp.extract_main_folder()}/{name}/physical_output/main"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = f"{output_dir}/output.csv"
+
+    try:
+        spec = importlib.util.spec_from_file_location("analysis_module", script_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.run(inputs=inputs, output_path=output_path)
+        logger.info(f"Structured analysis '{name}' completed successfully")
+        return redirect(f"/open_version/?name={name.replace(' ', '512')}")
+    except Exception as e:
+        logger.error(f"Structured analysis error: {e}")
+        return f"<h3>Analysis Error</h3><pre>{e}</pre><br><a href='/analysis'>Back to catalog</a>", 500
