@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Core Classes – ProjectCompass Docs</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
+    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
+    header h1{margin:0;font-size:1.8rem}
+    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
+    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
+    nav a:hover{text-decoration:underline}
+    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
+    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5;margin-top:2.5rem}
+    h3{color:#2d323a;margin-top:1.8rem;font-size:1.05rem}
+    p,li{line-height:1.7;font-size:.95rem}
+    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.85rem}
+    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.84rem;line-height:1.6}
+    .method-block{background:#fff;border-radius:8px;padding:1.2rem 1.5rem;margin:.8rem 0;box-shadow:0 2px 6px rgba(0,0,0,.07);border-left:4px solid #3F51B5}
+    .method-block h4{margin:0 0 .4rem;font-family:monospace;font-size:.95rem;color:#3F51B5}
+    .method-block p{margin:0;font-size:.9rem;color:#555;line-height:1.6}
+    .attr-table{width:100%;border-collapse:collapse;margin:.8rem 0}
+    .attr-table th{background:#e8eaf6;padding:.5rem .8rem;text-align:left;font-size:.85rem;color:#3F51B5}
+    .attr-table td{padding:.5rem .8rem;border-bottom:1px solid #eef;font-size:.85rem;vertical-align:top}
+    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Core Classes</h1>
+  <p>Reference for all Python classes in ProjectCompass</p>
+</header>
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="overview.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="routes.html">API Routes</a>
+  <a href="core_classes.html">Core Classes</a>
+  <a href="templates.html">Templates</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="docker.html">Docker</a>
+</nav>
+<main>
+
+  <!-- ── HTMLUtils ── -->
+  <h2>HTMLUtils <small style="font-size:.7em;color:#888">utils/html_utils.py</small></h2>
+  <p>Base class in the inheritance chain. Responsible for loading all environment configuration and parsing the shared <code>header.html</code> partial into named sections.</p>
+
+  <h3>Constructor</h3>
+  <pre>HTMLUtils(dir_path: str, **kwargs)</pre>
+  <p>On initialisation it:</p>
+  <ul>
+    <li>Reads <code>templates/environment_variables/constants.yaml</code> → <code>self.constants</code></li>
+    <li>Reads <code>templates/environment_variables/tool_choices.yaml</code> → <code>self.tool_choices</code></li>
+    <li>Reads <code>intro.txt</code>, <code>links.yaml</code>, <code>title.txt</code> → <code>self.environments_info</code></li>
+    <li>Parses <code>header.html</code> using HTML comment markers (<code>&lt;!-- start X --&gt;</code> / <code>&lt;!-- end X --&gt;</code>) into <code>self.html_parts</code> dict</li>
+    <li>Overrides <code>self.constants['port']</code> from the <code>PORT</code> environment variable if set</li>
+  </ul>
+
+  <h3>Key method</h3>
+  <div class="method-block">
+    <h4>substitute_html(**kwargs) → dict</h4>
+    <p>Iterates over <code>self.html_parts</code> and replaces <code>{{ key }}</code> placeholders with the provided keyword arguments. Returns a dict of rendered HTML strings (e.g. <code>head</code>, <code>top_container</code>, <code>sidebar_menu</code>) ready to be passed to <code>render_template()</code>.</p>
+  </div>
+
+  <!-- ── DataUtils ── -->
+  <h2>DataUtils <small style="font-size:.7em;color:#888">utils/data_utils.py</small></h2>
+  <p>Handles all data file operations and SQL execution. Inherits from <code>HTMLUtils</code>.</p>
+
+  <h3>Constructor</h3>
+  <pre>DataUtils(dir_path: str, **kwargs)</pre>
+  <p>Sets <code>self.save_queries_path</code> and <code>self.save_data_path</code>, creating both directories if they do not exist.</p>
+
+  <h3>Methods</h3>
+  <div class="method-block">
+    <h4>sql(sql_query: str) → pd.DataFrame</h4>
+    <p>Opens an in-memory DuckDB connection. Scans <code>Saved_data/</code> for CSV files and maps each filename (without extension) to a <code>read_csv_auto('/path/file.csv') AS alias</code> expression. SQLite/DB files are attached as separate schemas via <code>ATTACH … (TYPE sqlite)</code>. The user query is rewritten with these substitutions and executed. The connection is always closed in a <code>finally</code> block. Returns an empty DataFrame on error.</p>
+  </div>
+  <div class="method-block">
+    <h4>upload_text_files(request)</h4>
+    <p>Iterates over <code>request.files.getlist('upload_files')</code>. Each file is saved temporarily, read with <code>read_data()</code> using the form-supplied separator and header row, then written as a normalised CSV. The temporary file is removed afterwards.</p>
+  </div>
+  <div class="method-block">
+    <h4>list_data() → list[str]</h4>
+    <p>Returns the names (without extension) of all <code>.csv</code>, <code>.sqlite</code>, and <code>.db</code> files in <code>Saved_data/</code>.</p>
+  </div>
+  <div class="method-block">
+    <h4>read_data(file_path, separator, header) → pd.DataFrame  <em>[static]</em></h4>
+    <p>Thin wrapper around <code>pd.read_csv()</code>. Normalises the separator (<code>\\t</code> → tab, empty → comma) and the header row (<code>-1</code> → <code>None</code>). Uses the Python engine for compatibility with complex delimiters.</p>
+  </div>
+
+  <!-- ── AnalysisUtils ── -->
+  <h2>AnalysisUtils <small style="font-size:.7em;color:#888">utils/analysis_utils.py</small></h2>
+  <p>Manages the analysis catalog stored under <code>Analyses/</code>. Inherits from <code>DataUtils</code>.</p>
+
+  <h3>Constructor</h3>
+  <pre>AnalysisUtils(dir_path: str, **kwargs)</pre>
+  <p>Sets <code>self.save_folder_path = dir_path + 'Analyses'</code> and creates the directory.</p>
+
+  <h3>Methods</h3>
+  <div class="method-block">
+    <h4>read_single_analysis(main_folder, folder) → dict</h4>
+    <p>Reads <code>metadata.yaml</code> and <code>output_versions.yaml</code> for one analysis folder. Enriches the dict with computed fields: <code>last_modified</code>, <code>gitlab_link_viz</code>, <code>gdrive_link_viz</code>, <code>inline_inputs</code>, <code>inline_links</code>, <code>embedded</code>, <code>physical_output</code>, <code>versions_output</code>, <code>versions_dashboard</code>. Detects structured analyses by checking for <code>structured_analysis_main.py</code> and <code>metadata_automatic_report.yaml</code> in the <code>analysis/</code> subfolder. Also regenerates the per-analysis <code>readme.md</code>.</p>
+  </div>
+  <div class="method-block">
+    <h4>read_multiple_analysis() → dict</h4>
+    <p>Lists all non-hidden subdirectories of <code>Analyses/</code> and calls <code>read_single_analysis()</code> for each. Returns a dict keyed by folder name.</p>
+  </div>
+  <div class="method-block">
+    <h4>upload_new_analysis(request) → str</h4>
+    <p>Creates the full folder structure for a new analysis (<code>analysis/</code>, <code>physical_output/main/</code>, <code>sql_extractions/</code>), writes <code>metadata.yaml</code> and <code>output_versions.yaml</code>, saves uploaded files, auto-generates API documentation with <code>pdoc</code>, extracts <code>import</code> statements into <code>requirements.txt</code>, and extracts SQL queries from docstrings into <code>sql_extractions/</code>. Returns an error string (empty on success).</p>
+  </div>
+  <div class="method-block">
+    <h4>modify_analysis(request) → str</h4>
+    <p>Overwrites <code>metadata.yaml</code> and updates the main version in <code>output_versions.yaml</code> for an existing analysis. Replaces the main physical output file if a new one is uploaded.</p>
+  </div>
+  <div class="method-block">
+    <h4>produce_readme()</h4>
+    <p>Regenerates the top-level <code>Analyses/readme.md</code> with a summary table of all analyses (product, title, owner).</p>
+  </div>
+  <div class="method-block">
+    <h4>make_archive(source, destination)  <em>[static]</em></h4>
+    <p>Creates a ZIP archive of a source directory and moves it to the destination path.</p>
+  </div>
+
+  <!-- ── ProjectCompass ── -->
+  <h2>ProjectCompass <small style="font-size:.7em;color:#888">basefun.py</small></h2>
+  <p>Top-level class. Inherits from <code>DataUtils</code>, <code>AnalysisUtils</code>, and <code>HTMLUtils</code> (via the MRO chain). Adds project-folder path resolution and the recipe job-request builder.</p>
+
+  <h3>Constructor</h3>
+  <pre>ProjectCompass(dir_path: str)</pre>
+  <p>Resolves <code>self.project_folder</code> (the URL-safe last path segment of <code>dir_path</code>) and populates <code>self.environments</code> with the template and analysis folder paths.</p>
+
+  <div class="method-block">
+    <h4>create_job_request(RECIPE_ID, RECIPE_VERSION, **kwargs) → dict  <em>[static]</em></h4>
+    <p>Builds a v2 job-request payload for the Intelligence Studio Recipe API. Accepts arbitrary keyword arguments under <code>input_recipe</code>.</p>
+  </div>
+
+  <!-- ── Crypto helpers ── -->
+  <h2>Crypto Helpers <small style="font-size:.7em;color:#888">basefun.py</small></h2>
+  <div class="method-block">
+    <h4>encrypt_and_compress(text, key='key') → str</h4>
+    <p>XOR-encrypts the text with the key, compresses with zlib, and encodes with Base64. Used to protect sensitive configuration values.</p>
+  </div>
+  <div class="method-block">
+    <h4>decrypt_and_decompress(encrypted_string, key='key') → str</h4>
+    <p>Reverses the above: Base64 decode → zlib decompress → XOR decrypt.</p>
+  </div>
+
+  <!-- ── agent_utils ── -->
+  <h2>LLM Agent <small style="font-size:.7em;color:#888">utils/agent_utils.py + blueprints/agent.py</small></h2>
+  <p>Lazy-loaded module. Ollama is only initialised when the <code>/chat</code> route is used. The application starts and works fully without an LLM service.</p>
+
+  <table class="attr-table">
+    <tr><th>Component</th><th>Description</th></tr>
+    <tr><td><code>safe_execute_pandas()</code></td><td>AST-validated execution. Parses the expression, walks the AST to block imports/open/exec/eval, then executes in a restricted namespace with only <code>main_df</code> and <code>pd</code> available.</td></tr>
+    <tr><td><code>_get_llm()</code></td><td>Lazy-loads Ollama connection. Returns <code>None</code> if Ollama is unavailable — the app gracefully handles this.</td></tr>
+    <tr><td><code>/chat</code> route</td><td>Web UI for asking natural language questions about datasets. LLM generates a pandas expression, which is safely executed.</td></tr>
+    <tr><td><code>/chat/ask</code> API</td><td>JSON endpoint: accepts <code>{"question": ..., "dataset": ...}</code>, returns <code>{"answer": ..., "expression": ...}</code>.</td></tr>
+  </table>
+
+</main>
+<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+</body>
+</html>

@@ -189,3 +189,7 @@ script_staging/
 .amazonq/
 */.amazonq/*
 
+
+# ProjectCompass
+tmp/
+.env
