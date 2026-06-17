@@ -24,7 +24,7 @@ def _get_llm():
         from llama_index.llms.ollama import Ollama
 
         host = current_app.config.get('OLLAMA_HOST', 'http://localhost:11434')
-        _llm = Ollama(model="llama3", base_url=host)
+        _llm = Ollama(model="qwen3:0.6b", base_url=host)
         _embed_model = OllamaEmbedding(model_name="nomic-embed-text", base_url=host)
         Settings.llm = _llm
         Settings.embed_model = _embed_model
@@ -141,4 +141,76 @@ Expression:"""
         })
     except Exception as e:
         logger.error(f"Chat error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@agent_bp.route('/chat/analysis')
+def chat_analysis_page():
+    """Chat page with analysis context pre-loaded."""
+    webapp = current_app.config['WEBAPP']
+    html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
+    name = request.args.get('name', '').replace('512', ' ')
+    analysis = {}
+    if name:
+        try:
+            analysis = webapp.read_single_analysis(webapp.extract_main_folder(), name)
+        except Exception:
+            pass
+    return render_template('chat_analysis.html',
+                           head=html_part['head'],
+                           top_container=html_part['top_container'],
+                           sidebar_menu=html_part['sidebar_menu'],
+                           port=webapp.constants["port"],
+                           project_folder=webapp.project_folder,
+                           analysis=analysis,
+                           analysis_name=name)
+
+
+@agent_bp.route('/chat/analysis/ask', methods=['POST'])
+def chat_analysis_ask():
+    """Chat endpoint with analysis metadata as context."""
+    webapp = current_app.config['WEBAPP']
+    data = request.get_json()
+    question = data.get('question', '')
+    analysis_name = data.get('analysis_name', '')
+
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+
+    llm = _get_llm()
+    if llm is None:
+        return jsonify({'error': 'LLM service not available. Is Ollama running?'}), 503
+
+    # Load analysis context
+    context = ""
+    if analysis_name:
+        try:
+            analysis = webapp.read_single_analysis(webapp.extract_main_folder(), analysis_name)
+            context = f"""Analysis: {analysis.get('title', '')}
+Product: {analysis.get('product', '')}
+Owner: {analysis.get('owner', '')}
+Collaborators: {analysis.get('collaborators', '')}
+Countries: {analysis.get('countries', '')}
+Description: {analysis.get('description', '')}
+Output type: {analysis.get('output_type', '')}
+Output description: {analysis.get('output description', '')}
+Start date: {analysis.get('start_date', '')}"""
+        except Exception:
+            pass
+
+    prompt = f"""You are a helpful assistant knowledgeable about data analysis projects.
+Use the following analysis context to answer the user's question.
+
+{context}
+
+Question: {question}
+
+Answer:"""
+
+    try:
+        from llama_index.core import Settings
+        response = Settings.llm.complete(prompt)
+        return jsonify({'answer': str(response).strip()})
+    except Exception as e:
+        logger.error(f"Analysis chat error: {e}")
         return jsonify({'error': str(e)}), 500
