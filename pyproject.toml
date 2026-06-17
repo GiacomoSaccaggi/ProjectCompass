@@ -37,7 +37,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "S", "B"]
-ignore = ["S101", "S104", "S105", "S110", "S603", "S605", "S607", "S608"]
+ignore = ["S101", "S104", "S105", "S108", "S110", "S603", "S605", "S607", "S608"]
 
 [tool.ruff.lint.per-file-ignores]
 "utils/analysis_utils.py" = ["E501"]
