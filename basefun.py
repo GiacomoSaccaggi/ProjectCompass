@@ -29,16 +29,7 @@ class ProjectCompass(DataUtils, AnalysisUtils, HTMLUtils):
         super().__init__(dir_path=dir_path)
 
         self.environments = [self.template, self.save_folder_path]
-        if dir_path[:-1].split('/')[0] != dir_path[:-1]:
-            self.project_folder = dir_path[:-1].split('/')[-1].replace(' ', '%20') + '/'
-        elif dir_path[:-1].split('\\')[0] != dir_path[:-1]:
-            self.project_folder = dir_path[:-1].split('\\')[-1].replace(' ', '%20') + '/'
-        elif dir_path[:-1].split('/')[-1].replace(' ', '%20') != '':
-            self.project_folder = ''
-        elif dir_path[:-1].split('\\')[-1].replace(' ', '%20') != '':
-            self.project_folder = ''
-        else:
-            self.project_folder = dir_path[:-1].split('/')[-1].replace(' ', '%20') + '/'
+        self.project_folder = ''
 
     @staticmethod
     def create_job_request(RECIPE_ID, RECIPE_VERSION, **kwargs):
