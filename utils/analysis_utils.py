@@ -55,17 +55,22 @@ class AnalysisUtils:
                 analysis['inline_links'] = ';'.join([k + '===' + v for k, v in analysis['links'].items()])
                 analysis['embedded'] = 'y' if '<' in analysis['dashboard link'] else 'n'
                 analysis['folder'] = f"{main_folder}/{folder}"
+                analysis.setdefault('slides', {})
+                analysis.setdefault('confluence_link_viz', '')
                 for k, v in analysis.items():
                     if v is None:
                         analysis[k] = ""
             except yaml.YAMLError as exc:
                 print(exc)
         analysis['versions_dashboard'] = {}
-        with open(f"{main_folder}/{folder}/output_versions.yaml") as file:
-            try:
-                verions = yaml.safe_load(file)
-            except yaml.YAMLError as exc:
-                print(exc)
+        versions_file = f"{main_folder}/{folder}/output_versions.yaml"
+        verions = {}
+        if os.path.exists(versions_file):
+            with open(versions_file) as file:
+                try:
+                    verions = yaml.safe_load(file) or {}
+                except yaml.YAMLError as exc:
+                    print(exc)
         for k, v in verions.items():
             if ('<' in analysis['dashboard link']) == ('<' in v):
                 analysis['versions_dashboard'][k] = v
