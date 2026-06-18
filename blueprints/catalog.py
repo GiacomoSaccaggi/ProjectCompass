@@ -386,3 +386,129 @@ def run_investigation():
     except Exception as e:
         logger.error(f"Structured analysis error: {e}")
         return f"<h3>Analysis Error</h3><pre>{e}</pre><br><a href='/analysis'>Back to catalog</a>", 500
+
+
+# --- SCHEDULER ---
+
+def execute_scheduled_analysis(app, name, inputs):
+    """Execute a structured analysis (called by APScheduler)."""
+    import datetime
+    import importlib.util
+    import shutil
+    with app.app_context():
+        webapp = get_webapp()
+        script_path = f"{webapp.extract_main_folder()}/{name}/analysis/structured_analysis_main.py"
+        output_dir = f"{webapp.extract_main_folder()}/{name}/physical_output/main"
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = f"{output_dir}/output.csv"
+        try:
+            spec = importlib.util.spec_from_file_location("analysis_module", script_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            module.run(inputs=inputs, output_path=output_path)
+            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            version_dir = f"{webapp.extract_main_folder()}/{name}/physical_output"
+            for f_name in os.listdir(output_dir):
+                if f_name.startswith('.') or '.ini' in f_name:
+                    continue
+                ext = os.path.splitext(f_name)[1]
+                shutil.copy(f"{output_dir}/{f_name}", f"{version_dir}/{timestamp}{ext}")
+            logger.info(f"Scheduled analysis '{name}' completed")
+        except Exception as e:
+            logger.error(f"Scheduled analysis '{name}' failed: {e}")
+
+
+@catalog_bp.route('/schedule_analysis/', methods=['POST'])
+def schedule_analysis():
+    from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
+    from flask import current_app
+
+    name = request.form.get('analysis_name', '')
+    inputs = {k: v for k, v in request.form.items()
+              if k not in ('analysis_name', 'schedule_type', 'schedule_time', 'schedule_cron')}
+
+    schedule_type = request.form.get('schedule_type', '')
+    schedule_time = request.form.get('schedule_time', '07:00')
+    schedule_cron = request.form.get('schedule_cron', '')
+
+    scheduler = current_app.config['SCHEDULER']
+    hour, minute = (int(x) for x in schedule_time.split(':')) if schedule_time else (7, 0)
+
+    import datetime
+    job_id = f"{name}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    if schedule_type == 'daily':
+        trigger = CronTrigger(hour=hour, minute=minute)
+    elif schedule_type == 'hourly':
+        trigger = IntervalTrigger(hours=1)
+    elif schedule_type == 'weekly_mon':
+        trigger = CronTrigger(day_of_week='mon', hour=hour, minute=minute)
+    elif schedule_type == 'weekly_fri':
+        trigger = CronTrigger(day_of_week='fri', hour=hour, minute=minute)
+    elif schedule_type == 'cron' and schedule_cron:
+        trigger = CronTrigger.from_crontab(schedule_cron)
+    else:
+        return redirect(f"/create_investigations?name={name.replace(' ', '512')}")
+
+    app = current_app._get_current_object()
+    scheduler.add_job(
+        id=job_id,
+        func=execute_scheduled_analysis,
+        trigger=trigger,
+        args=[app, name, inputs],
+        name=f"{name} ({schedule_type})"
+    )
+    logger.info(f"Scheduled '{name}' as '{schedule_type}' (job: {job_id})")
+    return redirect('/schedules/')
+
+
+@catalog_bp.route('/schedules/')
+def schedules_page():
+    from flask import current_app
+    webapp = get_webapp()
+    html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
+    scheduler = current_app.config['SCHEDULER']
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({
+            'id': job.id,
+            'name': job.name or job.id,
+            'next_run': str(job.next_run_time.strftime('%Y-%m-%d %H:%M')) if job.next_run_time else 'Paused',
+            'trigger': str(job.trigger)
+        })
+    return render_template('schedules.html',
+                           title='Scheduled Analyses',
+                           jobs=jobs,
+                           head=html_part['head'],
+                           top_container=html_part['top_container'],
+                           sidebar_menu=html_part['sidebar_menu'],
+                           port=webapp.constants["port"],
+                           project_folder=webapp.project_folder)
+
+
+@catalog_bp.route('/delete_schedule/')
+def delete_schedule():
+    from flask import current_app
+    job_id = request.args.get('id', '')
+    scheduler = current_app.config['SCHEDULER']
+    try:
+        scheduler.remove_job(job_id)
+        logger.info(f"Deleted scheduled job: {job_id}")
+    except Exception:
+        pass
+    return redirect('/schedules/')
+
+
+@catalog_bp.route('/run_schedule_now/')
+def run_schedule_now():
+    from flask import current_app
+    job_id = request.args.get('id', '')
+    scheduler = current_app.config['SCHEDULER']
+    try:
+        job = scheduler.get_job(job_id)
+        if job:
+            job.func(*job.args, **job.kwargs)
+    except Exception as e:
+        logger.error(f"Manual run failed for {job_id}: {e}")
+    return redirect('/schedules/')

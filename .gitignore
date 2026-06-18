@@ -194,4 +194,4 @@ script_staging/
 # ProjectCompass
 tmp/
 .env
-.DS_Store
+.DS_Storescheduler_jobs.db
