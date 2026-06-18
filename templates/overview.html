@@ -72,6 +72,10 @@
       <p>Run structured analyses with dynamic forms generated from YAML metadata. Produces physical outputs (HTML reports, data files).</p>
     </div>
     <div class="ov-card">
+      <h4><i class="fa fa-calendar"></i> Scheduler</h4>
+      <p>Schedule structured analyses with cron/interval triggers. Daily, hourly, weekly, or custom cron. Jobs persist across restarts via SQLite (APScheduler).</p>
+    </div>
+    <div class="ov-card">
       <h4><i class="fa fa-comments"></i> AI Chat</h4>
       <p>Ask questions about your data in natural language. Uses Ollama + LLaMA with AST-validated safe code execution (sandboxed pandas).</p>
     </div>
@@ -95,6 +99,8 @@
     <tr><td>/query_runner/</td><td>SQL query editor (DuckDB)</td></tr>
     <tr><td>/open_data?name=X</td><td>Open a specific dataset and query it</td></tr>
     <tr><td>/graph_analysis/</td><td>Send query results to RAWGraphs</td></tr>
+    <tr><td>/schedules/</td><td>View and manage scheduled analyses</td></tr>
+    <tr><td>/outputs/</td><td>View analysis outputs per run</td></tr>
     <tr><td>/rawgraphs</td><td>RAWGraphs visualization (empty canvas)</td></tr>
     <tr><td>/upload_data/</td><td>Upload new data files</td></tr>
     <tr><td>/chat</td><td>AI data assistant (requires Ollama)</td></tr>
@@ -153,6 +159,7 @@
     <span>RAWGraphs</span>
     <span>jQuery</span>
     <span>Font Awesome</span>
+    <span>APScheduler</span>
     <span>Gunicorn</span>
     <span>Docker</span>
   </div>
