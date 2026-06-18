@@ -17,6 +17,8 @@ dependencies = [
     "python-dotenv==1.0.1",
     "werkzeug>=3.0.0",
     "scomp-link>=1.0.0",
+    "flask-apscheduler>=1.13.1",
+    "sqlalchemy<2.0",
 ]
 
 [project.optional-dependencies]

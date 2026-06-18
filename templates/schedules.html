@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+  <header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-calendar"></i> Scheduled Analyses</b></h5>
+  </header>
+  <br>
+  <div class="w3-padding w3-container">
+    {% if jobs %}
+    <table class="w3-table w3-bordered w3-hoverable w3-white">
+      <tr class="w3-light-grey">
+        <th>Analysis</th>
+        <th>Trigger</th>
+        <th>Next Run</th>
+        <th>Actions</th>
+      </tr>
+      {% for job in jobs %}
+      <tr>
+        <td><b>{{ job.name }}</b></td>
+        <td style="font-family:monospace;font-size:.82rem;">{{ job.trigger }}</td>
+        <td>{{ job.next_run }}</td>
+        <td>
+          <a href="/run_schedule_now/?id={{ job.id }}" class="w3-button w3-small w3-green" title="Run now"><i class="fa fa-play"></i></a>
+          <a href="/delete_schedule/?id={{ job.id }}" class="w3-button w3-small w3-red" onclick="return confirm('Delete this schedule?')" title="Delete"><i class="fa fa-trash"></i></a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <div class="w3-panel w3-pale-blue w3-border w3-border-blue" style="border-radius:6px;">
+      <p><i class="fa fa-info-circle"></i> No scheduled analyses. Go to an analysis and use the Schedule option to add one.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>

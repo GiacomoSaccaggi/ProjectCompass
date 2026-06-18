@@ -4,6 +4,7 @@ ProjectCompass — Analysis catalog and execution platform.
 import os
 
 from flask import Flask
+from flask_apscheduler import APScheduler
 from flask_cors import CORS
 
 from basefun import ProjectCompass
@@ -40,6 +41,14 @@ def create_app(config_class=Config):
     app.register_blueprint(data_bp)
     app.register_blueprint(agent_bp)
     app.register_blueprint(api_bp)
+
+    # Scheduler
+    app.config['SCHEDULER_JOBSTORES'] = {'default': {'type': 'sqlalchemy', 'url': f'sqlite:///{path}scheduler_jobs.db'}}
+    app.config['SCHEDULER_API_ENABLED'] = False
+    scheduler = APScheduler()
+    scheduler.init_app(app)
+    scheduler.start()
+    app.config['SCHEDULER'] = scheduler
 
     # Health endpoint
     @app.route('/health')
