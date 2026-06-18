@@ -1,183 +1,215 @@
 <!DOCTYPE html>
 <html>
-    <link href="/static/css/rawgraph2.css" rel="stylesheet">
-    <link href="/static/css/rawgraph1.css" rel="stylesheet">
-  {{ head|safe }}
-    <style>
-        #data-type-selector {background-color: white; }
-        .fade {background-color: white; }
-    </style>
+{{ head|safe }}
+<style>
+.rg{padding:1rem 1.5rem;max-width:1300px;margin:0 auto}
+.rg h5{color:#3F51B5;margin:0 0 .8rem;font-size:1rem;font-weight:700}
+.rg-section{background:#fff;border-radius:10px;padding:1.2rem;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+
+/* Data */
+.rg-data-info{font-size:.82rem;color:#555;padding:6px 10px;background:#e8f5e9;border-radius:4px;display:inline-block}
+
+/* Chart grid */
+.rg-charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;max-height:320px;overflow-y:auto;padding:.3rem}
+.rg-chart-card{border:2px solid #eee;border-radius:8px;padding:.5rem;text-align:center;cursor:pointer;transition:.15s}
+.rg-chart-card:hover{border-color:#9fa8da;background:#f5f5ff}
+.rg-chart-card.active{border-color:#3F51B5;background:#e8eaf6}
+.rg-chart-card img{width:100%;height:60px;object-fit:contain}
+.rg-chart-card span{display:block;font-size:.7rem;font-weight:600;margin-top:.3rem;color:#333}
+.rg-cat-filter{margin-bottom:.6rem;display:flex;gap:.4rem;flex-wrap:wrap}
+.rg-cat-btn{padding:3px 10px;border:1px solid #ccc;border-radius:12px;font-size:.7rem;cursor:pointer;background:#fff}
+.rg-cat-btn.active{background:#3F51B5;color:#fff;border-color:#3F51B5}
+
+/* Mapping */
+.rg-map-wrap{display:grid;grid-template-columns:200px 1fr;gap:1rem}
+@media(max-width:800px){.rg-map-wrap{grid-template-columns:1fr}}
+.rg-col-list{display:flex;flex-direction:column;gap:4px;max-height:350px;overflow-y:auto}
+.rg-col-chip{padding:5px 10px;border-radius:4px;font-size:.78rem;font-weight:600;cursor:grab;user-select:none;border:1px solid #ddd}
+.rg-col-chip[data-type="number"]{background:#e3f2fd;color:#1565c0;border-color:#bbdefb}
+.rg-col-chip[data-type="string"]{background:#fce4ec;color:#c62828;border-color:#f8bbd0}
+.rg-col-chip[data-type="date"]{background:#fff3e0;color:#e65100;border-color:#ffcc80}
+.rg-col-chip.dragging{opacity:.4}
+.rg-dims{display:flex;flex-direction:column;gap:.5rem}
+.rg-dim{border:2px dashed #ddd;border-radius:8px;padding:.6rem .8rem;min-height:42px;transition:.15s}
+.rg-dim.dragover{border-color:#3F51B5;background:#f3f4ff}
+.rg-dim-label{font-size:.75rem;font-weight:700;color:#555;margin-bottom:.3rem}
+.rg-dim-label .req{color:#c62828}
+.rg-dim-label .types{font-weight:400;color:#999;font-size:.68rem}
+.rg-dim-chips{display:flex;flex-wrap:wrap;gap:4px}
+.rg-dim-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;font-size:.72rem;font-weight:600;background:#e8eaf6;color:#3F51B5}
+.rg-dim-chip button{border:none;background:none;color:#c62828;cursor:pointer;font-size:.9rem;padding:0;line-height:1}
+
+/* Visual options */
+.rg-opts{display:flex;flex-direction:column;gap:.4rem;margin-top:.8rem;max-width:500px}
+.rg-opt{display:flex;align-items:center;gap:.5rem;font-size:.78rem;min-height:28px}
+.rg-opt label{min-width:140px;flex-shrink:0;font-weight:500;color:#444}
+.rg-opt input[type=range]{flex:1}
+.rg-opt input[type=number]{width:60px;padding:2px 4px;border:1px solid #ccc;border-radius:3px}
+.rg-opt input[type=color]{width:32px;height:24px;border:none;padding:0;cursor:pointer}
+.rg-opt-group{font-size:.72rem;font-weight:700;text-transform:uppercase;color:#3F51B5;margin-top:.6rem;border-bottom:1px solid #eee;padding-bottom:3px}
+
+/* Output */
+#rg-output{min-height:400px;border:1px solid #eee;border-radius:8px;background:#fafafa;padding:.5rem;overflow:auto}
+#rg-output svg{max-width:100%;height:auto}
+.rg-toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}
+.rg-toolbar button{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:.8rem;font-weight:600}
+.rg-btn-render{background:#3F51B5;color:#fff}.rg-btn-render:hover{background:#303F9F}
+.rg-btn-export{background:#4CAF50;color:#fff}.rg-btn-export:hover{background:#388E3C}
+.rg-btn-save{background:#FF9800;color:#fff}.rg-btn-save:hover{background:#F57C00}
+.rg-btn-load{background:#9E9E9E;color:#fff;border-radius:4px;padding:6px 14px;font-size:.8rem;font-weight:600;cursor:pointer}.rg-btn-load:hover{background:#757575}
+.rg-error{color:#c62828;font-size:.82rem;padding:.5rem;background:#ffebee;border-radius:4px}
+</style>
 <body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
 
-  {{ top_container|safe }}
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+<div class="rg">
 
-  {{ sidebar_menu|safe }}
-  <!-- !PAGE CONTENT! -->
-  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
-
-	<noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <script>
-        ! function(e) {
-            function r(r) {
-                for (var n, a, i = r[0], c = r[1], f = r[2], s = 0, p = []; s < i.length; s++) a = i[s], Object.prototype.hasOwnProperty.call(o, a) && o[a] && p.push(o[a][0]), o[a] = 0;
-                for (n in c) Object.prototype.hasOwnProperty.call(c, n) && (e[n] = c[n]);
-                for (l && l(r); p.length;) p.shift()();
-                return u.push.apply(u, f || []), t()
-            }
-
-            function t() {
-                for (var e, r = 0; r < u.length; r++) {
-                    for (var t = u[r], n = !0, i = 1; i < t.length; i++) {
-                        var c = t[i];
-                        0 !== o[c] && (n = !1)
-                    }
-                    n && (u.splice(r--, 1), e = a(a.s = t[0]))
-                }
-                return e
-            }
-            var n = {},
-                o = {
-                    1: 0
-                },
-                u = [];
-
-            function a(r) {
-                if (n[r]) return n[r].exports;
-                var t = n[r] = {
-                    i: r,
-                    l: !1,
-                    exports: {}
-                };
-                return e[r].call(t.exports, t, t.exports, a), t.l = !0, t.exports
-            }
-            a.e = function(e) {
-                var r = [],
-                    t = o[e];
-                if (0 !== t)
-                    if (t) r.push(t[2]);
-                    else {
-                        var n = new Promise((function(r, n) {
-                            t = o[e] = [r, n]
-                        }));
-                        r.push(t[2] = n);
-                        var u, i = document.createElement("script");
-                        i.charset = "utf-8", i.timeout = 120, a.nc && i.setAttribute("nonce", a.nc), i.src = function(e) {
-                            return a.p + "/static/js/rawgraph3.js"
-                        }(e);
-                        var c = new Error;
-                        u = function(r) {
-                            i.onerror = i.onload = null, clearTimeout(f);
-                            var t = o[e];
-                            if (0 !== t) {
-                                if (t) {
-                                    var n = r && ("load" === r.type ? "missing" : r.type),
-                                        u = r && r.target && r.target.src;
-                                    c.message = "Loading js scripts " + e + " failed.\n(" + n + ": " + u + ")", c.name = "ChunkLoadError", c.type = n, c.request = u, t[1](c)
-                                }
-                                o[e] = void 0
-                            }
-                        };
-                        var f = setTimeout((function() {
-                            u({
-                                type: "timeout",
-                                target: i
-                            })
-                        }), 12e4);
-                        i.onerror = i.onload = u, document.head.appendChild(i)
-                    } return Promise.all(r)
-            }, a.m = e, a.c = n, a.d = function(e, r, t) {
-                a.o(e, r) || Object.defineProperty(e, r, {
-                    enumerable: !0,
-                    get: t
-                })
-            }, a.r = function(e) {
-                "undefined" != typeof Symbol && Symbol.toStringTag && Object.defineProperty(e, Symbol.toStringTag, {
-                    value: "Module"
-                }), Object.defineProperty(e, "__esModule", {
-                    value: !0
-                })
-            }, a.t = function(e, r) {
-                if (1 & r && (e = a(e)), 8 & r) return e;
-                if (4 & r && "object" == typeof e && e && e.__esModule) return e;
-                var t = Object.create(null);
-                if (a.r(t), Object.defineProperty(t, "default", {
-                        enumerable: !0,
-                        value: e
-                    }), 2 & r && "string" != typeof e)
-                    for (var n in e) a.d(t, n, function(r) {
-                        return e[r]
-                    }.bind(null, n));
-                return t
-            }, a.n = function(e) {
-                var r = e && e.__esModule ? function() {
-                    return e.default
-                } : function() {
-                    return e
-                };
-                return a.d(r, "a", r), r
-            }, a.o = function(e, r) {
-                return Object.prototype.hasOwnProperty.call(e, r)
-            }, a.p = "/", a.oe = function(e) {
-                throw console.error(e), e
-            };
-            var i = this["webpackJsonprawgraphs-frontend"] = this["webpackJsonprawgraphs-frontend"] || [],
-                c = i.push.bind(i);
-            i.push = r, i = i.slice();
-            for (var f = 0; f < i.length; f++) r(i[f]);
-
-            var l = c;
-            t()
-
-        }([]);
-    </script>
-    <script>
-        function setNativeValue(element, value) {
-              var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-              nativeInputValueSetter.call(element, value);
-            }
-    </script>
-    <textarea id="rawgraphs-data-payload" style="display:none;">{{ input_data }}</textarea>
-    <script src="/static/js/rawgraph2.js"></script>
-    <script src="/static/js/rawgraph1.js"></script>
-
-    <script src="/static/js/worker_rowgraph.js"></script>
-
-    <script>
-        (function() {
-            var payload = document.getElementById('rawgraphs-data-payload');
-            var data = payload ? payload.value.trim() : '';
-            if (!data) return;
-            var attempts = 0;
-            var _interval = setInterval(function() {
-                attempts++;
-                if (attempts > 50) { clearInterval(_interval); return; }
-                var textarea = document.getElementById('inputtext');
-                if (!textarea) return;
-                clearInterval(_interval);
-                var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-                nativeSetter.call(textarea, data);
-                var tracker = textarea._valueTracker;
-                if (tracker) { tracker.setValue(''); }
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            }, 300);
-        })();
-    </script>
-
-    <footer>
-        <center>
-            <a href="https://www.rawgraphs.io/about">
-                <p>
-                    Mauri, M., Elli, T., Caviglia, G., Uboldi, G., & Azzi, M. (2017).
-                    <br>
-                    RAWGraphs: A Visualisation Platform to Create Open Outputs. In Proceedings of the 12th Biannual Conference on Italian SIGCHI Chapter (p. 28:1–28:5).
-                    <br>
-                    New York, NY, USA: ACM. https://doi.org/10.1145/3125571.3125585
-                </p>
-            </a>
-        </center>
-    </footer>
+<!-- 1. DATA -->
+<div class="rg-section">
+  <h5><i class="fa fa-table"></i> 1. Load your data</h5>
+  {% if input_data %}
+  <div class="rg-data-info"><i class="fa fa-check-circle"></i> <span id="rg-status">Data loaded from query</span></div>
+  {% else %}
+  <textarea id="rg-paste" rows="6" style="width:100%;font-family:monospace;font-size:.78rem;padding:.5rem;border:1px solid #ddd;border-radius:6px;resize:vertical" placeholder="Paste tabular data (TSV or CSV)..."></textarea>
+  <button class="rg-btn-render" onclick="loadPasted()" style="margin-top:.4rem"><i class="fa fa-upload"></i> Load</button>
+  {% endif %}
 </div>
-</body>
 
+<!-- 2. CHOOSE CHART -->
+<div class="rg-section">
+  <h5><i class="fa fa-bar-chart"></i> 2. Choose a chart</h5>
+  <div id="rg-cat-filter" class="rg-cat-filter"></div>
+  <div id="rg-charts" class="rg-charts"></div>
+</div>
+
+<!-- 3. MAPPING + OPTIONS -->
+<div class="rg-section">
+  <h5><i class="fa fa-columns"></i> 3. Mapping</h5>
+  <div class="rg-map-wrap">
+    <div>
+      <div style="font-size:.75rem;font-weight:600;color:#666;margin-bottom:.4rem">Columns (drag →)</div>
+      <div id="rg-cols" class="rg-col-list"></div>
+    </div>
+    <div id="rg-dims" class="rg-dims"></div>
+  </div>
+  <details style="margin-top:.8rem"><summary style="font-size:.82rem;font-weight:600;color:#3F51B5;cursor:pointer">Visual Options</summary>
+  <div id="rg-opts" class="rg-opts"></div>
+  </details>
+</div>
+
+<!-- 4. OUTPUT -->
+<div class="rg-section">
+  <h5><i class="fa fa-picture-o"></i> 4. Output</h5>
+  <div class="rg-toolbar">
+    <button class="rg-btn-render" onclick="render()"><i class="fa fa-paint-brush"></i> Render</button>
+    <button class="rg-btn-export" onclick="exportSVG()"><i class="fa fa-download"></i> SVG</button>
+    <button class="rg-btn-export" onclick="exportPNG()"><i class="fa fa-image"></i> PNG</button>
+    <button class="rg-btn-save" onclick="saveProject()"><i class="fa fa-save"></i> Save Project</button>
+    <label class="rg-btn-load" style="margin:0"><i class="fa fa-folder-open"></i> Load Project<input type="file" accept=".rawgraphs,.json" onchange="loadProject(event)" style="display:none"></label>
+  </div>
+  <div id="rg-output"></div>
+</div>
+
+</div>
+</div>
+
+<footer style="text-align:center;padding:.8rem;color:#aaa;font-size:.7rem;border-top:1px solid #eee">
+  Powered by <a href="https://www.rawgraphs.io/" target="_blank">RAWGraphs</a> (Apache 2.0) — DensityDesign Lab, Calibro, INMAGIK
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@rawgraphs/rawgraphs-core@1.0.0-beta.17/lib/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@rawgraphs/rawgraphs-charts/lib/index.umd.js"></script>
+{% if input_data %}
+<textarea id="rg-payload" style="display:none">{{ input_data }}</textarea>
+{% endif %}
+<script>
+var D={data:[],cols:[],types:{},chart:null,chartName:'',mapping:{},vopts:{}};
+
+// --- DATA ---
+function parseData(t){t=t.trim();if(!t)return[];var s=t.indexOf('\t')>=0?'\t':',';var L=t.split('\n');var h=L[0].split(s).map(function(x){return x.trim().replace(/^"|"$/g,'')});var R=[];for(var i=1;i<L.length;i++){if(!L[i].trim())continue;var v=L[i].split(s);var r={};for(var j=0;j<h.length;j++){var c=(v[j]||'').trim().replace(/^"|"$/g,'');var n=Number(c);r[h[j]]=(!isNaN(n)&&c!=='')?n:c}R.push(r)}return R}
+function detectTypes(data,cols){var t={};cols.forEach(function(c){var s=data.slice(0,50).map(function(r){return r[c]});t[c]=s.every(function(v){return typeof v==='number'})?'number':'string'});return t}
+function setData(data){D.data=data;if(data.length){D.cols=Object.keys(data[0]);D.types=detectTypes(data,D.cols);var st=document.getElementById('rg-status');if(st)st.textContent=data.length+' rows × '+D.cols.length+' cols';buildCols();if(D.chart)buildDims()}}
+function loadPasted(){setData(parseData(document.getElementById('rg-paste').value))}
+
+// --- CHARTS ---
+function buildCharts(){var el=document.getElementById('rg-charts');var cats=new Set();var charts=[];
+Object.keys(rawcharts).forEach(function(k){var c=rawcharts[k];if(!c.dimensions||!c.metadata||k==='colortest')return;(c.metadata.categories||[]).forEach(function(cat){cats.add(cat)});charts.push({key:k,def:c})});
+// category filter
+var cf=document.getElementById('rg-cat-filter');cf.innerHTML='<span class="rg-cat-btn active" onclick="filterCharts(\'\')">All</span>';
+cats.forEach(function(cat){cf.innerHTML+='<span class="rg-cat-btn" onclick="filterCharts(\''+cat+'\')">'+cat+'</span>'});
+// chart cards
+el.innerHTML='';charts.forEach(function(c){var d=document.createElement('div');d.className='rg-chart-card';d.dataset.cats=(c.def.metadata.categories||[]).join(' ');d.dataset.key=c.key;d.onclick=function(){selectChart(c.key)};
+d.innerHTML='<img src="'+(c.def.metadata.thumbnail||c.def.metadata.icon||'')+'" alt="'+c.def.metadata.name+'"><span>'+c.def.metadata.name+'</span>';el.appendChild(d)})}
+function filterCharts(cat){document.querySelectorAll('.rg-chart-card').forEach(function(el){el.style.display=(!cat||el.dataset.cats.indexOf(cat)>=0)?'':'none'});
+document.querySelectorAll('.rg-cat-btn').forEach(function(b){b.classList.toggle('active',b.textContent===cat||(cat===''&&b.textContent==='All'))})}
+function selectChart(key){D.chartName=key;D.chart=rawcharts[key];D.mapping={};
+document.querySelectorAll('.rg-chart-card').forEach(function(el){el.classList.toggle('active',el.dataset.key===key)});buildDims();buildOpts()}
+
+// --- COLUMNS (draggable) ---
+function buildCols(){var el=document.getElementById('rg-cols');el.innerHTML='';
+D.cols.forEach(function(c){var d=document.createElement('div');d.className='rg-col-chip';d.draggable=true;d.dataset.col=c;d.dataset.type=D.types[c]||'string';d.textContent=c;
+d.ondragstart=function(e){e.dataTransfer.setData('text/plain',c);d.classList.add('dragging')};d.ondragend=function(){d.classList.remove('dragging')};el.appendChild(d)})}
+
+// --- DIMENSIONS (droppable) ---
+function buildDims(){var el=document.getElementById('rg-dims');el.innerHTML='';if(!D.chart)return;
+D.chart.dimensions.forEach(function(dim){D.mapping[dim.id]=D.mapping[dim.id]||[];
+var d=document.createElement('div');d.className='rg-dim';d.dataset.dim=dim.id;
+d.ondragover=function(e){e.preventDefault();d.classList.add('dragover')};d.ondragleave=function(){d.classList.remove('dragover')};
+d.ondrop=function(e){e.preventDefault();d.classList.remove('dragover');var col=e.dataTransfer.getData('text/plain');addCol(dim.id,col,dim.multiple)};
+var types=(dim.validTypes||['any']).join(', ');
+d.innerHTML='<div class="rg-dim-label">'+(dim.name||dim.id)+(dim.required?' <span class="req">*</span>':'')+' <span class="types">['+types+(dim.multiple?' · multiple':'')+']</span></div><div class="rg-dim-chips" id="chips-'+dim.id+'"></div>';
+el.appendChild(d);renderChips(dim.id)})}
+function addCol(dimId,col,multiple){if(!multiple)D.mapping[dimId]=[col];else if(D.mapping[dimId].indexOf(col)<0)D.mapping[dimId].push(col);renderChips(dimId)}
+function removeCol(dimId,col){D.mapping[dimId]=D.mapping[dimId].filter(function(c){return c!==col});renderChips(dimId)}
+function renderChips(dimId){var el=document.getElementById('chips-'+dimId);if(!el)return;el.innerHTML='';
+D.mapping[dimId].forEach(function(col){el.innerHTML+='<span class="rg-dim-chip">'+col+' <button onclick="removeCol(\''+dimId+'\',\''+col+'\')">&times;</button></span>'})}
+
+// --- VISUAL OPTIONS ---
+function buildOpts(){var el=document.getElementById('rg-opts');el.innerHTML='';if(!D.chart||!D.chart.visualOptions)return;
+D.vopts={};var groups={};
+Object.keys(D.chart.visualOptions).forEach(function(k){var o=D.chart.visualOptions[k];var g=o.group||'general';if(!groups[g])groups[g]=[];groups[g].push({key:k,opt:o});D.vopts[k]=o.default});
+Object.keys(groups).forEach(function(g){el.innerHTML+='<div class="rg-opt-group">'+g+'</div>';
+groups[g].forEach(function(item){var o=item.opt,k=item.key,html='<div class="rg-opt"><label>'+o.label+'</label>';
+var dv=o.default!=null?o.default:'';
+if(o.type==='number'){var mn=o.min!=null?o.min:0,mx=o.max!=null?o.max:(dv>100?dv*2:1000),st=o.step||1;
+html+='<input type="number" value="'+dv+'" min="'+mn+'" max="'+mx+'" step="'+st+'" onchange="setOpt(\''+k+'\',+this.value)" style="width:70px;padding:2px 4px;border:1px solid #ccc;border-radius:3px;font-size:.78rem">';}
+else if(o.type==='boolean')html+='<input type="checkbox" '+(dv?'checked':'')+' onchange="setOpt(\''+k+'\',this.checked)">';
+else if(o.type==='color')html+='<input type="color" value="'+(dv||'#4e79a7')+'" onchange="setOpt(\''+k+'\',this.value)">';
+else if(o.type==='colorScale')html+='<select onchange="setOpt(\''+k+'\',{scaleType:this.value,interpolator:this.value})" style="padding:2px 6px;border:1px solid #ccc;border-radius:3px;font-size:.75rem"><option value="interpolateBlues">Blues</option><option value="interpolateGreens">Greens</option><option value="interpolateReds">Reds</option><option value="interpolateViridis">Viridis</option><option value="interpolateSpectral">Spectral</option><option value="interpolateRainbow">Rainbow</option><option value="interpolateOranges">Oranges</option><option value="interpolatePurples">Purples</option></select>';
+else if(o.type==='text')html+='<input type="text" value="'+(dv||'')+'" onchange="setOpt(\''+k+'\',this.value)" style="flex:1;padding:2px 6px;border:1px solid #ccc;border-radius:3px;font-size:.78rem">';
+html+='</div>';el.innerHTML+=html})})}
+function setOpt(k,v){D.vopts[k]=v}
+
+// --- RENDER ---
+function render(){if(!D.data.length){alert('Load data first');return}if(!D.chart){alert('Select a chart');return}
+var mapping={};D.chart.dimensions.forEach(function(dim){var cols=D.mapping[dim.id]||[];if(!cols.length)return;mapping[dim.id]=dim.multiple?{value:cols}:{value:cols[0]}});
+try{var viz=raw.chart(D.chart,{data:D.data,mapping:mapping,dataTypes:D.types,visualOptions:D.vopts});
+var t=document.getElementById('rg-output');t.innerHTML='';viz.renderToDOM(t)}
+catch(e){document.getElementById('rg-output').innerHTML='<div class="rg-error"><b>Error:</b> '+e.message+'</div>'}}
+
+// --- EXPORT ---
+function exportSVG(){var s=document.querySelector('#rg-output svg');if(!s){alert('Render first');return}
+var b=new Blob([s.outerHTML],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='chart.svg';a.click();URL.revokeObjectURL(u)}
+function exportPNG(){var s=document.querySelector('#rg-output svg');if(!s){alert('Render first');return}
+var c=document.createElement('canvas');var bb=s.getBoundingClientRect();c.width=bb.width*2;c.height=bb.height*2;var ctx=c.getContext('2d');var img=new Image();
+img.onload=function(){ctx.drawImage(img,0,0,c.width,c.height);var a=document.createElement('a');a.href=c.toDataURL('image/png');a.download='chart.png';a.click()};
+img.src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(s.outerHTML)))}
+
+// --- SAVE/LOAD PROJECT ---
+function saveProject(){var p=JSON.stringify({chartName:D.chartName,mapping:D.mapping,vopts:D.vopts,data:D.data});
+var b=new Blob([p],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='project.rawgraphs';a.click()}
+function loadProject(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){
+try{var p=JSON.parse(ev.target.result);D.data=p.data||[];D.cols=D.data.length?Object.keys(D.data[0]):[];D.types=detectTypes(D.data,D.cols);
+buildCols();selectChart(p.chartName);D.mapping=p.mapping||{};D.vopts=p.vopts||{};
+D.chart.dimensions.forEach(function(dim){renderChips(dim.id)});render()}catch(ex){alert('Invalid project file')}};r.readAsText(f)}
+
+// --- INIT ---
+buildCharts();
+{% if input_data %}
+(function(){var p=document.getElementById('rg-payload');if(p&&p.value.trim())setData(parseData(p.value))})();
+{% endif %}
+</script>
+</body>
 </html>

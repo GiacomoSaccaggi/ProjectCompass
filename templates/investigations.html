@@ -19,13 +19,45 @@
         <h5><i class="fa fa-rebel w3-margin-right"></i>{{ title }}</h5>
         </div>
       <div class="w3-col m10 w3-container ">
-        <form action="/run_investigation/" class = "w3-padding w3-container w3-card-1" method="post">
+        <form id="analysis-form" action="/run_investigation/" class="w3-padding w3-container w3-card-1" method="post">
             {% for input in input_form %}
               {{ input|safe }}
             {% endfor %}
-            <br><br>
-          <button name="run_investigation" type="submit" class="w3-button w3-dark-grey" onclick="myloadershow()"><i class="fa fa-empire w3-margin-right"></i> Run the analysis</button>
+
+            <!-- Schedule section -->
+            <div style="margin-top:1.2rem;padding-top:1rem;border-top:2px solid #e0e0e0;">
+              <label><b><i class="fa fa-clock-o"></i> Schedule (optional)</b></label><br>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center;">
+                <select name="schedule_type" id="schedule_type" onchange="toggleSchedule()"
+                  style="padding:6px 12px;border:2px solid #00889B;border-radius:4px;">
+                  <option value="">Don't schedule (run once)</option>
+                  <option value="daily">Every day</option>
+                  <option value="hourly">Every hour</option>
+                  <option value="weekly_mon">Every Monday</option>
+                  <option value="weekly_fri">Every Friday</option>
+                  <option value="cron">Custom cron</option>
+                </select>
+                <input type="time" name="schedule_time" id="schedule_time" value="07:00"
+                  style="padding:6px 12px;border:2px solid #00889B;border-radius:4px;display:none;">
+                <input type="text" name="schedule_cron" id="schedule_cron" placeholder="e.g. 0 7 * * MON-FRI"
+                  style="padding:6px 12px;border:2px solid #00889B;border-radius:4px;width:200px;display:none;">
+              </div>
+            </div>
+
+            <br>
+            <button type="submit" class="w3-button w3-dark-grey" onclick="submitRun()"><i class="fa fa-play w3-margin-right"></i> Run Now</button>
+            <button type="button" class="w3-button w3-blue" id="btn-schedule" style="display:none;" onclick="submitSchedule()"><i class="fa fa-calendar w3-margin-right"></i> Schedule</button>
         </form>
+        <script>
+        function toggleSchedule(){
+          var t=document.getElementById("schedule_type").value;
+          document.getElementById("schedule_time").style.display=(t&&t!=="hourly"&&t!=="cron")?"inline-block":"none";
+          document.getElementById("schedule_cron").style.display=(t==="cron")?"inline-block":"none";
+          document.getElementById("btn-schedule").style.display=t?"inline-block":"none";
+        }
+        function submitRun(){document.getElementById("analysis-form").action="/run_investigation/";myloadershow()}
+        function submitSchedule(){document.getElementById("analysis-form").action="/schedule_analysis/";document.getElementById("analysis-form").submit()}
+        </script>
       </div>
     </div>
       <br>
