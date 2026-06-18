@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+                        <html lang="en">
+                            <head>
+                            
+            <meta charset="utf-8">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta name="description" content="Automatic Report">
+            <meta name="author" content="scomp-link toolkit">
+            
+                            <title>Model Validation Report - Regression</title>
+                            
+            <link rel="shortcut icon" href="" />
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet"/>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+            <script src="https://code.highcharts.com/gantt/highcharts-gantt.js"></script>
+            <script>
+                var HighchartsGantt = Highcharts; // Rinomina Highcharts Gantt per evitare conflitti
+                // Ora puoi utilizzare Highcharts per Highcharts.js e HighchartsGantt per Highcharts Gantt
+            </script>
+            <script src="https://code.highcharts.com/highcharts.js"></script>
+            <script src="https://code.highcharts.com/modules/streamgraph.js"></script>
+            <script src="https://code.highcharts.com/modules/series-label.js"></script>
+            <script src="https://code.highcharts.com/modules/annotations.js"></script>
+            <script src="https://code.highcharts.com/modules/exporting.js"></script>
+            <script src="https://code.highcharts.com/modules/export-data.js"></script>
+            <script src="https://code.highcharts.com/modules/heatmap.js"></script>
+            <script src="https://code.highcharts.com/gantt/modules/exporting.js"></script>
+            <script src="https://code.highcharts.com/gantt/modules/pattern-fill.js"></script>
+            <script src="https://code.highcharts.com/gantt/modules/accessibility.js"></script>
+            <script>const colors = Highcharts.getOptions().colors;</script>
+
+            <style>
+            html,body{font-family:Baloo 2, sans-serif;font-size:15px;line-height:1.5;text-align: justify;text-justify: inter-word;color:#4D577D;}html{overflow-x:hidden}
+            h1{font-size:32px}h2{font-size:25px;color:#32BBB9;}h3{font-size:15px}h4{font-size:12px}h5{font-size:10px}h6{font-size:9px}
+            h1,h2,h3,h4,h5,h6{font-weight:400;margin:10px 0}.w3-wide{letter-spacing:4px}
+            footer{text-align: center;padding-left: 15%;padding-right: 15%;}
+            header{
+              position: relative;
+              background-position: center;
+              background-repeat: no-repeat;
+              background-size: cover;
+              background-image: url(https://giacomosaccaggi.github.io/articoli/sfondo.png);
+              height: 50%;
+              width:100%;
+              color: white;
+              text-align: left;
+              padding-top: 5%;
+              padding-left: 15%;
+            }
+            .user-select-none .svg-container {
+              height: 100%;
+              width:100%;
+            }
+            .report {
+                padding-right: 20%;
+                padding-bottom: 5%;
+                padding-left: 20%;
+            }
+            input[type=button], input[type=submit], input[type=reset] {
+              padding: 16px 32px;
+              text-decoration: none;
+              margin: 4px 2px;
+              cursor: pointer;
+              display: inline-block;
+              border-radius: 4px;
+              background-color: white;
+              color:  #4614B4;
+              border: 2px solid  #6E37FA;
+              text-align: center;
+              transition: all 0.5s;
+              cursor: pointer;
+              margin: 5px;
+            }
+           :root {
+              --radius: 2px;
+              --baseFg: dimgray;
+              --baseBg: white;
+              --accentFg: #5528D2;
+              --accentBg:  #6E37FA;
+            }
+            input[type=button]:hover, input[type=submit]:hover, input[type=reset]:hover {
+                  background-color:  #6E37FA;
+                  color: white;
+                }
+
+            .plotly-graph-div {
+                        width: 100%;
+            }
+             #container {
+                height: 600px;
+            }
+            .highcharts-label-icon {
+                opacity: 0.5;
+            }
+        
+            .highcharts-figure,
+            .highcharts-data-table table {
+                min-width: 310px;
+                max-width: 800px;
+                overflow: auto;
+                margin: 1em auto;
+            }
+        
+            .highcharts-data-table table {
+                font-family: Verdana, sans-serif;
+                border-collapse: collapse;
+                border: 1px solid #ebebeb;
+                margin: 10px auto;
+                text-align: center;
+                width: 100%;
+                height: auto;
+                max-width: 90000px;
+            }
+            
+            .highcharts-figure {width: 100%;
+                height: auto;
+                max-width: 90000px;}
+        
+            .highcharts-data-table caption {
+                padding: 1em 0;
+                font-size: 1.2em;
+                color: #555;
+            }
+        
+            .highcharts-data-table th {
+                font-weight: 600;
+                padding: 0.5em;
+            }
+        
+            .highcharts-data-table td,
+            .highcharts-data-table th,
+            .highcharts-data-table caption {
+                padding: 0.5em;
+            }
+        
+            .highcharts-data-table thead tr,
+            .highcharts-data-table tr:nth-child(even) {
+                background: #f8f8f8;
+            }
+        
+            .highcharts-data-table tr:hover {
+                background: #f1f7ff;
+            }
+            #table-wrapper {
+              position:relative;
+            }
+            #table-scroll {
+              height:500px;
+              overflow:auto;
+              margin-top:20px;
+            }
+            #table-wrapper table {
+              width:100%;
+            
+            }
+            #table-wrapper table * {
+              color:black;
+            }
+            #table-wrapper table thead th .text {
+              position:absolute;
+              top:-20px;
+              z-index:2;
+              height:20px;
+              width:35%;
+              border:1px solid red;
+            }
+            .column_result_save {
+              float: left;
+              width: 50%;
+              padding: 10px;
+            }
+            select {
+              font: 400 12px/1.3 sans-serif;
+              -webkit-appearance: none;
+              appearance: none;
+              color: var(--baseFg);
+              border: 1px solid var(--baseFg);
+              line-height: 1;
+              outline: 0;
+              padding: 0.65em 2.5em 0.55em 0.75em;
+              border-radius: var(--radius);
+              background-color: var(--baseBg);
+              background-image: linear-gradient(var(--baseFg), var(--baseFg)),
+                linear-gradient(-135deg, transparent 50%, var(--accentBg) 50%),
+                linear-gradient(-225deg, transparent 50%, var(--accentBg) 50%),
+                linear-gradient(var(--accentBg) 42%, var(--accentFg) 42%);
+              background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+              background-size: 1px 100%, 20px 22px, 20px 22px, 20px 100%;
+              background-position: right 20px center, right bottom, right bottom, right bottom;   
+            }
+
+            select:hover {
+              background-image: linear-gradient(var(--accentFg), var(--accentFg)),
+                linear-gradient(-135deg, transparent 50%, var(--accentFg) 50%),
+                linear-gradient(-225deg, transparent 50%, var(--accentFg) 50%),
+                linear-gradient(var(--accentFg) 42%, var(--accentBg) 42%);
+            }
+
+            select:active {
+              background-image: linear-gradient(var(--accentFg), var(--accentFg)),
+                linear-gradient(-135deg, transparent 50%, var(--accentFg) 50%),
+                linear-gradient(-225deg, transparent 50%, var(--accentFg) 50%),
+                linear-gradient(var(--accentFg) 42%, var(--accentBg) 42%);
+              color: var(--accentBg);
+              border-color: var(--accentFg);
+              background-color: var(--accentFg);
+            }
+            .collapsiblemygs {
+                  background-color: #777;
+                  color: white;
+                  cursor: pointer;
+                  padding: 18px;
+                  width: 100%;
+                  border: none;
+                  text-align: left;
+                  outline: none;
+                  font-size: 15px;
+                }
+
+                .active, .collapsiblemygs:hover {
+                  background-color: #555;
+                }
+
+                .content {
+                  padding: 0 18px;
+                  display: block;
+                  overflow: hidden;
+                  background-color: #f1f1f1;
+                }
+            /*rules*/
+            @media only screen and (max-width: 1024px) {
+            .report{padding-right: 5%; padding-left: 5%;}
+            }
+            /* ----------- iPhone 6+, 7+ and 8+ ----------- */
+            /* Portrait */
+            @media only screen and (max-width: 1024px) {
+            h2{font-size:18px}
+            h3{font-size:10px}
+            }
+            @media only screen and (max-width: 835px) {
+            h2{font-size:18px}
+            h3{font-size:8px}
+            }
+            @media only screen and (max-width: 700px) {
+            h2{font-size:15px}
+            h3{font-size:6px}
+            }
+            @media only screen and (max-width: 525px) {
+            h2{font-size:13px}
+            h3{font-size:5px}
+            }
+            @media only screen and (max-width: 370px) {
+            h2{font-size:10px}
+            h3{font-size:3px}
+            }
+            /* --- PDF PRINT STYLES --- */
+            @media print {
+                .collapsiblemygs {
+                    page-break-before: always;
+                    background-color: transparent !important;
+                    color: black !important;
+                    font-size: 24px !important;
+                    font-weight: bold;
+                    border-bottom: 2px solid var(--accentBg);
+                    padding: 0 0 10px 0 !important;
+                    margin-top: 30px !important;
+                }
+                .content {
+                    display: block !important;
+                    background-color: white !important;
+                    padding: 0 !important;
+                }
+                select, input[type="submit"], input[type="button"], label {
+                    display: none !important;
+                }
+                .print-grid-container {
+                    display: flex !important;
+                    flex-wrap: wrap !important;
+                    justify-content: space-between !important;
+                }
+                .print-grid-item {
+                    display: block !important;
+                    width: 48% !important;
+                    page-break-inside: avoid;
+                }
+                body {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+            }
+            </style>
+            <script src="https://cdn.plot.ly/plotly-2.9.0.min.js"></script>
+        
+                            </head>
+                        <body>    
+                            <header>
+                            <h1>Model Validation Report - Regression</h1><br><br><br>
+                        </header>
+                            <div class="report" style="background-color:WHITE">
+                                <button class="collapsiblemygs">Metrics Summary</button> <div class="content"><a href="#" onclick="download_table_as_csv('ValidationMetrics');">Download as CSV</a>
+            <div id="table-wrapper">
+                <div id="table-scroll">
+                    <table border="0" id="ValidationMetrics" class="scomp-table">
+  <thead>
+    <tr style="text-align: left;">
+      <th>Metric</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>mse</td>
+      <td>0.039861</td>
+    </tr>
+    <tr>
+      <td>rmse</td>
+      <td>0.199652</td>
+    </tr>
+    <tr>
+      <td>mae</td>
+      <td>0.169886</td>
+    </tr>
+    <tr>
+      <td>r2</td>
+      <td>-0.001065</td>
+    </tr>
+  </tbody>
+</table>
+                </div>
+            </div>
+            <style>
+                .scomp-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 13px;
+                    font-family: inherit;
+                }
+                .scomp-table thead tr {
+                    background-color: #6E37FA !important;
+                    color: white !important;
+                    text-align: left;
+                }
+                .scomp-table th {
+                    color: white !important;
+                    background-color: #6E37FA !important;
+                }
+                .scomp-table th, .scomp-table td {
+                    padding: 10px 12px;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                .scomp-table tbody tr:nth-child(even) {
+                    background-color: #f8f9fa;
+                }
+                .scomp-table tbody tr:hover {
+                    background-color: #9682FF22;
+                }
+            </style></div><button class="collapsiblemygs">Regression Analysis</button> <div class="content">                <h2>Observed vs Predicted</h2>
+                <div id="Observed_vs_Predicted" class="plotly-graph-div"></div>
+                <script>
+                        Plotly.newPlot(
+
+                            "Observed_vs_Predicted",
+
+                            [{"marker":{"color":"#6E37FA","opacity":0.5},"mode":"markers","name":"Predictions","x":[0.36,0.16,0.64,0.03,0.46,0.5,0.29,0.05,0.09,0.06,0.05,0.49,0.08,0.31,0.0,0.53,0.63,0.09,0.28,0.13,0.14,0.14,0.25,0.38,0.1,0.61,0.56,0.02,0.17,0.2,0.21,0.49,0.14,0.1,0.23,0.33,0.1,0.31,0.45,0.4,0.02,0.68,0.31,0.22,0.58,0.24,0.09,0.25,0.25,0.49,0.04,0.35,0.48,0.3,0.52,0.08,0.0,0.22,0.35,0.05,0.18,0.54,0.03,0.26,0.31,0.0,0.08,0.01,0.49,0.49,0.06,0.29,0.18,0.01,0.09,0.07,0.23,0.37,0.49,0.36,0.14,0.15,0.22,0.01,0.08,0.54,0.19,0.04,0.22,0.04,0.14,0.66,0.24,0.0,0.23,0.59,0.4,0.0,0.52,0.29,0.06,0.59,0.06,0.29,0.53,0.76,0.24,0.44,0.14,0.12,0.34,0.02,0.15,0.26,0.44,0.58,0.2,0.0,0.19,0.17,0.03,0.31,0.1,0.49,0.42,0.4,0.39,0.49,0.01,0.59,0.66,0.74,0.0,0.23,0.0,0.02,0.34,0.68,0.01,0.3,0.22,0.52,0.48,0.5,0.48,0.0,0.06,0.0,0.32,0.35,0.21,0.69,0.3,0.3,0.02,0.02,0.31,0.3,0.24,0.53,0.0,0.04,0.6,0.2,0.14,0.34,0.64,0.31,0.25,0.46,0.02,0.49,0.54,0.2,0.49,0.0,0.55,0.25,0.37,0.04,0.49,0.49,0.49,0.49,0.65,0.0,0.47,0.24,0.04,0.09,0.13,0.0,0.17,0.02,0.22,0.25,0.49,0.51,0.11,0.34,0.29,0.21,0.09,0.41,0.34,0.42,0.23,0.0,0.05,0.48,0.29,0.16,0.52,0.12,0.1,0.37,0.0,0.02,0.24,0.41,0.64,0.48,0.47,0.0,0.07,0.37,0.44,0.01,0.36,0.25,0.22,0.0,0.17,0.09,0.0,0.24,0.1,0.49,0.49,0.31,0.24,0.48],"y":[0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855,0.2631159420289855],"type":"scatter"},{"line":{"color":"red","dash":"dash"},"mode":"lines","name":"Ideal","x":[0.0,0.76],"y":[0.0,0.76],"type":"scatter"}],
+
+                            {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"title":{"text":"Observed vs Predicted"},"xaxis":{"title":{"text":"Observed"}},"yaxis":{"title":{"text":"Predicted"}}},
+
+                            {"responsive":true}
+                        )
+                         
+                // Imposta la larghezza al 100%
+                Plotly.update('Observed_vs_Predicted', { 'layout.width': window.innerWidth * 0.9 }); // Puoi anche usare '100%' al posto di 'window.innerWidth * 0.9' se preferisci una larghezza fissa
+            
+                // Aggiungi un listener per aggiornare la larghezza quando la finestra viene ridimensionata
+                window.addEventListener('resize', function() {
+                    Plotly.update('Observed_vs_Predicted', { 'layout.width': window.innerWidth * 0.9 });
+                });
+                
+                </script>
+                                    <h2>Residuals Distribution</h2>
+                <div id="Residuals_Distribution" class="plotly-graph-div"></div>
+                <script>
+                        Plotly.newPlot(
+
+                            "Residuals_Distribution",
+
+                            [{"marker":{"color":"#32BBB9"},"name":"Residuals","x":[-0.09688405797101446,0.10311594202898552,-0.3768840579710145,0.23311594202898553,-0.1968840579710145,-0.23688405797101447,-0.026884057971014452,0.21311594202898554,0.17311594202898553,0.20311594202898553,0.21311594202898554,-0.22688405797101446,0.1831159420289855,-0.04688405797101447,0.2631159420289855,-0.2668840579710145,-0.3668840579710145,0.17311594202898553,-0.0168840579710145,0.13311594202898552,0.12311594202898551,0.12311594202898551,0.013115942028985528,-0.11688405797101448,0.16311594202898552,-0.34688405797101446,-0.2968840579710145,0.24311594202898554,0.09311594202898552,0.06311594202898552,0.053115942028985536,-0.22688405797101446,0.12311594202898551,0.16311594202898552,0.03311594202898552,-0.06688405797101449,0.16311594202898552,-0.04688405797101447,-0.18688405797101448,-0.1368840579710145,0.24311594202898554,-0.4168840579710145,-0.04688405797101447,0.04311594202898553,-0.31688405797101443,0.023115942028985537,0.17311594202898553,0.013115942028985528,0.013115942028985528,-0.22688405797101446,0.22311594202898552,-0.08688405797101445,-0.21688405797101445,-0.03688405797101446,-0.2568840579710145,0.1831159420289855,0.2631159420289855,0.04311594202898553,-0.08688405797101445,0.21311594202898554,0.08311594202898553,-0.2768840579710145,0.23311594202898553,0.003115942028985519,-0.04688405797101447,0.2631159420289855,0.1831159420289855,0.2531159420289855,-0.22688405797101446,-0.22688405797101446,0.20311594202898553,-0.026884057971014452,0.08311594202898553,0.2531159420289855,0.17311594202898553,0.19311594202898552,0.03311594202898552,-0.10688405797101447,-0.22688405797101446,-0.09688405797101446,0.12311594202898551,0.11311594202898553,0.04311594202898553,0.2531159420289855,0.1831159420289855,-0.2768840579710145,0.07311594202898553,0.22311594202898552,0.04311594202898553,0.22311594202898552,0.12311594202898551,-0.3968840579710145,0.023115942028985537,0.2631159420289855,0.03311594202898552,-0.32688405797101444,-0.1368840579710145,0.2631159420289855,-0.2568840579710145,-0.026884057971014452,0.20311594202898553,-0.32688405797101444,0.20311594202898553,-0.026884057971014452,-0.2668840579710145,-0.4968840579710145,0.023115942028985537,-0.17688405797101447,0.12311594202898551,0.14311594202898553,-0.0768840579710145,0.24311594202898554,0.11311594202898553,0.003115942028985519,-0.17688405797101447,-0.31688405797101443,0.06311594202898552,0.2631159420289855,0.07311594202898553,0.09311594202898552,0.23311594202898553,-0.04688405797101447,0.16311594202898552,-0.22688405797101446,-0.15688405797101446,-0.1368840579710145,-0.12688405797101449,-0.22688405797101446,0.2531159420289855,-0.32688405797101444,-0.3968840579710145,-0.47688405797101446,0.2631159420289855,0.03311594202898552,0.2631159420289855,0.24311594202898554,-0.0768840579710145,-0.4168840579710145,0.2531159420289855,-0.03688405797101446,0.04311594202898553,-0.2568840579710145,-0.21688405797101445,-0.23688405797101447,-0.21688405797101445,0.2631159420289855,0.20311594202898553,0.2631159420289855,-0.05688405797101448,-0.08688405797101445,0.053115942028985536,-0.4268840579710144,-0.03688405797101446,-0.03688405797101446,0.24311594202898554,0.24311594202898554,-0.04688405797101447,-0.03688405797101446,0.023115942028985537,-0.2668840579710145,0.2631159420289855,0.22311594202898552,-0.33688405797101445,0.06311594202898552,0.12311594202898551,-0.0768840579710145,-0.3768840579710145,-0.04688405797101447,0.013115942028985528,-0.1968840579710145,0.24311594202898554,-0.22688405797101446,-0.2768840579710145,0.06311594202898552,-0.22688405797101446,0.2631159420289855,-0.2868840579710145,0.013115942028985528,-0.10688405797101447,0.22311594202898552,-0.22688405797101446,-0.22688405797101446,-0.22688405797101446,-0.22688405797101446,-0.3868840579710145,0.2631159420289855,-0.20688405797101445,0.023115942028985537,0.22311594202898552,0.17311594202898553,0.13311594202898552,0.2631159420289855,0.09311594202898552,0.24311594202898554,0.04311594202898553,0.013115942028985528,-0.22688405797101446,-0.24688405797101448,0.15311594202898554,-0.0768840579710145,-0.026884057971014452,0.053115942028985536,0.17311594202898553,-0.14688405797101445,-0.0768840579710145,-0.15688405797101446,0.03311594202898552,0.2631159420289855,0.21311594202898554,-0.21688405797101445,-0.026884057971014452,0.10311594202898552,-0.2568840579710145,0.14311594202898553,0.16311594202898552,-0.10688405797101447,0.2631159420289855,0.24311594202898554,0.023115942028985537,-0.14688405797101445,-0.3768840579710145,-0.21688405797101445,-0.20688405797101445,0.2631159420289855,0.19311594202898552,-0.10688405797101447,-0.17688405797101447,0.2531159420289855,-0.09688405797101446,0.013115942028985528,0.04311594202898553,0.2631159420289855,0.09311594202898552,0.17311594202898553,0.2631159420289855,0.023115942028985537,0.16311594202898552,-0.22688405797101446,-0.22688405797101446,-0.04688405797101447,0.023115942028985537,-0.21688405797101445],"type":"histogram"}],
+
+                            {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"title":{"text":"Residuals Distribution"},"xaxis":{"title":{"text":"Residual"}},"yaxis":{"title":{"text":"Count"}}},
+
+                            {"responsive":true}
+                        )
+                         
+                // Imposta la larghezza al 100%
+                Plotly.update('Residuals_Distribution', { 'layout.width': window.innerWidth * 0.9 }); // Puoi anche usare '100%' al posto di 'window.innerWidth * 0.9' se preferisci una larghezza fissa
+            
+                // Aggiungi un listener per aggiornare la larghezza quando la finestra viene ridimensionata
+                window.addEventListener('resize', function() {
+                    Plotly.update('Residuals_Distribution', { 'layout.width': window.innerWidth * 0.9 });
+                });
+                
+                </script>
+                    </div>
+                            </div>
+                            
+                        <script>
+                        // Quick and simple export target #table_id into a csv
+                        function download_table_as_csv(table_id, separator = ',') {
+                            // Select rows from table_id
+                            var rows = document.querySelectorAll('table#' + table_id + ' tr');
+                            // Construct csv
+                            var csv = [];
+                            for (var i = 0; i < rows.length; i++) {
+                                var row = [], cols = rows[i].querySelectorAll('td, th');
+                                for (var j = 0; j < cols.length; j++) {
+                                    // Clean innertext to remove multiple spaces and jumpline (break csv)
+                                    var data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ')
+                                    // Escape double-quote with double-double-quote (see https://stackoverflow.com/questions/17808511/properly-escape-a-double-quote-in-csv)
+                                    data = data.replace(/"/g, '""');
+                                    // Push escaped string
+                                    row.push('"' + data + '"');
+                                }
+                                csv.push(row.join(separator));
+                            }
+                            var csv_string = csv.join('\n');
+                            // Download it
+                            var filename = 'export_' + table_id + '_' + new Date().toLocaleDateString() + '.csv';
+                            var link = document.createElement('a');
+                            link.style.display = 'none';
+                            link.setAttribute('target', '_blank');
+                            link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+                            link.setAttribute('download', filename);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }
+                        var coll = document.getElementsByClassName("collapsiblemygs");
+                        var i;
+
+                        for (i = 0; i < coll.length; i++) {
+                          coll[i].addEventListener("click", function() {
+                            this.classList.toggle("active");
+                            var content = this.nextElementSibling;
+                            if (content.style.display === "block") {
+                              content.style.display = "none";
+                            } else {
+                              content.style.display = "block";
+                            }
+                          });
+                        }
+                        document.addEventListener("DOMContentLoaded", function() {
+                            // Funzione per eseguire il resize degli svg-container, delle immagini SVG e dei rect
+                            function resizeElements() {
+                                // Seleziona tutti gli elementi con la classe 'svg-container'
+                                var svgContainers = document.querySelectorAll('.svg-container');
+                        
+                                // Itera su ogni svg-container e imposta la larghezza al 100%
+                                svgContainers.forEach(function(container) {
+                                    container.style.width = '100%';
+                                });
+                                
+                                 var svgContainers0 = document.querySelectorAll('.user-select-none');
+                        
+                                // Itera su ogni svg-container e imposta la larghezza al 100%
+                                svgContainers0.forEach(function(container) {
+                                    container.style.width = '100%';
+                                });
+                                
+                                
+                                 var cartesianlayer = document.querySelectorAll('.cartesianlayer');
+                        
+                                // Itera su ogni svg-container e imposta la larghezza al 100%
+                                cartesianlayer.forEach(function(container) {
+                                    container.style.width = '100%';
+                                });
+                                
+                                
+                        
+                                 var svgContainers1 = document.querySelectorAll('.js-plotly-plot');
+                        
+                                // Itera su ogni svg-container e imposta la larghezza al 100%
+                                svgContainers1.forEach(function(container) {
+                                    container.style.width = '100%';
+                                });
+                                
+                                
+                                 var svgContainers2 = document.querySelectorAll('.main-svg');
+                        
+                                // Itera su ogni svg-container e imposta la larghezza al 100%
+                                svgContainers2.forEach(function(container) {
+                                    container.style.width = '100%';
+                                });
+                        
+                                 var svgContainers3 = document.querySelectorAll('.plot-container');
+                        
+                                // Itera su ogni svg-container e imposta la larghezza al 100%
+                                svgContainers3.forEach(function(container) {
+                                    container.style.width = '100%';
+                                });
+                        
+                                // Seleziona tutti gli elementi con il tag '.highcharts-container'
+                                var items = document.querySelectorAll('.highcharts-container');
+                        
+                                // Itera su ogni rect e imposta la larghezza al 100%
+                                items.forEach(function(item) {
+                                    item.style.width = '100%';
+                                });
+                                
+                                
+                                // Seleziona tutti gli elementi con il tag 'select'
+                                var selects = document.querySelectorAll('select');
+                        
+                                // Itera su ogni rect e imposta la larghezza al 100%
+                                selects.forEach(function(select) {
+                                    select.style.width = '200px';
+                                });
+                                
+                                 
+                                
+                                // Seleziona tutti gli elementi con il tag 'content'
+                                var contents = document.querySelectorAll('.content');
+                        
+                                contents.forEach(function(content) {
+                                    content.style.display = 'none';
+                                });
+                                
+                            }
+                        
+                            // Chiama la funzione quando il documento è completamente caricato
+                            resizeElements();
+                        });
+                        
+                        </script>
+                        </div><hr><br><footer><strong>About scomp-link</strong><br>
+                        scomp-link is a general-purpose data science toolkit for preprocessing, model selection, and validation. It is dataset- and domain-agnostic.
+                        Learn more in the project README and documentation.<br>
+                        <strong>May the code be with you.</strong><br><br>
+                        Copyright &copy; 2026 scomp-link contributors. All rights reserved.<br><br></footer>
+                            
+                            
+                        <script>
+                        $(".js-example-tags").select2({
+                          tags: true
+                        });
+                        </script>
+                        </body>
+                        </html>
+                    
