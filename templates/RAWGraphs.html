@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
-    <link href="/ProjectCompass/static/css/rawgraph2.css" rel="stylesheet">
-    <link href="/ProjectCompass/static/css/rawgraph1.css" rel="stylesheet">
+    <link href="/static/css/rawgraph2.css" rel="stylesheet">
+    <link href="/static/css/rawgraph1.css" rel="stylesheet">
   {{ head|safe }}
     <style>
         #data-type-selector {background-color: white; }
@@ -63,7 +63,7 @@
                         r.push(t[2] = n);
                         var u, i = document.createElement("script");
                         i.charset = "utf-8", i.timeout = 120, a.nc && i.setAttribute("nonce", a.nc), i.src = function(e) {
-                            return a.p + "ProjectCompass/static/js/rawgraph3.js"
+                            return a.p + "/static/js/rawgraph3.js"
                         }(e);
                         var c = new Error;
                         u = function(r) {
@@ -133,30 +133,36 @@
     </script>
     <script>
         function setNativeValue(element, value) {
-              const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
-              const prototype = Object.getPrototypeOf(element);
-              const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
-
-              if (valueSetter && valueSetter !== prototypeValueSetter) {
-                prototypeValueSetter.call(element, value);
-              } else {
-                valueSetter.call(element, value);
-              }
+              var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+              nativeInputValueSetter.call(element, value);
             }
-
-        setTimeout(() => {
-                    var textarea = document.getElementById('inputtext');
-                    setNativeValue(textarea, '{{ input_data|safe }}');
-                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                    console.log('Imported data')
-        }, 1000);
-
-
     </script>
-    <script src="/ProjectCompass/static/js/rawgraph2.js"></script>
-    <script src="/ProjectCompass/static/js/rawgraph1.js"></script>
+    <textarea id="rawgraphs-data-payload" style="display:none;">{{ input_data }}</textarea>
+    <script src="/static/js/rawgraph2.js"></script>
+    <script src="/static/js/rawgraph1.js"></script>
 
-    <script src="/ProjectCompass/static/js/worker_rowgraph.js"></script>
+    <script src="/static/js/worker_rowgraph.js"></script>
+
+    <script>
+        (function() {
+            var payload = document.getElementById('rawgraphs-data-payload');
+            var data = payload ? payload.value.trim() : '';
+            if (!data) return;
+            var attempts = 0;
+            var _interval = setInterval(function() {
+                attempts++;
+                if (attempts > 50) { clearInterval(_interval); return; }
+                var textarea = document.getElementById('inputtext');
+                if (!textarea) return;
+                clearInterval(_interval);
+                var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                nativeSetter.call(textarea, data);
+                var tracker = textarea._valueTracker;
+                if (tracker) { tracker.setValue(''); }
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            }, 300);
+        })();
+    </script>
 
     <footer>
         <center>

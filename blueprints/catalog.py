@@ -199,10 +199,8 @@ def load_analysis_internal():
 def overview_page():
     webapp = get_webapp()
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
-    return render_template('index.html',
+    return render_template('overview.html',
                            title=webapp.environments_info['title'],
-                           intro_title='',
-                           intro=False,
                            head=html_part['head'],
                            top_container=html_part['top_container'], port=webapp.constants["port"],
                            project_folder=webapp.project_folder,
@@ -232,23 +230,56 @@ def iframe_page():
                            port=webapp.constants["port"], sidebar_menu=html_part['sidebar_menu'])
 
 
-@catalog_bp.route('/physical_output/', methods=['GET'])
-def physical_output():
+@catalog_bp.route('/outputs/', methods=['GET'])
+def outputs_page():
+    from collections import defaultdict
     webapp = get_webapp()
     name = request.args['name'].replace('512', ' ')
-    analysis = webapp.read_single_analysis(webapp.extract_main_folder(), name)
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
-    if 'version' not in request.args:
-        output_path = analysis.get('physical_output', '')
-        if '.html' in output_path:
-            url = f'/static/../{output_path}'
-            title = f'<a href="{url}">{name}</a>'
-            return render_template('iframetemplate.html', obj='', title=title, url=url, head=html_part['head'],
-                                   top_container=html_part['top_container'], project_folder=webapp.project_folder,
-                                   port=webapp.constants["port"], sidebar_menu=html_part['sidebar_menu'])
-        elif output_path:
-            return send_file(os.path.join(webapp.dir_path, output_path))
-    return redirect(url_for('catalog.analysis_page'))
+    output_base = f"{webapp.extract_main_folder()}/{name}/physical_output"
+    runs = defaultdict(list)
+    if os.path.exists(output_base):
+        for f in os.listdir(output_base):
+            if f == 'main' or f.startswith('.') or '.ini' in f:
+                continue
+            run_id = os.path.splitext(f)[0]
+            fpath = f"Analyses/{name}/physical_output/{f}"
+            runs[run_id].append({'name': f, 'path': fpath, 'is_html': f.endswith('.html')})
+    # Sort runs by date descending
+    sorted_runs = sorted(runs.items(), key=lambda x: x[0], reverse=True)
+    return render_template('outputs.html',
+                           title=f'Outputs: {name}',
+                           analysis_name=name,
+                           runs=sorted_runs,
+                           head=html_part['head'],
+                           top_container=html_part['top_container'],
+                           sidebar_menu=html_part['sidebar_menu'],
+                           port=webapp.constants["port"],
+                           project_folder=webapp.project_folder)
+
+
+@catalog_bp.route('/delete_run/', methods=['GET'])
+def delete_run():
+    webapp = get_webapp()
+    name = request.args['name'].replace('512', ' ')
+    run_id = request.args['run_id']
+    output_base = f"{webapp.extract_main_folder()}/{name}/physical_output"
+    for f in os.listdir(output_base):
+        if os.path.splitext(f)[0] == run_id and f != 'main':
+            os.remove(os.path.join(output_base, f))
+    return redirect(f"/outputs/?name={request.args['name']}")
+
+
+@catalog_bp.route('/physical_output/', methods=['GET'])
+def physical_output():
+    name = request.args.get('name', '')
+    return redirect(f"/outputs/?name={name}")
+
+
+@catalog_bp.route('/serve_output/<path:filepath>')
+def serve_output(filepath):
+    webapp = get_webapp()
+    return send_file(os.path.join(webapp.dir_path, filepath))
 
 
 @catalog_bp.route('/open_version/', methods=['GET'])
@@ -292,12 +323,23 @@ def create_investigations():
         field_type = field_info.get('type', 'text')
         default = field_info.get('default', '')
         desc = field_info.get('description', field_name)
-        html_type = 'date' if field_type == 'date' else 'text'
-        input_form.append(
-            f'<label><b>{desc}</b></label><br>'
-            f'<input type="{html_type}" name="{field_name}" value="{default}" '
-            f'style="padding:6px 12px;margin:4px;border:2px solid #00889B;border-radius:4px;width:90%"><br><br>'
-        )
+        style = 'padding:6px 12px;margin:4px;border:2px solid #00889B;border-radius:4px;width:90%'
+        if field_type == 'select':
+            options_html = ''.join(
+                f'<option value="{opt}"{" selected" if str(opt) == str(default) else ""}>{opt}</option>'
+                for opt in field_info.get('options', [])
+            )
+            input_form.append(
+                f'<label><b>{desc}</b></label><br>'
+                f'<select name="{field_name}" style="{style}"><br>{options_html}</select><br><br>'
+            )
+        else:
+            html_type = 'date' if field_type == 'date' else 'text'
+            input_form.append(
+                f'<label><b>{desc}</b></label><br>'
+                f'<input type="{html_type}" name="{field_name}" value="{default}" '
+                f'style="{style}"><br><br>'
+            )
 
     return render_template('investigations.html',
                            title=metadata.get('title', name),
@@ -327,8 +369,20 @@ def run_investigation():
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         module.run(inputs=inputs, output_path=output_path)
+
+        # Save timestamped version of outputs
+        import datetime
+        import shutil
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        version_dir = f"{webapp.extract_main_folder()}/{name}/physical_output"
+        for f_name in os.listdir(output_dir):
+            if f_name.startswith('.') or '.ini' in f_name:
+                continue
+            ext = os.path.splitext(f_name)[1]
+            shutil.copy(f"{output_dir}/{f_name}", f"{version_dir}/{timestamp}{ext}")
+
         logger.info(f"Structured analysis '{name}' completed successfully")
-        return redirect(f"/open_version/?name={name.replace(' ', '512')}")
+        return redirect(f"/outputs/?name={name.replace(' ', '512')}")
     except Exception as e:
         logger.error(f"Structured analysis error: {e}")
         return f"<h3>Analysis Error</h3><pre>{e}</pre><br><a href='/analysis'>Back to catalog</a>", 500

@@ -1,0 +1,35 @@
+title: ScompLink Wine Quality Prediction
+description: Run scomp-link ML pipeline on wine quality dataset
+inputs:
+  task_type:
+    type: select
+    default: "auto"
+    description: Task type
+    options:
+      - auto
+      - regression
+      - classification
+  test_size:
+    type: text
+    default: "0.2"
+    description: Test set proportion (0.0 to 1.0)
+  target_column:
+    type: select
+    default: "quality"
+    description: Target column to predict
+    options:
+      - quality
+      - alcohol
+      - pH
+      - density
+      - fixed acidity
+      - volatile acidity
+      - citric acid
+      - residual sugar
+      - chlorides
+      - free sulfur dioxide
+      - total sulfur dioxide
+      - sulphates
+output:
+  type: html
+  description: Interactive validation report + predictions CSV
