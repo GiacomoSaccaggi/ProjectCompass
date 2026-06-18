@@ -7,7 +7,7 @@
 ProjectCompass is a Python-based tool for teams that produce data analyses. It solves three problems that emerge after the analytical work is done:
 
 1. **Organization** — a tag-based catalog of all analyses with metadata, documentation, and version tracking
-2. **Execution** — a unified environment to run structured analyses consistently
+2. **Execution** — a unified environment to run structured analyses consistently, with scheduling
 3. **Exploration** — SQL queries on local datasets via DuckDB, with visualization and LLM-powered chat
 
 ---
@@ -17,9 +17,11 @@ ProjectCompass is a Python-based tool for teams that produce data analyses. It s
 | Feature | Description |
 |---------|-------------|
 | 📂 **Catalog** | Tag-based analysis repository with search, filter, and pagination |
-| 🔍 **Data Explorer** | SQL queries on CSV/SQLite via DuckDB, RAWGraphs visualization |
+| 🔍 **Data Explorer** | SQL queries on CSV/SQLite via DuckDB |
+| 📊 **RAWGraphs Visualization** | Custom chart builder with 30+ chart types, drag-and-drop mapping, visual options, SVG/PNG export |
 | ⚙️ **Execution Engine** | Run structured analyses with dynamic forms and physical outputs |
-| 🤖 **AI Chat** | Ask questions about your data in natural language (Ollama/LLaMA) |
+| ⏰ **Scheduler** | Schedule analyses with cron/interval triggers (APScheduler + SQLite persistence) |
+| 🤖 **AI Chat** | Ask questions about your data in natural language (Ollama) |
 | 🔗 **REST API** | JSON endpoints for all catalog, data, and query operations |
 | 🐳 **Docker** | One-command deployment with Ollama LLM service |
 
@@ -42,7 +44,7 @@ open http://localhost:8080
 
 To enable AI chat (optional):
 ```bash
-docker exec ollama ollama pull llama3
+docker exec ollama ollama pull qwen3:0.6b
 docker exec ollama ollama pull nomic-embed-text
 ```
 
@@ -102,13 +104,13 @@ See [DOCKER.md](DOCKER.md) for volumes, environment variables, health checks, an
 
 ```
 ProjectCompass/
-├── app.py                  # Application factory (Flask)
+├── app.py                  # Application factory (Flask + APScheduler)
 ├── config.py               # Configuration from environment
 ├── logging_config.py       # Unified structured logging
 ├── basefun.py              # Core ProjectCompass class
 ├── blueprints/
 │   ├── auth.py             # Authentication (hashed passwords, sessions)
-│   ├── catalog.py          # Analysis CRUD, search, filter, pagination
+│   ├── catalog.py          # Analysis CRUD, search, filter, scheduling
 │   ├── data.py             # Query runner, data upload, RAWGraphs
 │   ├── agent.py            # LLM chat with sandboxed execution
 │   └── api.py              # REST API (JSON endpoints)
@@ -120,17 +122,20 @@ ProjectCompass/
 ├── templates/              # Jinja2 HTML templates
 ├── static/                 # CSS, JS, images, fonts
 ├── tests/                  # pytest test suite
-├── Analyses/               # Analysis storage
+├── Analyses/               # Analysis storage (file-based)
 ├── Saved_data/             # Uploaded datasets
-└── Saved_queries/          # Saved SQL queries
+├── Saved_queries/          # Saved SQL queries
+└── scheduler_jobs.db       # APScheduler job persistence (SQLite)
 ```
 
 ### Tech Stack
 
-- **Backend**: Flask 3.0, Gunicorn, Python 3.12
+- **Backend**: Flask 3.0, Gunicorn, Python 3.13
 - **Data**: DuckDB (in-memory SQL on CSV), pandas
-- **AI**: Ollama + LLaMA 3 (optional, lazy-loaded)
-- **Frontend**: W3.CSS, Chart.js, RAWGraphs, jQuery
+- **Visualization**: RAWGraphs via CDN (`@rawgraphs/rawgraphs-core` + `@rawgraphs/rawgraphs-charts`)
+- **Scheduling**: APScheduler with SQLite persistence
+- **AI**: Ollama + qwen3 (optional, lazy-loaded)
+- **Frontend**: W3.CSS, Chart.js, jQuery
 - **Security**: werkzeug password hashing, AST-validated code sandbox, CORS
 - **CI/CD**: GitHub Actions (ruff + pytest on tags), Docker image auto-published to ghcr.io
 
@@ -195,14 +200,39 @@ curl -X POST http://localhost:8080/api/query \
 | Route | Description |
 |-------|-------------|
 | `/` | Dashboard with statistics |
+| `/overview` | Project documentation page |
 | `/analysis` | Analysis catalog with search/filter |
 | `/load_analysis/` | Create or edit an analysis |
+| `/create_investigations` | Run structured analysis with dynamic form |
+| `/outputs/` | View analysis outputs (per run, with delete) |
+| `/schedules/` | View and manage scheduled analyses |
 | `/query_runner/` | SQL query editor |
 | `/all_data/` | Browse uploaded datasets |
 | `/upload_data/` | Upload new data files |
-| `/rawgraphs` | Data visualization |
+| `/rawgraphs` | RAWGraphs visualization (30+ chart types) |
+| `/graph_analysis/` | Open query results in RAWGraphs |
 | `/chat` | AI data assistant |
 | `/todo` | Notes/todo page |
+
+---
+
+## Structured Analyses & Scheduling
+
+Create analyses that can be run on-demand or scheduled:
+
+```
+Analyses/My Analysis/
+├── metadata.yaml                          # Catalog metadata
+├── readme.md                              # Description
+├── output_versions.yaml                   # Version tracking
+└── analysis/
+    ├── metadata_automatic_report.yaml     # Form definition (inputs)
+    └── structured_analysis_main.py        # Execution script (run function)
+```
+
+Schedule options: `Every day at HH:MM`, `Every hour`, `Every Monday`, `Every Friday`, `Custom cron expression`.
+
+Jobs persist across restarts via SQLite.
 
 ---
 
