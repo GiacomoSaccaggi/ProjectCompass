@@ -216,3 +216,24 @@ def upload_data_form():
                            project_folder=webapp.project_folder,
                            sidebar_menu=html_part['sidebar_menu'],
                            head=html_part['head'])
+
+
+@data_bp.route('/graph_analysis/', methods=['POST'])
+def graph_analysis():
+    webapp = get_webapp()
+    html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
+    query = request.form.get('output_query_to_rawgraph', '')
+    input_data = ''
+    if query:
+        try:
+            df = webapp.sql(query)
+            input_data = df.to_csv(index=False, sep='\t')
+        except Exception:
+            pass
+    return render_template('RAWGraphs.html',
+                           title=webapp.environments_info['title'],
+                           head=html_part['head'],
+                           input_data=input_data,
+                           top_container=html_part['top_container'], port=webapp.constants["port"],
+                           project_folder=webapp.project_folder,
+                           sidebar_menu=html_part['sidebar_menu'])

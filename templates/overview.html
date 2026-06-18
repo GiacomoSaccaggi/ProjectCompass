@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<style>
+.ov-container { padding: 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+.ov-header { text-align: center; margin-bottom: 2rem; }
+.ov-header h1 { font-size: 2rem; color: #3F51B5; margin: 0; }
+.ov-header p { color: #666; margin-top: .3rem; }
+.ov-section { margin-bottom: 2.5rem; }
+.ov-section h2 { color: #3F51B5; border-bottom: 2px solid #e8eaf6; padding-bottom: .4rem; font-size: 1.3rem; }
+.ov-section h3 { color: #444; margin-top: 1.2rem; font-size: 1rem; }
+.ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.ov-card { background: #fff; border-radius: 8px; padding: 1.1rem 1.3rem; box-shadow: 0 2px 6px rgba(0,0,0,.06); border-left: 4px solid #3F51B5; }
+.ov-card h4 { margin: 0 0 .4rem; color: #3F51B5; font-size: .95rem; }
+.ov-card p { margin: 0; font-size: .85rem; color: #555; line-height: 1.5; }
+.ov-card code { background: #e8eaf6; padding: 1px 5px; border-radius: 3px; font-size: .8rem; }
+.ov-table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: .8rem; }
+.ov-table th { text-align: left; padding: .5rem .6rem; background: #e8eaf6; color: #3F51B5; font-weight: 600; }
+.ov-table td { padding: .45rem .6rem; border-bottom: 1px solid #eee; }
+.ov-table td:first-child { font-family: monospace; font-weight: 600; color: #3F51B5; }
+.ov-badge { display: inline-block; font-size: .7rem; padding: 2px 7px; border-radius: 3px; font-weight: 600; margin-right: .3rem; }
+.ov-badge-blue { background: #e3f2fd; color: #1565c0; }
+.ov-badge-green { background: #e8f5e9; color: #2e7d32; }
+.ov-badge-orange { background: #fff3e0; color: #e65100; }
+.ov-badge-purple { background: #ede7f6; color: #4527a0; }
+.ov-arch { background: #263238; color: #e0e0e0; padding: 1rem 1.2rem; border-radius: 8px; font-family: monospace; font-size: .8rem; line-height: 1.6; overflow-x: auto; white-space: pre; }
+.ov-tech { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+.ov-tech span { background: #e8eaf6; color: #3F51B5; padding: 4px 10px; border-radius: 15px; font-size: .8rem; font-weight: 500; }
+</style>
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+<div class="ov-container">
+
+<!-- Header -->
+<div class="ov-header">
+  <h1><i class="fa fa-compass"></i> ProjectCompass</h1>
+  <p>Analysis catalog, execution engine, and data exploration platform</p>
+</div>
+
+<!-- What is ProjectCompass -->
+<div class="ov-section">
+  <h2><i class="fa fa-info-circle"></i> What is ProjectCompass?</h2>
+  <p style="font-size:.9rem;line-height:1.7;color:#444;">
+    ProjectCompass is a Python-based tool for teams that produce data analyses. It solves three problems:
+    <strong>organization</strong> (a tag-based catalog with metadata and versioning),
+    <strong>execution</strong> (a unified environment to run structured analyses), and
+    <strong>exploration</strong> (SQL queries on local datasets via DuckDB, with visualization and AI chat).
+  </p>
+</div>
+
+<!-- Features -->
+<div class="ov-section">
+  <h2><i class="fa fa-th-large"></i> Features</h2>
+  <div class="ov-grid">
+    <div class="ov-card">
+      <h4><i class="fa fa-folder-open"></i> Analysis Catalog</h4>
+      <p>Tag-based repository with search, filter by product/owner/country, pagination, and version tracking. Each analysis has metadata, documentation, queries, and physical outputs.</p>
+    </div>
+    <div class="ov-card">
+      <h4><i class="fa fa-database"></i> Data Explorer</h4>
+      <p>SQL queries on CSV/SQLite via DuckDB. Upload datasets, run queries with syntax highlighting, save queries, and paginate results.</p>
+    </div>
+    <div class="ov-card">
+      <h4><i class="fa fa-line-chart"></i> RAWGraphs Visualization</h4>
+      <p>Send query results directly to RAWGraphs for interactive data visualization. Supports alluvial diagrams, bar charts, treemaps, and more.</p>
+    </div>
+    <div class="ov-card">
+      <h4><i class="fa fa-cogs"></i> Execution Engine</h4>
+      <p>Run structured analyses with dynamic forms generated from YAML metadata. Produces physical outputs (HTML reports, data files).</p>
+    </div>
+    <div class="ov-card">
+      <h4><i class="fa fa-comments"></i> AI Chat</h4>
+      <p>Ask questions about your data in natural language. Uses Ollama + LLaMA with AST-validated safe code execution (sandboxed pandas).</p>
+    </div>
+    <div class="ov-card">
+      <h4><i class="fa fa-plug"></i> REST API</h4>
+      <p>JSON endpoints for analyses, data, and queries. Session-based auth, CORS-restricted. Useful for integrations and automation.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Routes -->
+<div class="ov-section">
+  <h2><i class="fa fa-sitemap"></i> Web Routes</h2>
+  <table class="ov-table">
+    <tr><th>Route</th><th>Description</th></tr>
+    <tr><td>/</td><td>Dashboard with statistics (analysis count, products chart, owners)</td></tr>
+    <tr><td>/analysis</td><td>Analysis catalog with search, filter, and pagination</td></tr>
+    <tr><td>/load_analysis/</td><td>Create or edit an analysis</td></tr>
+    <tr><td>/overview</td><td>This documentation page</td></tr>
+    <tr><td>/all_data/</td><td>Browse uploaded datasets</td></tr>
+    <tr><td>/query_runner/</td><td>SQL query editor (DuckDB)</td></tr>
+    <tr><td>/open_data?name=X</td><td>Open a specific dataset and query it</td></tr>
+    <tr><td>/graph_analysis/</td><td>Send query results to RAWGraphs</td></tr>
+    <tr><td>/rawgraphs</td><td>RAWGraphs visualization (empty canvas)</td></tr>
+    <tr><td>/upload_data/</td><td>Upload new data files</td></tr>
+    <tr><td>/chat</td><td>AI data assistant (requires Ollama)</td></tr>
+    <tr><td>/create_investigations</td><td>Structured analysis execution with dynamic forms</td></tr>
+    <tr><td>/todo</td><td>Notes/todo page (localStorage)</td></tr>
+  </table>
+
+  <h3>REST API Endpoints <span class="ov-badge ov-badge-green">JSON</span></h3>
+  <table class="ov-table">
+    <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+    <tr><td>GET</td><td>/api/health</td><td>Health check</td></tr>
+    <tr><td>GET</td><td>/api/analyses</td><td>List analyses (supports ?q=, ?product=, ?owner=, ?page=)</td></tr>
+    <tr><td>GET</td><td>/api/analyses/&lt;name&gt;</td><td>Single analysis details</td></tr>
+    <tr><td>GET</td><td>/api/data</td><td>List available datasets</td></tr>
+    <tr><td>GET</td><td>/api/data/&lt;name&gt;/preview</td><td>Preview dataset rows</td></tr>
+    <tr><td>POST</td><td>/api/query</td><td>Execute SQL query ({"sql": "..."})</td></tr>
+  </table>
+</div>
+
+<!-- Architecture -->
+<div class="ov-section">
+  <h2><i class="fa fa-cubes"></i> Architecture</h2>
+<div class="ov-arch">ProjectCompass/
+├── app.py                  # Flask application factory
+├── config.py               # Configuration from .env
+├── basefun.py              # Core ProjectCompass class
+├── blueprints/
+│   ├── auth.py             # Authentication (session + werkzeug hash)
+│   ├── catalog.py          # Analysis CRUD, search, filter, pagination
+│   ├── data.py             # Query runner, data upload, RAWGraphs
+│   ├── agent.py            # LLM chat (Ollama, sandboxed execution)
+│   └── api.py              # REST API (JSON endpoints)
+├── utils/
+│   ├── analysis_utils.py   # Metadata management
+│   ├── data_utils.py       # DuckDB SQL, file operations
+│   ├── html_utils.py       # Template helpers
+│   └── agent_utils.py      # LLM agent (lazy-loaded)
+├── templates/              # Jinja2 HTML templates
+├── static/                 # CSS, JS, images, fonts
+├── Analyses/               # Analysis storage (file-based)
+├── Saved_data/             # Uploaded datasets (CSV)
+└── Saved_queries/          # Saved SQL queries</div>
+</div>
+
+<!-- Tech Stack -->
+<div class="ov-section">
+  <h2><i class="fa fa-wrench"></i> Tech Stack</h2>
+  <div class="ov-tech">
+    <span>Python 3.12</span>
+    <span>Flask 3.0</span>
+    <span>DuckDB</span>
+    <span>pandas</span>
+    <span>Ollama / LLaMA</span>
+    <span>W3.CSS</span>
+    <span>Chart.js</span>
+    <span>RAWGraphs</span>
+    <span>jQuery</span>
+    <span>Font Awesome</span>
+    <span>Gunicorn</span>
+    <span>Docker</span>
+  </div>
+
+  <h3>Key Design Decisions</h3>
+  <table class="ov-table">
+    <tr><th>Aspect</th><th>Choice</th><th>Rationale</th></tr>
+    <tr><td>Database</td><td>DuckDB (in-memory)</td><td>SQL on CSV without loading into memory; zero infrastructure</td></tr>
+    <tr><td>Storage</td><td>File-based</td><td>Analyses stored as folders with YAML metadata; no external DB needed</td></tr>
+    <tr><td>Auth</td><td>Session + werkzeug hash</td><td>Simple, secure; no OAuth complexity for internal tools</td></tr>
+    <tr><td>AI</td><td>Ollama (local LLM)</td><td>Privacy-first; no data leaves the server; lazy-loaded</td></tr>
+    <tr><td>Code safety</td><td>AST validation</td><td>LLM-generated pandas code is validated against a whitelist before execution</td></tr>
+    <tr><td>Frontend</td><td>W3.CSS + Jinja2</td><td>Lightweight, no build step, responsive out of the box</td></tr>
+  </table>
+</div>
+
+<!-- Configuration -->
+<div class="ov-section">
+  <h2><i class="fa fa-sliders"></i> Configuration</h2>
+  <p style="font-size:.85rem;color:#555;">All configuration via environment variables (<code>.env</code> file):</p>
+  <table class="ov-table">
+    <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+    <tr><td>SECRET_KEY</td><td>random</td><td>Flask session encryption key</td></tr>
+    <tr><td>ADMIN_USERNAME</td><td>admin</td><td>Login username</td></tr>
+    <tr><td>ADMIN_PASSWORD_HASH</td><td>—</td><td>Werkzeug-hashed password</td></tr>
+    <tr><td>PORT</td><td>5000</td><td>Server port</td></tr>
+    <tr><td>FLASK_DEBUG</td><td>False</td><td>Debug mode</td></tr>
+    <tr><td>OLLAMA_HOST</td><td>http://localhost:11434</td><td>Ollama LLM endpoint</td></tr>
+    <tr><td>ALLOWED_ORIGINS</td><td>*</td><td>CORS allowed origins</td></tr>
+  </table>
+</div>
+
+<!-- Quick Start -->
+<div class="ov-section">
+  <h2><i class="fa fa-rocket"></i> Quick Start</h2>
+  <div class="ov-grid">
+    <div class="ov-card">
+      <h4><i class="fa fa-docker"></i> Docker (fastest)</h4>
+      <p>
+        <code>docker compose -f docker-compose.public.yml up -d</code><br><br>
+        Open <a href="http://localhost:8080">localhost:8080</a>. Pull LLM models optionally with <code>docker exec ollama ollama pull llama3</code>.
+      </p>
+    </div>
+    <div class="ov-card">
+      <h4><i class="fa fa-terminal"></i> Local Development</h4>
+      <p>
+        <code>uv sync && cp .env.example .env</code><br>
+        <code>uv run python app.py</code><br><br>
+        Open <a href="http://localhost:5000">localhost:5000</a>. Tests: <code>uv run pytest -v</code>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Data Flow -->
+<div class="ov-section">
+  <h2><i class="fa fa-exchange"></i> Data Flow</h2>
+  <div class="ov-grid" style="grid-template-columns:1fr;">
+    <div class="ov-card" style="border-left-color:#4CAF50;">
+      <p style="font-size:.85rem;">
+        <span class="ov-badge ov-badge-blue">1</span> <strong>Upload</strong> CSV/TSV files → stored in <code>Saved_data/</code><br>
+        <span class="ov-badge ov-badge-blue">2</span> <strong>Query</strong> files via DuckDB SQL → results in table<br>
+        <span class="ov-badge ov-badge-blue">3</span> <strong>Visualize</strong> results in RAWGraphs or Chart.js<br>
+        <span class="ov-badge ov-badge-blue">4</span> <strong>Ask AI</strong> questions about datasets in natural language<br>
+        <span class="ov-badge ov-badge-blue">5</span> <strong>Catalog</strong> analyses with metadata, tags, outputs, and versions
+      </p>
+    </div>
+  </div>
+</div>
+
+<footer style="text-align:center;padding:1.5rem;color:#999;font-size:.8rem;border-top:1px solid #eee;margin-top:2rem;">
+  ProjectCompass v0.1.0 — Organization Is Everything®
+</footer>
+
+</div>
+</div>
+</body>
+</html>
