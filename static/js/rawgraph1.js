@@ -427,7 +427,7 @@
                 },
                 Ce = a(283),
                 ke = function() {
-                    return new Worker(a.p + "ProjectCompass/static/js/worker_rowgraph.js")
+                    return new Worker(a.p + "static/js/worker_rowgraph.js")
                 };
             var Ne = a(4),
                 _e = a(3);
