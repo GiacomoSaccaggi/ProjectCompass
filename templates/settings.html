@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    <header class="w3-container" style="padding-top:22px">
+        <h5><b><i class="fa fa-cog"></i> Settings</b></h5>
+    </header>
+
+    <div class="w3-container" style="padding:16px;">
+        <!-- User Info Card -->
+        <div class="w3-card w3-white w3-padding" style="margin-bottom:1rem;">
+            <h5><i class="fa fa-user"></i> User Information</h5>
+            <table class="w3-table">
+                <tr><td style="width:150px;"><b>Username:</b></td><td>{{ username }}</td></tr>
+                <tr><td><b>Role:</b></td><td><span class="w3-tag w3-round {% if role == 'admin' %}w3-red{% elif role == 'editor' %}w3-blue{% else %}w3-grey{% endif %}">{{ role }}</span></td></tr>
+            </table>
+        </div>
+
+        <!-- API Tokens Card -->
+        <div class="w3-card w3-white w3-padding">
+            <h5><i class="fa fa-key"></i> API Tokens</h5>
+            <p class="w3-text-grey" style="font-size:0.9rem;">
+                API tokens allow programmatic access to ProjectCompass. Use the token in the <code>Authorization: Bearer &lt;token&gt;</code> header.
+            </p>
+
+            <!-- Generate Token Button -->
+            <button class="w3-button w3-blue w3-small" onclick="generateToken()">
+                <i class="fa fa-plus"></i> Generate New Token
+            </button>
+
+            <!-- Token Display (hidden initially) -->
+            <div id="new-token-display" style="display:none;margin-top:1rem;">
+                <div class="w3-panel w3-pale-green w3-border w3-border-green">
+                    <p><b>New Token Created!</b> Copy it now — it won't be shown again.</p>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="text" id="new-token-value" class="w3-input w3-border" readonly style="font-family:monospace;flex:1;">
+                        <button class="w3-button w3-green w3-small" onclick="copyToken()"><i class="fa fa-copy"></i> Copy</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Token List -->
+            <div style="margin-top:1rem;">
+                <table class="w3-table w3-bordered w3-striped">
+                    <thead>
+                        <tr class="w3-light-grey">
+                            <th>Name</th>
+                            <th>Created</th>
+                            <th style="width:80px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tokens-list">
+                        {% for token in tokens %}
+                        <tr id="token-row-{{ token.id }}">
+                            <td>{{ token.name or 'API Token' }}</td>
+                            <td>{{ token.created_at.strftime('%Y-%m-%d %H:%M') if token.created_at else '' }}</td>
+                            <td>
+                                <button class="w3-button w3-red w3-tiny" onclick="revokeToken({{ token.id }})">
+                                    <i class="fa fa-trash"></i> Revoke
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr id="no-tokens-row">
+                            <td colspan="3" class="w3-text-grey" style="text-align:center;">No API tokens</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align:center;padding-left:15%;padding-right:15%;">
+        <hr><br>
+        <strong>About ProjectCompass</strong><br>
+        Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+        <a href="/license">Copyright ©2025 ProjectCompass. All rights reserved.</a><br><br>
+    </footer>
+</div>
+
+<script>
+function generateToken() {
+    const name = prompt('Token name (optional):', 'API Token');
+    if (name === null) return;
+
+    fetch('/api/tokens', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name || 'API Token'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.token) {
+            document.getElementById('new-token-value').value = data.token;
+            document.getElementById('new-token-display').style.display = 'block';
+
+            // Add row to table
+            const noTokensRow = document.getElementById('no-tokens-row');
+            if (noTokensRow) noTokensRow.remove();
+
+            const tbody = document.getElementById('tokens-list');
+            const row = document.createElement('tr');
+            row.id = 'token-row-' + data.id;
+            row.innerHTML = `
+                <td>${data.name}</td>
+                <td>${new Date().toISOString().slice(0,16).replace('T',' ')}</td>
+                <td><button class="w3-button w3-red w3-tiny" onclick="revokeToken(${data.id})"><i class="fa fa-trash"></i> Revoke</button></td>
+            `;
+            tbody.insertBefore(row, tbody.firstChild);
+        } else {
+            alert('Error creating token');
+        }
+    });
+}
+
+function copyToken() {
+    const input = document.getElementById('new-token-value');
+    input.select();
+    document.execCommand('copy');
+    alert('Token copied to clipboard!');
+}
+
+function revokeToken(tokenId) {
+    if (!confirm('Revoke this token? This cannot be undone.')) return;
+
+    fetch('/api/tokens/' + tokenId, {method: 'DELETE'})
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('token-row-' + tokenId).remove();
+            // Check if table is now empty
+            const tbody = document.getElementById('tokens-list');
+            if (tbody.children.length === 0) {
+                const row = document.createElement('tr');
+                row.id = 'no-tokens-row';
+                row.innerHTML = '<td colspan="3" class="w3-text-grey" style="text-align:center;">No API tokens</td>';
+                tbody.appendChild(row);
+            }
+        }
+    });
+}
+</script>
+
+</body>
+</html>

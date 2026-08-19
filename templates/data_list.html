@@ -116,9 +116,28 @@ header{
     <br>
 
   <div class="w3-padding w3-container w3-card-1">
+        {% if not all_data or all_data|length == 0 %}
+          {% with icon='📊', title='No datasets uploaded', message='Upload a CSV file to start exploring your data with SQL queries, visualizations, and AI chat.', cta_url='/upload_data', cta_icon='fa-upload', cta_text='Upload Data' %}
+            {% include 'components/empty_state.html' %}
+          {% endwith %}
+        {% else %}
         {% for data in all_data %}
-            <h6><b><i class="fa fa-empire"></i>    <a href="{{'/open_data?name=' + data}}">Open data {{data}}</a></b></h6>
+            <h6>
+              <b><i class="fa fa-empire"></i> <a href="{{'/open_data?name=' + data}}">Open data {{data}}</a></b>
+              {% if lineage and data in lineage %}
+              <span style="margin-left:10px;font-size:.75rem;color:#666;">
+                Used by: 
+                {% for analysis in lineage[data][:3] %}
+                <span class="w3-tag w3-small w3-light-grey" style="margin-left:2px;">{{ analysis }}</span>
+                {% endfor %}
+                {% if lineage[data]|length > 3 %}
+                <span class="w3-tag w3-small w3-pale-blue">+{{ lineage[data]|length - 3 }} more</span>
+                {% endif %}
+              </span>
+              {% endif %}
+            </h6>
         {% endfor %}
+        {% endif %}
   </div>
 
   <!-- Footer -->
