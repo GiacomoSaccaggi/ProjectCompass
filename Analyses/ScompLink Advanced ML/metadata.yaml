@@ -1,0 +1,16 @@
+title: ScompLink Advanced ML
+description: Advanced ML pipeline using scomp-link v2.x features — DSL syntax, feature engineering, SHAP explainability, drift detection, and rich HTML reporting with KPI cards and dark mode.
+product: Machine Learning
+owner: ''
+collaborators: ''
+countries: Global
+start_date: '2026-08-18'
+output_type: CSV + HTML Report
+output description: Validation report with KPI cards, comparison table, data summary, and drift analysis. Predictions CSV with model metrics.
+dashboard link: ''
+gitlab: https://github.com/GiacomoSaccaggi/scomp-link
+gdrive: ''
+inputs: {}
+links:
+  scomp-link PyPI: https://pypi.org/project/scomp-link/
+  scomp-link Docs: https://giacomosaccaggi.github.io/scomp_link/

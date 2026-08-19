@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+
+<style>
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+.kpi-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+.kpi-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2D323A;
+}
+.kpi-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 5px;
+}
+.kpi-card.success .kpi-value { color: #28a745; }
+.kpi-card.primary .kpi-value { color: #007bff; }
+.kpi-card.warning .kpi-value { color: #ffc107; }
+.kpi-card.info .kpi-value { color: #17a2b8; }
+
+.chart-container {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+.chart-container h4 {
+    margin: 0 0 15px;
+    color: #2D323A;
+}
+.chart-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+@media (max-width: 900px) {
+    .chart-row { grid-template-columns: 1fr; }
+}
+</style>
+
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    <div class="w3-container" style="padding: 20px;">
+        <h2><i class="fa fa-dashboard"></i> Observability Dashboard</h2>
+        <hr>
+
+        <!-- KPI Cards -->
+        <div class="metrics-grid" id="kpiCards">
+            <div class="kpi-card primary">
+                <div class="kpi-value" id="totalExecs">-</div>
+                <div class="kpi-label">Total Executions</div>
+            </div>
+            <div class="kpi-card success">
+                <div class="kpi-value" id="successRate">-</div>
+                <div class="kpi-label">Success Rate</div>
+            </div>
+            <div class="kpi-card info">
+                <div class="kpi-value" id="totalUsers">-</div>
+                <div class="kpi-label">Total Users</div>
+            </div>
+            <div class="kpi-card warning">
+                <div class="kpi-value" id="totalAnalyses">-</div>
+                <div class="kpi-label">Total Analyses</div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="chart-row">
+            <div class="chart-container">
+                <h4><i class="fa fa-bar-chart"></i> Executions per Day (Last 30 Days)</h4>
+                <canvas id="dailyChart" height="200"></canvas>
+            </div>
+            <div class="chart-container">
+                <h4><i class="fa fa-pie-chart"></i> Status Breakdown</h4>
+                <canvas id="statusChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Analyses -->
+        <div class="chart-container">
+            <h4><i class="fa fa-trophy"></i> Top 5 Analyses by Execution Count</h4>
+            <canvas id="topChart" height="100"></canvas>
+        </div>
+
+        <div class="w3-panel w3-pale-blue w3-leftbar w3-border-blue">
+            <p><i class="fa fa-info-circle"></i> <strong>Note:</strong> 
+            This dashboard shows execution metrics from the database. 
+            Metrics update in real-time as analyses are run.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+var dailyChart, statusChart, topChart;
+
+function loadMetrics() {
+    fetch('/api/metrics')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            // Update KPI cards
+            document.getElementById('totalExecs').textContent = data.total_executions;
+            document.getElementById('successRate').textContent = data.success_rate + '%';
+            document.getElementById('totalUsers').textContent = data.total_users;
+            document.getElementById('totalAnalyses').textContent = data.total_analyses;
+
+            // Daily executions chart
+            var dailyLabels = data.daily.map(function(d) { return d.day; });
+            var dailyValues = data.daily.map(function(d) { return d.count; });
+            
+            if (dailyChart) dailyChart.destroy();
+            dailyChart = new Chart(document.getElementById('dailyChart'), {
+                type: 'bar',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [{
+                        label: 'Executions',
+                        data: dailyValues,
+                        backgroundColor: 'rgba(45, 50, 58, 0.7)',
+                        borderColor: '#2D323A',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+
+            // Status breakdown doughnut
+            var statusLabels = Object.keys(data.statuses);
+            var statusValues = Object.values(data.statuses);
+            var statusColors = statusLabels.map(function(s) {
+                if (s === 'success') return '#28a745';
+                if (s === 'failed') return '#dc3545';
+                if (s === 'running') return '#ffc107';
+                return '#6c757d';
+            });
+
+            if (statusChart) statusChart.destroy();
+            statusChart = new Chart(document.getElementById('statusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusValues,
+                        backgroundColor: statusColors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Top analyses horizontal bar
+            var topLabels = data.top_analyses.map(function(t) { return t.name || 'Unknown'; });
+            var topValues = data.top_analyses.map(function(t) { return t.count; });
+
+            if (topChart) topChart.destroy();
+            topChart = new Chart(document.getElementById('topChart'), {
+                type: 'bar',
+                data: {
+                    labels: topLabels,
+                    datasets: [{
+                        label: 'Executions',
+                        data: topValues,
+                        backgroundColor: 'rgba(77, 255, 214, 0.7)',
+                        borderColor: '#4DFFD6',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        })
+        .catch(function(err) {
+            console.error('Failed to load metrics:', err);
+        });
+}
+
+// Load metrics on page load
+loadMetrics();
+</script>
+
+</body>
+</html>
