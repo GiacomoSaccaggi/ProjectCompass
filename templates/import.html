@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+
+<style>
+.import-container {
+    max-width: 600px;
+    margin: 40px auto;
+}
+.drop-zone {
+    border: 3px dashed #ccc;
+    border-radius: 12px;
+    padding: 60px 40px;
+    text-align: center;
+    background: #f9f9f9;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: #4DFFD6;
+    background: #e8fff9;
+}
+.drop-zone i {
+    font-size: 48px;
+    color: #999;
+    margin-bottom: 15px;
+}
+.drop-zone p {
+    font-size: 1rem;
+    color: #666;
+}
+.drop-zone input[type="file"] {
+    display: none;
+}
+.btn-import {
+    background: #2D323A;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 20px;
+}
+.btn-import:hover {
+    background: #4DFFD6;
+    color: #2D323A;
+}
+.file-selected {
+    margin-top: 15px;
+    padding: 10px;
+    background: #e8f4e8;
+    border-radius: 6px;
+    color: #2d5a2d;
+}
+</style>
+
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    <div class="w3-container import-container">
+        <h2><i class="fa fa-upload"></i> Import Analysis</h2>
+        <p>Upload a ZIP file containing an analysis package. The analysis will be extracted to the Analyses folder.</p>
+        
+        <form action="/import" method="POST" enctype="multipart/form-data" id="importForm">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <i class="fa fa-cloud-upload"></i>
+                <p>Drag & drop your ZIP file here<br>or click to browse</p>
+                <input type="file" name="file" id="fileInput" accept=".zip">
+            </div>
+            <div class="file-selected" id="fileSelected" style="display:none;"></div>
+            <button type="submit" class="btn-import"><i class="fa fa-upload"></i> Import Analysis</button>
+        </form>
+        
+        <div class="w3-panel w3-pale-blue w3-leftbar w3-border-blue" style="margin-top: 30px;">
+            <p><i class="fa fa-info-circle"></i> <strong>Note:</strong> 
+            The ZIP file should contain an analysis folder at the root level with the standard structure 
+            (metadata.yaml, readme.md, analysis/ folder, etc.).</p>
+        </div>
+    </div>
+</div>
+
+<script>
+var dropZone = document.getElementById('dropZone');
+var fileInput = document.getElementById('fileInput');
+var fileSelected = document.getElementById('fileSelected');
+
+['dragenter', 'dragover'].forEach(function(evt) {
+    dropZone.addEventListener(evt, function(e) {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+});
+
+['dragleave', 'drop'].forEach(function(evt) {
+    dropZone.addEventListener(evt, function(e) {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+    });
+});
+
+dropZone.addEventListener('drop', function(e) {
+    var files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].name.endsWith('.zip')) {
+        fileInput.files = files;
+        showSelected(files[0].name);
+    }
+});
+
+fileInput.addEventListener('change', function() {
+    if (fileInput.files.length > 0) {
+        showSelected(fileInput.files[0].name);
+    }
+});
+
+function showSelected(name) {
+    fileSelected.innerHTML = '<i class="fa fa-file-archive-o"></i> Selected: <strong>' + name + '</strong>';
+    fileSelected.style.display = 'block';
+}
+</script>
+
+</body>
+</html>

@@ -17,6 +17,54 @@ def health():
     return jsonify({'status': 'ok'})
 
 
+@api_bp.route('/search')
+def api_search():
+    from sqlalchemy import text
+
+    from models import db
+    q = request.args.get('q', '').strip()
+    if not q or len(q) < 2:
+        return jsonify({'results': []})
+    try:
+        results = db.session.execute(
+            text("SELECT name, title, snippet(analyses_fts, 2, '<b>', '</b>', '...', 30) "
+                 "as snippet FROM analyses_fts WHERE analyses_fts MATCH :q LIMIT 10"),
+            {'q': q}
+        ).fetchall()
+        return jsonify({'results': [{'name': r[0], 'title': r[1], 'snippet': r[2]} for r in results]})
+    except Exception:
+        return jsonify({'results': []})
+
+
+@api_bp.route('/search_html')
+def api_search_html():
+    from sqlalchemy import text
+
+    from models import db
+    q = request.args.get('q', '').strip()
+    if not q or len(q) < 2:
+        return ''
+    try:
+        results = db.session.execute(
+            text("SELECT name, title FROM analyses_fts WHERE analyses_fts MATCH :q LIMIT 8"),
+            {'q': q + '*'}
+        ).fetchall()
+    except Exception:
+        return '<div style="padding:10px;color:#999;">Search error</div>'
+    if not results:
+        return '<div style="padding:10px;color:#999;">No results</div>'
+    html = ''
+    for r in results:
+        name, title = r[0], r[1] or r[0]
+        html += (
+            f'<a href="/analysis?q={name}" style="display:block;padding:8px 12px;'
+            f'text-decoration:none;color:#333;border-bottom:1px solid #f0f0f0;" '
+            f'onmouseover="this.style.background=\'#f0f4ff\'" '
+            f'onmouseout="this.style.background=\'\'">{title}</a>'
+        )
+    return html
+
+
 @api_bp.route('/analyses')
 def list_analyses():
     webapp = get_webapp()
@@ -131,3 +179,47 @@ def run_query():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+
+@api_bp.route('/activity')
+def api_activity():
+    from models import AuditLog, User
+    limit = int(request.args.get('limit', 20))
+    entries = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+    result = []
+    for e in entries:
+        user = User.query.get(e.user_id) if e.user_id else None
+        result.append({
+            'action': e.action,
+            'target_type': e.target_type,
+            'target_name': e.target_name,
+            'user': user.username if user else 'system',
+            'created_at': e.created_at.isoformat() if e.created_at else '',
+        })
+    return jsonify(result)
+
+
+@api_bp.route('/activity_html')
+def api_activity_html():
+    from models import AuditLog, User
+    entries = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(15).all()
+    html = ''
+    for e in entries:
+        user = User.query.get(e.user_id) if e.user_id else None
+        username = user.username if user else 'system'
+        icon_map = {
+            'login': 'fa-sign-in',
+            'create': 'fa-plus',
+            'run': 'fa-play',
+            'upload': 'fa-upload',
+            'delete': 'fa-trash',
+            'save': 'fa-save',
+        }
+        icon = icon_map.get(e.action, 'fa-circle')
+        html += (
+            f'<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:.8rem;">'
+            f'<i class="fa {icon}" style="width:20px;color:#3F51B5;"></i> '
+            f'<b>{username}</b> {e.action} '
+            f'<span style="color:#666;">{e.target_type}: {e.target_name}</span></div>'
+        )
+    return html or '<div style="padding:10px;color:#999;">No activity yet</div>'

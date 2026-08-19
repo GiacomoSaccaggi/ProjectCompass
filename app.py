@@ -19,6 +19,11 @@ def create_app(config_class=Config):
     app = Flask(__name__, template_folder=template_path, static_folder=os.path.join(path, 'static'))
     app.config.from_object(config_class)
 
+    # Initialize database
+    from models import init_db, init_fts
+    init_db(app)
+    init_fts(app)
+
     # Security: restrict CORS
     CORS(app, resources={r"/api/*": {"origins": os.environ.get('ALLOWED_ORIGINS', '*').split(',')}})
 
