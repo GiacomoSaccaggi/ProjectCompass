@@ -35,7 +35,7 @@ class AnalysisUtils:
         with open(f"{main_folder}/{folder}/metadata.yaml") as file:
             try:
                 analysis = yaml.safe_load(file)
-                analysis['start_date'] = analysis['start_date'].strftime("%Y-%m-%d")
+                analysis['start_date'] = analysis['start_date'].strftime("%Y-%m-%d") if hasattr(analysis['start_date'], 'strftime') else str(analysis['start_date'])
                 analysis['last_modified'] = datetime.datetime.fromtimestamp(
                     os.path.getmtime(f"{main_folder}/{folder}")).strftime("%Y-%m-%d")
                 analysis['gitlab_link_viz'] = '<br><h6><b><i class="fa fa-gitlab"></i>    <a href="' + analysis[
@@ -48,7 +48,7 @@ class AnalysisUtils:
                     + gdrive + '" target="_blank">Google drive workspace</a></b></h6>'
                     if gdrive and gdrive != '' else ''
                 )
-                analysis['inputs'] = {} if analysis['inputs'] is None else analysis['inputs']
+                analysis['inputs'] = {} if not isinstance(analysis.get('inputs'), dict) else analysis['inputs']
                 analysis['inline_inputs'] = ';'.join(
                     [f"{k}:{v['type']}={v['default']}" for k, v in analysis['inputs'].items()])
                 analysis['links'] = {} if analysis['links'] is None else analysis['links']

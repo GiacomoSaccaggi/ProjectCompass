@@ -1,15 +1,37 @@
+import json
 import re
 
 import pandas as pd
 from flask import Blueprint, current_app, render_template, request
 
 from logging_config import logger
+from models import Execution, log_action
 
 data_bp = Blueprint('data', __name__)
 
 
 def get_webapp():
     return current_app.config['WEBAPP']
+
+
+def _get_data_lineage():
+    """Get which analyses use each dataset based on execution history."""
+    lineage = {}  # dataset_name -> list of analysis names
+    executions = Execution.query.filter(Execution.inputs_json.isnot(None)).all()
+    for exe in executions:
+        try:
+            inputs = json.loads(exe.inputs_json) if exe.inputs_json else {}
+            # Check if this execution used any datasets (from inputs_json)
+            for _key, val in inputs.items():
+                if isinstance(val, str) and val.endswith('.csv'):
+                    ds_name = val.replace('.csv', '')
+                    if ds_name not in lineage:
+                        lineage[ds_name] = set()
+                    lineage[ds_name].add(exe.analysis_name)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    # Convert sets to sorted lists
+    return {k: sorted(list(v)) for k, v in lineage.items()}
 
 
 def clean_query(output_query: str) -> str:
@@ -46,14 +68,26 @@ def list_of_data():
 def upload_data():
     webapp = get_webapp()
     webapp.upload_text_files(request)
-    logger.info("Data file uploaded")
+    # Extract filename from request
+    filename = 'unknown'
+    if 'filename' in request.form:
+        filename = request.form['filename']
+    elif request.files:
+        for f in request.files.values():
+            if f.filename:
+                filename = f.filename
+                break
+    log_action('upload', 'dataset', filename)
+    logger.info(f"Data file uploaded: {filename}")
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     all_data = webapp.list_data()
+    lineage = _get_data_lineage()
     return render_template('data_list.html',
                            title=webapp.environments_info['title'],
                            intro=webapp.environments_info['intro'],
                            links=webapp.environments_info['links'],
                            all_data=all_data,
+                           lineage=lineage,
                            top_container=html_part['top_container'], port=webapp.constants["port"],
                            project_folder=webapp.project_folder,
                            sidebar_menu=html_part['sidebar_menu'],
@@ -65,11 +99,13 @@ def all_data():
     webapp = get_webapp()
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     all_data_list = webapp.list_data()
+    lineage = _get_data_lineage()
     return render_template('data_list.html',
                            title=webapp.environments_info['title'],
                            intro=webapp.environments_info['intro'],
                            links=webapp.environments_info['links'],
                            all_data=all_data_list,
+                           lineage=lineage,
                            top_container=html_part['top_container'], port=webapp.constants["port"],
                            project_folder=webapp.project_folder,
                            sidebar_menu=html_part['sidebar_menu'],

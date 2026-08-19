@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+
+<style>
+input[type=text], input[type=password], input[type=email], select {
+    padding: 8px 12px;
+    margin: 4px 2px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+input[type=submit] {
+    padding: 10px 20px;
+    background-color: #2D323A;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+input[type=submit]:hover {
+    background-color: #4DFFD6;
+    color: #2D323A;
+}
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.delete-btn:hover {
+    background-color: #c82333;
+}
+.role-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+.role-admin { background-color: #dc3545; color: white; }
+.role-editor { background-color: #007bff; color: white; }
+.role-viewer { background-color: #6c757d; color: white; }
+</style>
+
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+    <div class="w3-container" style="padding: 20px;">
+        <h2><i class="fa fa-users"></i> User Management</h2>
+        <hr>
+
+        <!-- Create User Form -->
+        <div class="w3-card w3-white w3-margin-bottom" style="padding: 20px;">
+            <h4>Create New User</h4>
+            <form action="/admin/users/create" method="POST">
+                <table>
+                    <tr>
+                        <td><label>Username:</label></td>
+                        <td><input type="text" name="username" required placeholder="username"></td>
+                    </tr>
+                    <tr>
+                        <td><label>Password:</label></td>
+                        <td><input type="password" name="password" required placeholder="password"></td>
+                    </tr>
+                    <tr>
+                        <td><label>Email:</label></td>
+                        <td><input type="email" name="email" placeholder="email@example.com"></td>
+                    </tr>
+                    <tr>
+                        <td><label>Role:</label></td>
+                        <td>
+                            <select name="role">
+                                <option value="editor">Editor</option>
+                                <option value="viewer">Viewer</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td><input type="submit" value="Create User"></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+
+        <!-- Users Table -->
+        <div class="w3-card w3-white" style="padding: 20px;">
+            <h4>All Users ({{ users|length }})</h4>
+            <table class="w3-table w3-striped w3-bordered">
+                <thead>
+                    <tr class="w3-dark-grey">
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td><strong>{{ user.username }}</strong></td>
+                        <td>{{ user.email or '-' }}</td>
+                        <td>
+                            <span class="role-badge role-{{ user.role }}">{{ user.role }}</span>
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</td>
+                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td>
+                        <td>
+                            <form action="/admin/users/{{ user.id }}/delete" method="POST" style="display:inline;"
+                                  onsubmit="return confirm('Delete user {{ user.username }}?');">
+                                <button type="submit" class="delete-btn">
+                                    <i class="fa fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not users %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #999;">
+                            No users in database. Using environment variable authentication.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="w3-panel w3-pale-blue w3-leftbar w3-border-blue" style="margin-top: 20px;">
+            <p><i class="fa fa-info-circle"></i> <strong>Note:</strong> 
+            When no users exist in the database, authentication falls back to the 
+            <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD_HASH</code> environment variables.
+            Create your first admin user above to enable multi-user mode.</p>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

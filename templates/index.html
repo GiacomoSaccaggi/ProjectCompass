@@ -56,6 +56,19 @@
       </div>
     </div>
   </div>
+  <!-- Activity Feed -->
+  <div class="w3-container">
+    <div class="w3-card w3-white w3-padding" style="margin-top:1rem;margin-left:10%;margin-right:10%;">
+      <h5><i class="fa fa-history"></i> Recent Activity</h5>
+      <div hx-get="/api/activity_html" hx-trigger="load" hx-swap="innerHTML" style="max-height:300px;overflow-y:auto;">
+        <div class="skeleton" style="height:1.2rem;width:80%;margin:8px 0;"></div>
+        <div class="skeleton" style="height:1.2rem;width:65%;margin:8px 0;"></div>
+        <div class="skeleton" style="height:1.2rem;width:72%;margin:8px 0;"></div>
+        <div class="skeleton" style="height:1.2rem;width:58%;margin:8px 0;"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="w3-container">
 
   <div class="w3-col w3-bar w3-text-projectcompass" style="padding: 10%;">

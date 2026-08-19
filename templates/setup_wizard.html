@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProjectCompass — Setup</title>
+<link rel="icon" href="/static/img/logo.png" type="image/x-icon">
+<link rel="stylesheet" href="/static/css/font-awesome.min.css">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #1a1a2e;
+  --bg-darker: #0f0f1a;
+  --indigo: #3F51B5;
+  --indigo-light: #5C6BC0;
+  --pink: #E91E63;
+  --pink-light: #F06292;
+  --green: #4CAF50;
+  --green-light: #66BB6A;
+  --text: #ffffff;
+  --text-muted: #b0b0c0;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(-45deg, var(--bg-dark), #16213e, var(--indigo), #0f3460);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.setup-container {
+  width: 100%;
+  max-width: 600px;
+  margin-top: 2rem;
+}
+
+.logo-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo-svg {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 10px 30px rgba(63, 81, 181, 0.4));
+}
+
+.logo-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--text), var(--indigo-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-header p {
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 2rem;
+}
+
+.step-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+}
+
+.step-dot.active {
+  background: linear-gradient(135deg, var(--indigo), var(--indigo-light));
+  border-color: var(--indigo);
+  color: white;
+  box-shadow: 0 5px 20px rgba(63, 81, 181, 0.4);
+}
+
+.step-dot.completed {
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  border-color: var(--green);
+  color: white;
+}
+
+.step-line {
+  width: 60px;
+  height: 3px;
+  background: var(--card-border);
+  transition: all 0.3s ease;
+}
+
+.step-line.completed {
+  background: var(--green);
+}
+
+/* Cards */
+.setup-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.setup-card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.setup-card .subtitle {
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.2);
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.error-message {
+  background: rgba(233, 30, 99, 0.1);
+  border: 1px solid var(--pink);
+  color: var(--pink-light);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 1rem 2rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  text-decoration: none;
+  text-align: center;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--indigo), var(--indigo-light));
+  color: white;
+  box-shadow: 0 10px 30px rgba(63, 81, 181, 0.3);
+  width: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(63, 81, 181, 0.4);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  color: white;
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
+  width: 100%;
+}
+
+.btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(76, 175, 80, 0.4);
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.btn-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn-row .btn {
+  flex: 1;
+}
+
+/* File Upload */
+.file-upload {
+  border: 2px dashed var(--card-border);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.file-upload:hover {
+  border-color: var(--indigo);
+  background: rgba(63, 81, 181, 0.05);
+}
+
+.file-upload.dragover {
+  border-color: var(--green);
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.file-upload-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.file-upload p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.file-upload input[type="file"] {
+  display: none;
+}
+
+.file-name {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  color: var(--green);
+  font-size: 0.9rem;
+  display: none;
+}
+
+.file-name.visible {
+  display: block;
+}
+
+/* Explore Cards */
+.explore-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.explore-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.3s ease;
+}
+
+.explore-card:hover {
+  border-color: var(--indigo);
+  background: rgba(63, 81, 181, 0.1);
+  transform: translateY(-3px);
+}
+
+.explore-card .icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.explore-card h4 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.explore-card p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Success Message */
+.success-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.success-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.success-header h2 {
+  color: var(--green);
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .setup-card { padding: 1.5rem; }
+  .explore-grid { grid-template-columns: 1fr; }
+  .btn-row { flex-direction: column; }
+  .step-line { width: 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="setup-container">
+  <!-- Logo Header -->
+  <div class="logo-header">
+    <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="20" fill="#F0F4F8"/>
+      <circle cx="50" cy="50" r="35" fill="#FFFFFF" stroke="#3F51B5" stroke-width="4"/>
+      <path d="M50 25L65 75L50 60L35 75L50 25Z" fill="#E91E63"/>
+      <path d="M50 25L65 75L50 60L35 75L50 25Z" fill-opacity="0.2" stroke="#E91E63" stroke-width="2"/>
+      <path d="M50 25L50 50L70 50" stroke="#3F51B5" stroke-width="3" stroke-linecap="round"/>
+      <path d="M50 50L30 50L50 75" stroke="#3F51B5" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="5" fill="#3F51B5"/>
+      <path d="M75 50C75 63.8071 63.8071 75 50 75C36.1929 75 25 63.8071 25 50C25 36.1929 36.1929 25 50 25" stroke="#9E9E9E" stroke-width="2" stroke-dasharray="2 4"/>
+    </svg>
+    <h1>ProjectCompass</h1>
+    <p>Initial Setup</p>
+  </div>
+
+  <!-- Step Indicator -->
+  <div class="step-indicator">
+    <div class="step-dot {% if step == '1' %}active{% elif step in ['2', '3'] %}completed{% endif %}">
+      {% if step in ['2', '3'] %}✓{% else %}1{% endif %}
+    </div>
+    <div class="step-line {% if step in ['2', '3'] %}completed{% endif %}"></div>
+    <div class="step-dot {% if step == '2' %}active{% elif step == '3' %}completed{% endif %}">
+      {% if step == '3' %}✓{% else %}2{% endif %}
+    </div>
+    <div class="step-line {% if step == '3' %}completed{% endif %}"></div>
+    <div class="step-dot {% if step == '3' %}active{% endif %}">3</div>
+  </div>
+
+  <!-- Step 1: Create Admin Account -->
+  {% if step == '1' %}
+  <div class="setup-card">
+    <h2>Create Admin Account</h2>
+    <p class="subtitle">Set up your administrator credentials</p>
+    
+    {% if error %}
+    <div class="error-message">{{ error }}</div>
+    {% endif %}
+    
+    <form action="/setup/create-admin" method="post">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" value="admin" required placeholder="Choose a username">
+      </div>
+      
+      <div class="form-group">
+        <label for="email">Email (optional)</label>
+        <input type="email" id="email" name="email" placeholder="admin@example.com">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required placeholder="Choose a strong password" minlength="4">
+      </div>
+      
+      <div class="form-group">
+        <label for="password_confirm">Confirm Password</label>
+        <input type="password" id="password_confirm" name="password_confirm" required placeholder="Confirm your password" minlength="4">
+      </div>
+      
+      <button type="submit" class="btn btn-primary" id="submit-btn">Create Account →</button>
+    </form>
+  </div>
+  
+  <script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const pw = document.getElementById('password').value;
+      const pwc = document.getElementById('password_confirm').value;
+      if (pw !== pwc) {
+        e.preventDefault();
+        alert('Passwords do not match!');
+      }
+    });
+  </script>
+  {% endif %}
+
+  <!-- Step 2: Upload First Dataset -->
+  {% if step == '2' %}
+  <div class="setup-card">
+    <h2>Upload Your First Dataset</h2>
+    <p class="subtitle">Optional: Add a CSV file to get started</p>
+    
+    <form action="/setup/upload-data" method="post" enctype="multipart/form-data" id="upload-form">
+      <div class="file-upload" id="drop-zone">
+        <div class="file-upload-icon">📁</div>
+        <p>Drag & drop a CSV file here<br>or click to browse</p>
+        <input type="file" name="file" id="file-input" accept=".csv,.tsv,.txt">
+      </div>
+      <div class="file-name" id="file-name"></div>
+      
+      <div class="btn-row">
+        <a href="/setup?step=3" class="btn btn-secondary">Skip →</a>
+        <button type="submit" class="btn btn-primary" id="upload-btn" disabled>Upload & Continue</button>
+      </div>
+    </form>
+  </div>
+  
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileName = document.getElementById('file-name');
+    const uploadBtn = document.getElementById('upload-btn');
+    
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        updateFileName();
+      }
+    });
+    
+    fileInput.addEventListener('change', updateFileName);
+    
+    function updateFileName() {
+      if (fileInput.files.length) {
+        fileName.textContent = '📄 ' + fileInput.files[0].name;
+        fileName.classList.add('visible');
+        uploadBtn.disabled = false;
+      }
+    }
+  </script>
+  {% endif %}
+
+  <!-- Step 3: Explore -->
+  {% if step == '3' %}
+  <div class="setup-card">
+    <div class="success-header">
+      <div class="success-icon">🎉</div>
+      <h2>Your Workspace is Ready!</h2>
+      <p class="subtitle">Start exploring ProjectCompass</p>
+    </div>
+    
+    <div class="explore-grid">
+      <a href="/analysis" class="explore-card">
+        <div class="icon">📂</div>
+        <h4>Analysis Catalog</h4>
+        <p>Browse & create analyses</p>
+      </a>
+      
+      <a href="/pipeline_builder" class="explore-card">
+        <div class="icon">🔧</div>
+        <h4>Pipeline Builder</h4>
+        <p>Visual ML pipelines</p>
+      </a>
+      
+      <a href="/all_data/" class="explore-card">
+        <div class="icon">📊</div>
+        <h4>Data Explorer</h4>
+        <p>Query your data</p>
+      </a>
+      
+      <a href="/admin/users" class="explore-card">
+        <div class="icon">👥</div>
+        <h4>Admin Users</h4>
+        <p>Manage team access</p>
+      </a>
+    </div>
+    
+    <a href="/" class="btn btn-success">Go to Dashboard →</a>
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>
