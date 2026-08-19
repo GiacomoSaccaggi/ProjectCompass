@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<link rel="stylesheet" href="/static/css/drawflow.min.css">
+<style>
+.pb-wrap{display:flex;height:calc(100vh - 43px)}
+.pb-palette{width:240px;background:#f5f5f5;border-right:1px solid #ddd;padding:.8rem;overflow-y:auto;flex-shrink:0}
+.pb-palette h6{margin:0 0 .6rem;color:#3F51B5;font-size:.85rem;font-weight:700}
+.pb-block{padding:8px 10px;margin-bottom:6px;background:#fff;border:1px solid #ddd;border-radius:6px;cursor:grab;font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:6px}
+.pb-block:hover{border-color:#3F51B5;background:#f3f4ff}
+.pb-block i{width:18px;text-align:center;color:#3F51B5}
+#drawflow{flex:1;background:#fafafa}
+.pb-toolbar{position:absolute;top:52px;right:12px;z-index:10;display:flex;gap:6px}
+.pb-toolbar button{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:.8rem;font-weight:600;color:#fff}
+.pb-btn-save{background:#4CAF50}.pb-btn-save:hover{background:#388E3C}
+.pb-btn-clear{background:#f44336}.pb-btn-clear:hover{background:#d32f2f}
+.pb-btn-run{background:#3F51B5}.pb-btn-run:hover{background:#303F9F}
+
+/* Node styling */
+.drawflow-node{border-radius:8px!important;border:2px solid #90a4ae!important;min-width:180px}
+.drawflow-node .drawflow_content_node{padding:8px 12px;font-size:.8rem}
+.drawflow-node.load_data{border-color:#FF9800!important;background:#fff3e0!important}
+.drawflow-node.feature_eng{border-color:#9C27B0!important;background:#f3e5f5!important}
+.drawflow-node.train_model{border-color:#2196F3!important;background:#e3f2fd!important}
+.drawflow-node.predict{border-color:#00BCD4!important;background:#e0f7fa!important}
+.drawflow-node.anomaly{border-color:#F44336!important;background:#ffebee!important}
+.drawflow-node.forecast{border-color:#4CAF50!important;background:#e8f5e9!important}
+.drawflow-node.quality{border-color:#607D8B!important;background:#eceff1!important}
+.drawflow-node.save_artifact{border-color:#FFC107!important;background:#fffde7!important}
+/* New ML blocks */
+.drawflow-node.drift{border-color:#E91E63!important;background:#fce4ec!important}
+.drawflow-node.explainability{border-color:#673AB7!important;background:#ede7f6!important}
+.drawflow-node.fairness{border-color:#009688!important;background:#e0f2f1!important}
+.drawflow-node.tuning{border-color:#FF5722!important;background:#fbe9e7!important}
+.drawflow-node.validation{border-color:#3F51B5!important;background:#e8eaf6!important}
+.drawflow-node.text_nlp{border-color:#00897B!important;background:#e0f2f1!important}
+/* Report blocks */
+.drawflow-node.report{border-color:#795548!important;background:#efebe9!important}
+.drawflow-node.report_kpi{border-color:#8D6E63!important;background:#efebe9!important}
+.drawflow-node.report_plotly_grid{border-color:#8D6E63!important;background:#efebe9!important}
+.drawflow-node.report_tabs{border-color:#8D6E63!important;background:#efebe9!important}
+.drawflow-node.report_comparison{border-color:#8D6E63!important;background:#efebe9!important}
+.drawflow-node.report_summary{border-color:#8D6E63!important;background:#efebe9!important}
+.drawflow-node.report_dark_mode{border-color:#8D6E63!important;background:#efebe9!important}
+.node-title{font-weight:700;margin-bottom:4px;font-size:.82rem}
+.node-config{font-size:.7rem;color:#666;font-style:italic}
+.pb-sep{border:none;border-top:1px solid #ccc;margin:.8rem 0}
+
+/* Modal */
+.pb-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1000;justify-content:center;align-items:center}
+.pb-modal.active{display:flex}
+.pb-modal-content{background:#fff;border-radius:10px;padding:1.5rem;min-width:400px;max-width:500px;max-height:80vh;overflow-y:auto}
+.pb-modal-content h5{margin:0 0 1rem;color:#3F51B5}
+.pb-modal-content label{font-size:.8rem;font-weight:600;display:block;margin-top:.5rem}
+.pb-modal-content input,.pb-modal-content select{width:100%;padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:.82rem;margin-top:3px}
+.pb-modal-content button{margin-top:1rem;padding:8px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:600}
+</style>
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;position:relative;">
+<div class="pb-toolbar">
+  <div style="position:relative;display:inline-block;">
+    <button class="pb-btn-save" style="background:#9C27B0;" onclick="document.getElementById('tpl-dropdown').style.display=document.getElementById('tpl-dropdown').style.display==='block'?'none':'block'"><i class="fa fa-folder-open"></i> Templates</button>
+    <div id="tpl-dropdown" style="display:none;position:absolute;top:100%;left:0;background:#fff;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;min-width:220px;">
+      <a onclick="loadTemplate('classification_explainability')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Classification + Explainability</a>
+      <a onclick="loadTemplate('anomaly_detection')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Anomaly Detection</a>
+      <a onclick="loadTemplate('forecasting')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Forecasting</a>
+      <a onclick="loadTemplate('full_ml')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;">Full ML Pipeline</a>
+    </div>
+  </div>
+  <button class="pb-btn-save" onclick="savePipeline()"><i class="fa fa-save"></i> Save as Analysis</button>
+  <button class="pb-btn-run" onclick="saveAndRun()"><i class="fa fa-play"></i> Save & Run</button>
+  <button class="pb-btn-clear" onclick="editor.clear()"><i class="fa fa-trash"></i> Clear</button>
+</div>
+<div class="pb-wrap">
+  <!-- Palette -->
+  <div class="pb-palette">
+    <h6><i class="fa fa-database"></i> Data</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="load_data">
+      <i class="fa fa-database"></i> Load Data
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="feature_eng">
+      <i class="fa fa-magic"></i> Feature Engineering
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="quality">
+      <i class="fa fa-check-circle"></i> Data Quality
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-cogs"></i> ML Pipeline</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="train_model">
+      <i class="fa fa-cogs"></i> Train Model
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="tuning">
+      <i class="fa fa-sliders"></i> Tuning
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="validation">
+      <i class="fa fa-check-square-o"></i> Validation
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="predict">
+      <i class="fa fa-bolt"></i> Predict
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="explainability">
+      <i class="fa fa-lightbulb-o"></i> Explainability
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="fairness">
+      <i class="fa fa-balance-scale"></i> Fairness
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="drift">
+      <i class="fa fa-exchange"></i> Drift Detection
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-area-chart"></i> Specialized</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="anomaly">
+      <i class="fa fa-exclamation-triangle"></i> Anomaly Detection
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="forecast">
+      <i class="fa fa-line-chart"></i> Forecast
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="text_nlp">
+      <i class="fa fa-font"></i> Text / NLP
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-file-text"></i> Report</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report">
+      <i class="fa fa-file-text"></i> Quick Report
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_kpi">
+      <i class="fa fa-dashboard"></i> KPI Cards
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_plotly_grid">
+      <i class="fa fa-th"></i> Plotly Grid
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_tabs">
+      <i class="fa fa-folder-o"></i> Tabs
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_comparison">
+      <i class="fa fa-columns"></i> Comparison Table
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_summary">
+      <i class="fa fa-table"></i> Summary Stats
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_dark_mode">
+      <i class="fa fa-moon-o"></i> Dark Mode
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-download"></i> Output</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="save_artifact">
+      <i class="fa fa-download"></i> Save Artifact
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-info-circle"></i> How to use</h6>
+    <p style="font-size:.72rem;color:#666;line-height:1.4">
+      1. Drag blocks onto the canvas<br>
+      2. Connect outputs → inputs<br>
+      3. Double-click to configure<br>
+      4. Save as Analysis to run/schedule
+    </p>
+  </div>
+
+  <!-- Canvas -->
+  <div id="drawflow" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+</div>
+</div>
+
+<!-- Config Modal -->
+<div class="pb-modal" id="configModal">
+  <div class="pb-modal-content">
+    <h5 id="modalTitle">Configure Node</h5>
+    <div id="modalBody"></div>
+    <button onclick="saveNodeConfig()" style="background:#3F51B5;color:#fff">Save</button>
+    <button onclick="closeModal()" style="background:#eee;color:#333;margin-left:6px">Cancel</button>
+  </div>
+</div>
+
+<!-- Save Pipeline Modal -->
+<div class="pb-modal" id="saveModal">
+  <div class="pb-modal-content">
+    <h5>Save Pipeline as Structured Analysis</h5>
+    <label>Analysis Name *</label>
+    <input type="text" id="pipeline_name" placeholder="My ML Pipeline" required>
+    <label>Description</label>
+    <input type="text" id="pipeline_desc" placeholder="Description of what this pipeline does">
+    <label>Product</label>
+    <input type="text" id="pipeline_product" value="Machine Learning">
+    <label>Owner</label>
+    <input type="text" id="pipeline_owner" value="{{ owner }}">
+    <button onclick="submitPipeline(false)" style="background:#4CAF50;color:#fff">Save</button>
+    <button onclick="submitPipeline(true)" style="background:#3F51B5;color:#fff;margin-left:6px">Save & Run</button>
+    <button onclick="document.getElementById('saveModal').classList.remove('active')" style="background:#eee;color:#333;margin-left:6px">Cancel</button>
+  </div>
+</div>
+
+<script src="/static/js/drawflow.min.js"></script>
+<script>
+var editor = new Drawflow(document.getElementById('drawflow'));
+editor.reroute = true;
+editor.start();
+var _editingNode = null;
+var _allColumns = [];
+var datasets = {{ datasets|tojson }};
+
+// Node definitions
+var NODE_DEFS = {
+  // --- Data ---
+  load_data: {title:'Load Data', inputs:0, outputs:1, fields:[
+    {id:'dataset',label:'Dataset',type:'select',options:datasets},
+    {id:'limit',label:'Row limit (0=all)',type:'number',default:'0'}
+  ]},
+  feature_eng: {title:'Feature Engineering', inputs:1, outputs:1, fields:[
+    {id:'interactions',label:'Polynomial interactions',type:'checkbox',default:false},
+    {id:'log_transform',label:'Log transform skewed',type:'checkbox',default:true},
+    {id:'date_features',label:'Extract date features',type:'checkbox',default:false},
+    {id:'target_encode',label:'Target encode categoricals',type:'checkbox',default:false}
+  ]},
+  quality: {title:'Data Quality Report', inputs:1, outputs:1, fields:[]},
+  // --- ML Pipeline ---
+  train_model: {title:'Train Model', inputs:1, outputs:1, fields:[
+    {id:'task_type',label:'Task type',type:'select',options:['regression','classification']},
+    {id:'target_col',label:'Target column',type:'columns',default:''},
+    {id:'model_hint',label:'Model hint',type:'select',options:['auto','numerical_prediction','categorical_known','categorical_unknown']},
+    {id:'test_size',label:'Test size',type:'number',default:'0.2'},
+    {id:'ensemble',label:'Ensemble',type:'select',options:['none','voting','stacking']}
+  ]},
+  tuning: {title:'Tuning', inputs:1, outputs:1, fields:[
+    {id:'method',label:'Method',type:'select',options:['optuna','halving']},
+    {id:'n_trials',label:'Trials / iterations',type:'number',default:'50'},
+    {id:'scoring',label:'Scoring metric',type:'select',options:['r2','accuracy','f1','rmse']}
+  ]},
+  validation: {title:'Validation', inputs:1, outputs:1, fields:[
+    {id:'methods',label:'Method',type:'select',options:['kfold','loocv','bootstrap']},
+    {id:'cv_folds',label:'CV folds',type:'number',default:'5'},
+    {id:'bootstrap_iterations',label:'Bootstrap iterations',type:'number',default:'100'}
+  ]},
+  predict: {title:'Predict', inputs:1, outputs:1, fields:[
+    {id:'artifact_path',label:'Artifact path (.scomp)',type:'text',default:''}
+  ]},
+  explainability: {title:'Explainability', inputs:1, outputs:1, fields:[
+    {id:'method',label:'Method',type:'select',options:['shap','lime']},
+    {id:'num_features',label:'Top N features',type:'number',default:'10'}
+  ]},
+  fairness: {title:'Fairness', inputs:1, outputs:1, fields:[
+    {id:'sensitive_column',label:'Sensitive attribute',type:'columns',default:''},
+    {id:'predicted_col',label:'Predicted column',type:'columns',default:''},
+    {id:'target_col',label:'Target column',type:'columns',default:''}
+  ]},
+  drift: {title:'Drift Detection', inputs:1, outputs:1, fields:[
+    {id:'reference_dataset',label:'Reference dataset',type:'select',options:datasets},
+    {id:'threshold',label:'PSI threshold',type:'number',default:'0.1'}
+  ]},
+  // --- Specialized ---
+  anomaly: {title:'Anomaly Detection', inputs:1, outputs:1, fields:[
+    {id:'methods',label:'Methods (comma-sep)',type:'text',default:'iforest,lof'},
+    {id:'contamination',label:'Contamination',type:'number',default:'0.05'}
+  ]},
+  forecast: {title:'Time Series Forecast', inputs:1, outputs:1, fields:[
+    {id:'column',label:'Value column',type:'columns',default:''},
+    {id:'horizon',label:'Horizon',type:'number',default:'10'},
+    {id:'method',label:'Method',type:'select',options:['auto','arima','sarima','exp_smoothing']}
+  ]},
+  text_nlp: {title:'Text / NLP', inputs:1, outputs:1, fields:[
+    {id:'text_column',label:'Text column',type:'columns',default:''},
+    {id:'method',label:'Method',type:'select',options:['contrastive']},
+    {id:'head',label:'Classifier head',type:'select',options:['auto','logistic','svm','lightgbm']}
+  ]},
+  // --- Report ---
+  report: {title:'Quick Report', inputs:1, outputs:0, fields:[
+    {id:'report_type',label:'Report type',type:'select',options:['model','eda','full']},
+    {id:'include_kpi',label:'Include KPI cards',type:'checkbox',default:true},
+    {id:'include_summary',label:'Include data summary',type:'checkbox',default:true},
+    {id:'dark_mode',label:'Dark mode',type:'checkbox',default:false}
+  ]},
+  report_kpi: {title:'KPI Cards', inputs:1, outputs:1, fields:[
+    {id:'metrics_keys',label:'Metric keys (comma-sep, empty=all)',type:'text',default:''},
+    {id:'cols',label:'Columns',type:'number',default:'3'}
+  ]},
+  report_plotly_grid: {title:'Plotly Grid', inputs:1, outputs:1, fields:[
+    {id:'cols',label:'Grid columns',type:'number',default:'2'},
+    {id:'chart_type',label:'Chart type',type:'select',options:['scatter','bar','histogram','line']}
+  ]},
+  report_tabs: {title:'Tabs', inputs:1, outputs:1, fields:[
+    {id:'tab_labels',label:'Tab labels (comma-sep)',type:'text',default:'Overview,Details'}
+  ]},
+  report_comparison: {title:'Comparison Table', inputs:1, outputs:1, fields:[
+    {id:'baseline_col',label:'Baseline column',type:'columns',default:''},
+    {id:'compare_cols',label:'Compare columns (comma-sep)',type:'text',default:''}
+  ]},
+  report_summary: {title:'Summary Stats', inputs:1, outputs:1, fields:[
+    {id:'title',label:'Section title',type:'text',default:'Data Summary'}
+  ]},
+  report_dark_mode: {title:'Dark Mode Toggle', inputs:1, outputs:1, fields:[]},
+  // --- Output ---
+  save_artifact: {title:'Save Artifact', inputs:1, outputs:0, fields:[
+    {id:'artifact_name',label:'Artifact filename',type:'text',default:'model.scomp'}
+  ]}
+};
+
+// Drag & drop
+function drag(ev){ev.dataTransfer.setData('node',ev.target.dataset.node)}
+function allowDrop(ev){ev.preventDefault()}
+function drop(ev){
+  ev.preventDefault();
+  var type=ev.dataTransfer.getData('node');
+  if(!type||!NODE_DEFS[type])return;
+  var def=NODE_DEFS[type];
+  var html='<div class="node-title">'+def.title+'</div><div class="node-config" id="cfg-{id}">double-click to configure</div>';
+  var posX=ev.clientX-document.getElementById('drawflow').getBoundingClientRect().left;
+  var posY=ev.clientY-document.getElementById('drawflow').getBoundingClientRect().top;
+  var nodeId=editor.addNode(type,def.inputs,def.outputs,posX,posY,type,{config:{}},html.replace('{id}',''));
+  var el=document.querySelector('#node-'+nodeId+' .node-config');
+  if(el)el.id='cfg-'+nodeId;
+}
+
+// Double-click to configure
+editor.on('nodeSelected',function(id){_editingNode=id});
+document.getElementById('drawflow').addEventListener('dblclick',function(){
+  if(!_editingNode)return;
+  openConfig(_editingNode);
+});
+
+function openConfig(nodeId){
+  var node=editor.getNodeFromId(nodeId);
+  var def=NODE_DEFS[node.class];
+  if(!def||!def.fields.length){alert('No configuration needed for this block');return}
+  var cfg=node.data.config||{};
+  var html='';
+  def.fields.forEach(function(f){
+    var val=cfg[f.id]!==undefined?cfg[f.id]:(f.default||'');
+    html+='<label>'+f.label+'</label>';
+    if(f.type==='select'){
+      html+='<select id="cfg_'+f.id+'">';
+      f.options.forEach(function(o){html+='<option value="'+o+'"'+(val==o?' selected':'')+'>'+o+'</option>'});
+      html+='</select>';
+    }else if(f.type==='columns'){
+      html+='<select id="cfg_'+f.id+'"><option value="">-- select column --</option>';
+      _allColumns.forEach(function(c){html+='<option value="'+c+'"'+(val==c?' selected':'')+'>'+c+'</option>'});
+      html+='</select>';
+    }else if(f.type==='checkbox'){
+      html+='<input type="checkbox" id="cfg_'+f.id+'" '+(val?'checked':'')+' style="width:auto">';
+    }else{
+      html+='<input type="'+f.type+'" id="cfg_'+f.id+'" value="'+val+'">';
+    }
+  });
+  document.getElementById('modalTitle').textContent='Configure: '+def.title;
+  document.getElementById('modalBody').innerHTML=html;
+  document.getElementById('configModal').classList.add('active');
+}
+
+function saveNodeConfig(){
+  var node=editor.getNodeFromId(_editingNode);
+  var def=NODE_DEFS[node.class];
+  if(node.class==='load_data'){
+    var dsEl=document.getElementById('cfg_dataset');
+    if(dsEl&&dsEl.value){fetch('/api/data/'+dsEl.value+'/preview?limit=1').then(function(r){return r.json()}).then(function(d){if(d.columns)_allColumns=d.columns}).catch(function(){});}
+  }
+  var cfg={};
+  def.fields.forEach(function(f){
+    var el=document.getElementById('cfg_'+f.id);
+    if(f.type==='checkbox')cfg[f.id]=el.checked;
+    else cfg[f.id]=el.value;
+  });
+  node.data.config=cfg;
+  editor.updateNodeDataFromId(_editingNode,node.data);
+  var cfgEl=document.querySelector('#node-'+_editingNode+' .node-config');
+  if(cfgEl){
+    var summary=Object.entries(cfg).filter(function(e){return e[1]&&e[1]!=='0'&&e[1]!=='none'&&e[1]!==false}).map(function(e){return e[0]+'='+e[1]}).join(', ');
+    cfgEl.textContent=summary||'configured';
+  }
+  closeModal();
+}
+function closeModal(){document.getElementById('configModal').classList.remove('active')}
+
+// Save pipeline
+function savePipeline(){document.getElementById('saveModal').classList.add('active')}
+function saveAndRun(){document.getElementById('saveModal').classList.add('active')}
+
+function submitPipeline(andRun){
+  var name=document.getElementById('pipeline_name').value.trim();
+  if(!name){alert('Name is required');return}
+  var exportData=editor.export();
+  var payload={
+    name:name,
+    description:document.getElementById('pipeline_desc').value,
+    product:document.getElementById('pipeline_product').value,
+    owner:document.getElementById('pipeline_owner').value,
+    graph:exportData,
+    run_after_save:andRun
+  };
+  fetch('/save_pipeline/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.success){
+      document.getElementById('saveModal').classList.remove('active');
+      if(andRun)window.location='/create_investigations?name='+d.name.replace(/ /g,'512');
+      else window.location='/analysis';
+    }else{alert('Error: '+d.error)}
+  });
+}
+
+function loadTemplate(name){
+  fetch('/static/pipeline_templates/'+name+'.json').then(function(r){return r.json()}).then(function(data){
+    editor.clear();
+    editor.import(data);
+    document.getElementById('tpl-dropdown').style.display='none';
+    alert('Template loaded: '+name.replace(/_/g,' '));
+  }).catch(function(){alert('Failed to load template');});
+}
+
+// Close template dropdown on outside click
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#tpl-dropdown')&&!e.target.closest('[onclick*="tpl-dropdown"]')){
+    var dd=document.getElementById('tpl-dropdown');
+    if(dd)dd.style.display='none';
+  }
+});
+</script>
+</body>
+</html>

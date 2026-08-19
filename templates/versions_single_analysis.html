@@ -87,6 +87,16 @@
       <h5><b><i class="fa fa-history"></i>    Versions</b></h5>
     </header>
     <br>
+
+    <!-- Pipeline Version History -->
+    <div class="w3-padding w3-container w3-card-1" style="margin-bottom:20px;">
+      <h6><b><i class="fa fa-code-fork"></i> Pipeline History</b></h6>
+      <p>Track changes to the pipeline code over time.</p>
+      <a href="/analysis/{{ nome.replace(' ', '512') }}/versions" class="w3-button w3-small w3-blue">
+        <i class="fa fa-history"></i> View Pipeline History
+      </a>
+    </div>
+
     <div class="w3-padding w3-container w3-card-1">
       <ul>
 
@@ -154,6 +164,35 @@
                       </script>
 
     </div>
+
+    <!-- Comments Section -->
+    <header class="w3-container" style="padding-top:22px">
+      <h5><b><i class="fa fa-comments"></i> Comments</b></h5>
+    </header>
+    <br>
+    <div class="w3-padding w3-container w3-card-1">
+      <div id="comments-list" hx-get="/analysis/{{ nome.replace(' ','512') }}/comments" hx-trigger="load" hx-swap="innerHTML"></div>
+      <form hx-post="/analysis/{{ nome.replace(' ','512') }}/comment" hx-target="#comments-list" hx-swap="afterbegin" style="margin-top:.5rem;">
+        <textarea name="text" placeholder="Add a comment..." class="w3-input w3-border" rows="2" style="resize:vertical;width:100%;"></textarea>
+        <button type="submit" class="w3-button w3-blue w3-small w3-margin-top"><i class="fa fa-send"></i> Comment</button>
+      </form>
+    </div>
+
+    <!-- Webhooks Section -->
+    <header class="w3-container" style="padding-top:22px">
+      <h5><b><i class="fa fa-link"></i> Webhooks</b></h5>
+    </header>
+    <br>
+    <div class="w3-padding w3-container w3-card-1">
+      <p class="w3-text-grey" style="font-size:.85rem;">Configure webhooks to receive notifications when this analysis runs.</p>
+      <div id="webhooks-list" hx-get="/analysis/{{ nome.replace(' ','512') }}/webhooks" hx-trigger="load" hx-swap="innerHTML"></div>
+      <form hx-post="/analysis/{{ nome.replace(' ','512') }}/webhooks" hx-target="#webhooks-list" hx-swap="innerHTML" style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+        <input type="text" name="url" placeholder="https://example.com/webhook" class="w3-input w3-border" style="flex:1;min-width:200px;">
+        <input type="text" name="secret" placeholder="Secret (optional)" class="w3-input w3-border" style="width:150px;">
+        <button type="submit" class="w3-button w3-blue w3-small"><i class="fa fa-plus"></i> Add</button>
+      </form>
+    </div>
+
     <!-- Footer -->
     <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
                 <hr><br>

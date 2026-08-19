@@ -2,6 +2,66 @@
 
 All notable changes to ProjectCompass will be documented in this file.
 
+## [2.0.0] - 2026-08-19
+
+### Added
+
+#### scomp-link v2.2.0 Integration
+- **Pipeline Builder**: Visual ML pipeline designer with DSL `>>` syntax (`CleanStep >> SelectStep >> ModelStep >> TrainStep`)
+- **ML Blocks**: 6 new blocks — Drift Detection, Explainability (SHAP/LIME), Fairness, Tuning (Optuna/Halving), Validation (K-Fold/Bootstrap), Text/NLP
+- **Report Blocks**: 7 new blocks — Quick Report (expanded EDA), KPI Cards, Plotly Grid, Tabs, Comparison Table, Summary Stats, Dark Mode
+- **Pipeline Templates**: 4 pre-built templates (Classification+Explainability, Anomaly Detection, Forecasting, Full ML)
+- **Demo Analysis**: "ScompLink Advanced ML" showcasing all new capabilities
+
+#### Database & Multi-User (Phase 1)
+- **SQLite Backend**: Flask-SQLAlchemy with `projectcompass.db` for users, executions, comments, audit log
+- **Multi-User RBAC**: Admin, editor, and viewer roles with granular permissions
+- **User Management**: Admin page at `/admin/users` for creating, editing, and deleting users
+- **HTMX Integration**: Progressive enhancement throughout — no full page reloads for most actions
+
+#### UX Improvements (Phase 2)
+- **Dark Mode**: Toggle with localStorage persistence, applied across all pages
+- **Toast Notifications**: Success, error, info, and warning toasts for user feedback
+- **Real-time Execution**: Server-Sent Events (SSE) for streaming logs, progress bar, and abort capability
+- **Command Palette**: `Ctrl+K` / `Cmd+K` for quick navigation to any page or analysis
+
+#### Pipeline & Versioning (Phase 3)
+- **Execution History**: Full history page at `/executions` with status badges, filtering, and detailed logs
+- **Pipeline Versioning**: Every save creates a version; restore to any previous state with one click
+- **Data Lineage**: "Used by" badges on datasets showing which analyses depend on them
+
+#### Collaboration & API (Phase 4)
+- **Audit Log**: All user actions logged to database with timestamps and details
+- **Activity Feed**: HTMX-loaded recent activity on dashboard
+- **API Token Auth**: Bearer tokens for external integrations, manageable via `/api/tokens` endpoints
+- **Comments**: Real-time HTMX comments on analyses for team collaboration
+- **Webhooks**: HMAC-SHA256 signed payloads for external system integration
+
+#### Polish (Phase 5)
+- **Full-Text Search**: SQLite FTS5 with HTMX instant results dropdown
+- **Pipeline Templates**: 4 pre-built templates, load with one click from Pipeline Builder
+- **Export/Import**: Package analyses as ZIP for sharing and backup; import at `/import`
+- **Observability Dashboard**: Admin metrics at `/admin/metrics` with Chart.js visualizations
+
+#### Testing & Quality
+- **Test Suite**: 194 pytest tests with 83% coverage
+- **Linting**: Ruff lint clean with all rules passing
+
+### Changed
+- **Authentication**: Upgraded from single-user to multi-user with RBAC
+- **API**: Added Bearer token authentication alongside session-based auth
+- **Execution**: Replaced synchronous execution with SSE streaming and progress tracking
+- **Search**: Upgraded from basic filtering to FTS5 full-text search
+- **Architecture**: Added `models.py` for SQLAlchemy models, reorganized templates into `admin/` and `components/` subdirectories
+- **Static Assets**: Added `static/css/dark.css` for dark mode, `static/pipeline_templates/` for ML templates
+
+### Fixed
+- **Execution Reliability**: Abort capability prevents orphaned long-running processes
+- **State Persistence**: Pipeline versions and execution history now persisted to database
+- **Data Integrity**: Lineage tracking prevents accidental deletion of datasets in use
+
+---
+
 ## [1.0.0] - 2026-06-17
 
 ### Added

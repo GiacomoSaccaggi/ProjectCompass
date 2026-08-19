@@ -11,14 +11,27 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def app():
     from app import create_app
     from config import Config
+    from models import db
 
     class TestConfig(Config):
         TESTING = True
         SECRET_KEY = 'test-secret'
         WTF_CSRF_ENABLED = False
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 
     app = create_app(TestConfig)
-    return app
+
+    with app.app_context():
+        db.create_all()
+        # Initialize FTS table
+        from sqlalchemy import text
+        db.session.execute(text(
+            'CREATE VIRTUAL TABLE IF NOT EXISTS analyses_fts USING fts5'
+            '(name, title, description, readme_text, script_text)'
+        ))
+        db.session.commit()
+        yield app
+        db.drop_all()
 
 
 @pytest.fixture
