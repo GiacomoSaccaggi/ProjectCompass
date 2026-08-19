@@ -1,0 +1,36 @@
+title: ScompLink Advanced ML
+description: Run scomp-link v2.x advanced pipeline with DSL, feature engineering, explainability, drift detection, and rich report
+inputs:
+  target_col:
+    type: text
+    default: quality
+    description: Target column to predict
+  task_type:
+    type: radio
+    default: auto
+    options:
+      - auto
+      - regression
+      - classification
+    description: Task type (auto-detects from data)
+  test_size:
+    type: text
+    default: '0.2'
+    description: Fraction held out for testing
+  feature_engineering:
+    type: radio
+    default: 'true'
+    options:
+      - 'true'
+      - 'false'
+    description: Apply automated feature engineering
+  explainability:
+    type: radio
+    default: 'true'
+    options:
+      - 'true'
+      - 'false'
+    description: Generate SHAP explainability analysis
+output:
+  type: csv
+  description: Model metrics and rich HTML report

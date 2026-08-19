@@ -1,0 +1,20 @@
+/* Dark mode styles - scoped to body.dark-mode */
+body.dark-mode { background-color: #1a1a2e !important; color: #e0e0e0 !important; }
+body.dark-mode .w3-light-grey { background-color: #1a1a2e !important; }
+body.dark-mode .w3-white, body.dark-mode .w3-card-4, body.dark-mode .w3-card { background-color: #16213e !important; color: #e0e0e0 !important; }
+body.dark-mode .w3-sidebar { background-color: #0f3460 !important; }
+body.dark-mode .w3-bar { background-color: #0f3460 !important; }
+body.dark-mode .w3-main { background-color: #1a1a2e !important; }
+body.dark-mode input, body.dark-mode textarea, body.dark-mode select { background-color: #16213e !important; color: #e0e0e0 !important; border-color: #30475e !important; }
+body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #30475e !important; }
+body.dark-mode th { background-color: #0f3460 !important; color: #e0e0e0 !important; }
+body.dark-mode a { color: #4fc3f7 !important; }
+body.dark-mode .w3-text-grey, body.dark-mode .w3-text-dark-grey { color: #b0b0b0 !important; }
+body.dark-mode .w3-border { border-color: #30475e !important; }
+body.dark-mode code, body.dark-mode pre { background-color: #0d1b2a !important; color: #4fc3f7 !important; }
+
+/* Command palette dark mode */
+body.dark-mode #cmd-palette > div { background-color: #16213e !important; }
+body.dark-mode #cmd-palette input { background-color: #1a1a2e !important; color: #e0e0e0 !important; border-color: #30475e !important; }
+body.dark-mode #cmd-palette a { color: #e0e0e0 !important; border-color: #30475e !important; }
+body.dark-mode #cmd-palette a:hover { background-color: #0f3460 !important; }

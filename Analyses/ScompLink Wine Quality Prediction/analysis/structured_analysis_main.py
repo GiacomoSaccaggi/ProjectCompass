@@ -1,9 +1,9 @@
-"""ScompLink Wine Quality Prediction — structured analysis."""
+"""ScompLink Wine Quality Prediction — structured analysis using DSL."""
 import os
 import shutil
 
 import pandas as pd
-from scomp_link import ScompLinkPipeline
+from scomp_link import CleanStep, ModelStep, SelectStep, TrainStep
 
 
 def detect_task_type(df, target_col):
@@ -16,7 +16,7 @@ def detect_task_type(df, target_col):
 
 
 def run(inputs, output_path):
-    """Run scomp-link pipeline on wine quality data."""
+    """Run scomp-link DSL pipeline on wine quality data."""
     data_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'Saved_data', 'wine_quality.csv')
     df = pd.read_csv(data_path)
 
@@ -24,21 +24,18 @@ def run(inputs, output_path):
     test_size = float(inputs.get('test_size', 0.2))
     target_col = inputs.get('target_column', 'quality')
 
-    # Auto-detect task type
     if task_type == 'auto':
         task_type = detect_task_type(df, target_col)
 
-    pipe = ScompLinkPipeline("Wine Quality Prediction")
-    pipe.set_objectives(["Minimize RMSE", "Maximize R²"] if task_type == "regression"
-                        else ["Maximize Accuracy", "Maximize F1"])
-    pipe.import_and_clean_data(df)
-    pipe.select_variables(target_col=target_col)
-    pipe.choose_model("numerical_prediction" if task_type == "regression" else "categorical_known",
-                      metadata={"only_numerical_exogenous": True, "all_variables_important": False}
-                      if task_type == "regression" else
-                      {"records_per_category": len(df) // df[target_col].nunique(), "exogenous_type": "numerical"})
+    objective = "numerical_prediction" if task_type == "regression" else "categorical_known"
 
-    results = pipe.run_pipeline(task_type=task_type, test_size=test_size)
+    # DSL pipeline: CleanStep >> SelectStep >> ModelStep >> TrainStep
+    results = (
+        CleanStep(df)
+        >> SelectStep(target_col)
+        >> ModelStep(objective)
+        >> TrainStep(task_type, test_size=test_size)
+    ).run()
 
     # Save outputs
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
