@@ -16,3 +16,8 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
     WTF_CSRF_ENABLED = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        'DATABASE_URL',
+        'sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), 'projectcompass.db')
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False

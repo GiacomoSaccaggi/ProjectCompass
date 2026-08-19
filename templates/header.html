@@ -12,8 +12,24 @@
     <script src="/static/js/chartjs/chart.js"></script>
 
     <link rel="stylesheet" href="/static/css/css.css">
+    <link rel="stylesheet" href="/static/css/dark.css">
     <link rel="stylesheet" href="/static/css/font-awesome.min.css">
     <script src="/static/js/jquery.min.js" type="text/javascript"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+    <style>
+    /* HTMX loading indicator */
+    .htmx-indicator { display:none; }
+    .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display:inline-block; }
+    .htmx-settling { opacity: .7; }
+    /* Skeleton loading animation */
+    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    .skeleton { background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:4px; height:1rem; margin:6px 0; }
+    body.dark-mode .skeleton { background:linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
+    /* Execution running pulse */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .exec-running { animation: pulse 1.5s infinite; color: #FF9800; font-weight: bold; }
+    </style>
     <style>
     html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
     @media print {
@@ -264,6 +280,17 @@
     <!-- end head -->
     <body class="w3-light-grey">
 
+    <!-- Toast container for notifications -->
+    <div id="toast-container" style="position:fixed;top:60px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
+
+    <!-- Command Palette (Ctrl/Cmd+K) -->
+    <div id="cmd-palette" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:10000;justify-content:center;align-items:flex-start;padding-top:15vh;">
+      <div style="background:#fff;border-radius:12px;width:500px;max-width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+        <input id="cmd-input" type="text" placeholder="Type a command..." style="width:100%;padding:16px 20px;border:none;font-size:1rem;outline:none;border-bottom:1px solid #eee;">
+        <div id="cmd-results" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
     <!-- start top_container -->
     <div class="w3-bar w3-top w3-theme-d2 w3-large w3-color-projectcompass" style="z-index:4">
       <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_nav_open();"><i class="fa fa-bars"></i>  Menu</button>
@@ -275,8 +302,34 @@
           </a>
       </span>
       <a href="/todo" class="todo"><span class="w3-bar-item w3-padding-large w3-theme-d4 w3-center"><i class="fa fa-pencil w3-margin-right"></i>Todo</span></a>
+      <!-- Global Search -->
+      <div style="position:relative;display:inline-block;margin-left:20px;vertical-align:middle;">
+        <input type="text" id="global-search" placeholder="Search analyses..." 
+          hx-get="/api/search_html" hx-trigger="keyup changed delay:300ms" hx-target="#search-dropdown" hx-indicator="#search-spinner"
+          name="q" style="padding:5px 10px;border-radius:4px;border:1px solid #ccc;font-size:.8rem;width:200px;">
+        <span id="search-spinner" class="htmx-indicator" style="margin-left:6px;"><i class="fa fa-spinner fa-spin" style="color:#3F51B5;"></i></span>
+        <div id="search-dropdown" style="position:absolute;top:100%;left:0;width:100%;min-width:250px;background:#fff;border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;display:none;"></div>
+      </div>
       <span class="w3-bar-item w3-padding-large w3-theme-d4 w3-right"><img src="/static/img/logo_text.png" height="30"  width="auto" ></span>
+      <button onclick="toggleDarkMode()" class="w3-bar-item w3-button w3-right" title="Toggle dark mode">
+        <i id="dark-mode-icon" class="fa fa-moon-o"></i>
+      </button>
     </div>
+    <script>
+    // Search dropdown show/hide
+    document.body.addEventListener('htmx:afterSwap', function(e){
+      if(e.target.id==='search-dropdown'){
+        var dd=document.getElementById('search-dropdown');
+        dd.style.display=dd.innerHTML.trim()?'block':'none';
+      }
+    });
+    document.addEventListener('click',function(e){
+      if(!e.target.closest('#global-search,#search-dropdown')){
+        var dd=document.getElementById('search-dropdown');
+        if(dd)dd.style.display='none';
+      }
+    });
+    </script>
     <!-- end top_container -->
 
     <!-- start sidebar_menu -->
@@ -342,7 +395,9 @@
         </div>
 
         <a href="/chat" class="w3-bar-item w3-button"><h5><i class="fa fa-comments w3-margin-right"></i>AI Chat</h5></a>
+        <a href="/pipeline_builder" class="w3-bar-item w3-button"><h5><i class="fa fa-sitemap w3-margin-right"></i>Pipeline Builder</h5></a>
         <a href="/schedules/" class="w3-bar-item w3-button"><h5><i class="fa fa-calendar w3-margin-right"></i>Schedules</h5></a>
+        <a href="/executions" class="w3-bar-item w3-button"><h5><i class="fa fa-history w3-margin-right"></i>Executions</h5></a>
 
         <script>
 
@@ -416,6 +471,73 @@
 
 
     </div>
+
+<script>
+/* ===== Dark Mode Toggle ===== */
+function toggleDarkMode(){
+  document.body.classList.toggle('dark-mode');
+  var icon=document.getElementById('dark-mode-icon');
+  if(document.body.classList.contains('dark-mode')){
+    icon.className='fa fa-sun-o';
+    localStorage.setItem('darkMode','true');
+  }else{
+    icon.className='fa fa-moon-o';
+    localStorage.setItem('darkMode','false');
+  }
+}
+// Apply saved preference on page load
+if(localStorage.getItem('darkMode')==='true'){
+  document.body.classList.add('dark-mode');
+  document.addEventListener('DOMContentLoaded',function(){var i=document.getElementById('dark-mode-icon');if(i)i.className='fa fa-sun-o';});
+}
+
+/* ===== Toast Notifications ===== */
+function showToast(msg, type, duration){
+  type=type||'info'; duration=duration||3000;
+  var colors={success:'#4CAF50',error:'#f44336',info:'#2196F3',warning:'#FF9800'};
+  var toast=document.createElement('div');
+  toast.style.cssText='padding:12px 20px;border-radius:6px;color:#fff;font-size:.85rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.2);opacity:0;transform:translateX(100%);transition:all .3s ease;background:'+colors[type];
+  toast.textContent=msg;
+  document.getElementById('toast-container').appendChild(toast);
+  setTimeout(function(){toast.style.opacity='1';toast.style.transform='translateX(0)';},10);
+  setTimeout(function(){toast.style.opacity='0';toast.style.transform='translateX(100%)';setTimeout(function(){toast.remove();},300);},duration);
+}
+
+/* ===== Command Palette (Ctrl/Cmd+K) ===== */
+var CMD_ITEMS=[
+  {label:'Go to Analyses',icon:'fa-line-chart',url:'/analysis'},
+  {label:'Go to Data',icon:'fa-database',url:'/all_data/'},
+  {label:'Go to Chat',icon:'fa-comment',url:'/chat'},
+  {label:'New Analysis',icon:'fa-plus',url:'/load_analysis/'},
+  {label:'Pipeline Builder',icon:'fa-puzzle-piece',url:'/pipeline_builder'},
+  {label:'Query Runner',icon:'fa-search',url:'/query_runner/'},
+  {label:'Upload Data',icon:'fa-upload',url:'/list_of_data/'},
+  {label:'Schedules',icon:'fa-clock-o',url:'/schedules/'},
+  {label:'RAWGraphs',icon:'fa-bar-chart',url:'/rawgraphs'},
+  {label:'Admin Users',icon:'fa-users',url:'/admin/users'},
+  {label:'Overview',icon:'fa-eye',url:'/overview'},
+  {label:'Todo',icon:'fa-pencil',url:'/todo'},
+];
+function openCmdPalette(){
+  var el=document.getElementById('cmd-palette');
+  el.style.display='flex';
+  var input=document.getElementById('cmd-input');
+  input.value='';input.focus();
+  renderCmdResults('');
+}
+function closeCmdPalette(){document.getElementById('cmd-palette').style.display='none';}
+function renderCmdResults(q){
+  var results=CMD_ITEMS.filter(function(c){return c.label.toLowerCase().includes(q.toLowerCase());});
+  var html=results.map(function(c){return '<a href="'+c.url+'" style="display:flex;align-items:center;gap:10px;padding:10px 20px;text-decoration:none;color:#333;border-bottom:1px solid #f5f5f5;" onmouseover="this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\'\'"><i class="fa '+c.icon+'" style="width:20px;text-align:center;color:#3F51B5;"></i>'+c.label+'</a>';}).join('');
+  document.getElementById('cmd-results').innerHTML=html||'<div style="padding:20px;color:#999;text-align:center;">No results</div>';
+}
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();openCmdPalette();}
+  if(e.key==='Escape')closeCmdPalette();
+});
+document.getElementById('cmd-palette').addEventListener('click',function(e){if(e.target===this)closeCmdPalette();});
+document.getElementById('cmd-input').addEventListener('input',function(){renderCmdResults(this.value);});
+</script>
 
 </body>
 </html>

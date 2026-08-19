@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProjectCompass — Organization Is Everything</title>
+<link rel="icon" href="/static/img/logo.png" type="image/x-icon">
+<link rel="stylesheet" href="/static/css/font-awesome.min.css">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #1a1a2e;
+  --bg-darker: #0f0f1a;
+  --indigo: #3F51B5;
+  --indigo-light: #5C6BC0;
+  --pink: #E91E63;
+  --pink-light: #F06292;
+  --green: #4CAF50;
+  --green-light: #66BB6A;
+  --text: #ffffff;
+  --text-muted: #b0b0c0;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-darker);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Animated gradient background */
+.hero {
+  min-height: 100vh;
+  background: linear-gradient(-45deg, var(--bg-dark), #16213e, var(--indigo), #0f3460);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Floating particles */
+.particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: float 20s infinite;
+}
+
+.particle:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 25s; }
+.particle:nth-child(2) { left: 20%; animation-delay: 2s; animation-duration: 20s; }
+.particle:nth-child(3) { left: 30%; animation-delay: 4s; animation-duration: 28s; }
+.particle:nth-child(4) { left: 40%; animation-delay: 1s; animation-duration: 22s; }
+.particle:nth-child(5) { left: 50%; animation-delay: 3s; animation-duration: 18s; }
+.particle:nth-child(6) { left: 60%; animation-delay: 5s; animation-duration: 24s; }
+.particle:nth-child(7) { left: 70%; animation-delay: 2s; animation-duration: 26s; }
+.particle:nth-child(8) { left: 80%; animation-delay: 4s; animation-duration: 21s; }
+.particle:nth-child(9) { left: 90%; animation-delay: 1s; animation-duration: 23s; }
+
+@keyframes float {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+}
+
+.hero-content {
+  text-align: center;
+  z-index: 1;
+}
+
+.logo-svg {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 10px 30px rgba(63, 81, 181, 0.4));
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+h1 {
+  font-size: 4rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--text), var(--indigo-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  font-weight: 300;
+}
+
+.cta-btn {
+  display: inline-block;
+  padding: 1rem 2.5rem;
+  background: linear-gradient(135deg, var(--pink), var(--pink-light));
+  color: white;
+  text-decoration: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(233, 30, 99, 0.4);
+  border: none;
+  cursor: pointer;
+}
+
+.cta-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(233, 30, 99, 0.5);
+}
+
+.scroll-indicator {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: bounce 2s infinite;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(10px); }
+}
+
+/* Features Section */
+.features {
+  padding: 5rem 2rem;
+  background: var(--bg-darker);
+}
+
+.section-title {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.section-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--indigo);
+  box-shadow: 0 20px 40px rgba(63, 81, 181, 0.2);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.feature-card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* How It Works */
+.how-it-works {
+  padding: 5rem 2rem;
+  background: linear-gradient(180deg, var(--bg-darker), var(--bg-dark));
+}
+
+.steps {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.step {
+  text-align: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--indigo), var(--indigo-light));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 auto 1rem;
+  box-shadow: 0 10px 30px rgba(63, 81, 181, 0.4);
+}
+
+.step h3 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.step p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.step-arrow {
+  font-size: 2rem;
+  color: var(--indigo);
+  flex-shrink: 0;
+}
+
+/* Login Section */
+.login-section {
+  padding: 5rem 2rem;
+  background: var(--bg-dark);
+}
+
+.login-container {
+  max-width: 400px;
+  margin: 0 auto;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.login-logo {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.login-logo svg {
+  width: 80px;
+  height: 80px;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.2);
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(76, 175, 80, 0.4);
+}
+
+/* Footer */
+.footer {
+  padding: 2rem;
+  text-align: center;
+  background: var(--bg-darker);
+  border-top: 1px solid var(--card-border);
+}
+
+.footer p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.footer-stats {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.footer-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.footer-stat .dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  h1 { font-size: 2.5rem; }
+  .subtitle { font-size: 1.1rem; }
+  .section-title { font-size: 2rem; }
+  .step-arrow { display: none; }
+  .steps { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero Section -->
+<section class="hero" id="top">
+  <div class="particles">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+  
+  <div class="hero-content">
+    <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" rx="20" fill="#F0F4F8"/>
+      <circle cx="50" cy="50" r="35" fill="#FFFFFF" stroke="#3F51B5" stroke-width="4"/>
+      <path d="M50 25L65 75L50 60L35 75L50 25Z" fill="#E91E63"/>
+      <path d="M50 25L65 75L50 60L35 75L50 25Z" fill-opacity="0.2" stroke="#E91E63" stroke-width="2"/>
+      <path d="M50 25L50 50L70 50" stroke="#3F51B5" stroke-width="3" stroke-linecap="round"/>
+      <path d="M50 50L30 50L50 75" stroke="#3F51B5" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="5" fill="#3F51B5"/>
+      <path d="M75 50C75 63.8071 63.8071 75 50 75C36.1929 75 25 63.8071 25 50C25 36.1929 36.1929 25 50 25" stroke="#9E9E9E" stroke-width="2" stroke-dasharray="2 4"/>
+    </svg>
+    
+    <h1>ProjectCompass</h1>
+    <p class="subtitle">Organization Is Everything®</p>
+    <a href="#login" class="cta-btn">Get Started →</a>
+  </div>
+  
+  <div class="scroll-indicator">↓</div>
+</section>
+
+<!-- Features Section -->
+<section class="features" id="features">
+  <h2 class="section-title">Powerful Features</h2>
+  <p class="section-subtitle">Everything you need to manage your data analyses</p>
+  
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">📂</div>
+      <h3>Analysis Catalog</h3>
+      <p>Organize analyses with tags, search, and full-text indexing. Version control and complete metadata tracking.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">🔧</div>
+      <h3>Pipeline Builder</h3>
+      <p>Visual drag-and-drop ML pipelines with 26 blocks. DSL syntax support for power users.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Data Explorer</h3>
+      <p>SQL queries on CSV/SQLite with DuckDB + 30+ chart types via RAWGraphs integration.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Real-time Execution</h3>
+      <p>Stream execution logs live with progress tracking. Abort capability and full history.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI Assistant</h3>
+      <p>Ask questions about your data in natural language. Powered by Ollama with local LLM support.</p>
+    </div>
+    
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <h3>Team Collaboration</h3>
+      <p>Multi-user RBAC, comments, activity feed. Webhooks and REST API for integrations.</p>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works" id="how">
+  <h2 class="section-title">How It Works</h2>
+  <p class="section-subtitle">Three simple steps to powerful analysis</p>
+  
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <h3>Upload Data</h3>
+      <p>CSV, SQLite, or connect to external sources</p>
+    </div>
+    
+    <div class="step-arrow">→</div>
+    
+    <div class="step">
+      <div class="step-number">2</div>
+      <h3>Build Pipeline</h3>
+      <p>Visual builder or code your analysis</p>
+    </div>
+    
+    <div class="step-arrow">→</div>
+    
+    <div class="step">
+      <div class="step-number">3</div>
+      <h3>Get Results</h3>
+      <p>Interactive dashboards and reports</p>
+    </div>
+  </div>
+</section>
+
+<!-- Login Section -->
+<section class="login-section" id="login">
+  <div class="login-container">
+    <div class="login-logo">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="20" fill="#F0F4F8"/>
+        <circle cx="50" cy="50" r="35" fill="#FFFFFF" stroke="#3F51B5" stroke-width="4"/>
+        <path d="M50 25L65 75L50 60L35 75L50 25Z" fill="#E91E63"/>
+        <path d="M50 25L65 75L50 60L35 75L50 25Z" fill-opacity="0.2" stroke="#E91E63" stroke-width="2"/>
+        <path d="M50 25L50 50L70 50" stroke="#3F51B5" stroke-width="3" stroke-linecap="round"/>
+        <path d="M50 50L30 50L50 75" stroke="#3F51B5" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="50" cy="50" r="5" fill="#3F51B5"/>
+        <path d="M75 50C75 63.8071 63.8071 75 50 75C36.1929 75 25 63.8071 25 50C25 36.1929 36.1929 25 50 25" stroke="#9E9E9E" stroke-width="2" stroke-dasharray="2 4"/>
+      </svg>
+    </div>
+    
+    <h3 class="login-title">Sign In</h3>
+    
+    <form action="/login/" method="post">
+      <div class="form-group">
+        <label for="uname">Username</label>
+        <input type="text" id="uname" name="uname" placeholder="Enter your username" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="psw">Password</label>
+        <input type="password" id="psw" name="psw" placeholder="Enter your password" required>
+      </div>
+      
+      <button type="submit" class="login-btn">Login</button>
+    </form>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>Powered by <strong>scomp-link v2.2.0</strong></p>
+  <div class="footer-stats">
+    <span class="footer-stat"><span class="dot"></span> 194 tests</span>
+    <span class="footer-stat"><span class="dot"></span> 83% coverage</span>
+  </div>
+</footer>
+
+<script>
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
+</script>
+
+</body>
+</html>

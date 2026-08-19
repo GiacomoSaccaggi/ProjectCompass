@@ -1,0 +1,11 @@
+{# Usage: {% include 'components/empty_state.html' %} with context #}
+<div style="text-align:center;padding:3rem 1rem;">
+  <div style="font-size:4rem;margin-bottom:1rem;opacity:.6;">{{ icon }}</div>
+  <h4 style="color:#666;margin-bottom:.5rem;">{{ title }}</h4>
+  <p style="color:#999;font-size:.9rem;max-width:400px;margin:0 auto 1.5rem;">{{ message }}</p>
+  {% if cta_url %}
+  <a href="{{ cta_url }}" class="w3-button w3-indigo w3-round" style="text-decoration:none;">
+    <i class="fa {{ cta_icon }}"></i> {{ cta_text }}
+  </a>
+  {% endif %}
+</div>

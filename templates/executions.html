@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+  <header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-history"></i> Execution History</b></h5>
+  </header>
+  <br>
+
+  <!-- Filter buttons -->
+  <div class="w3-padding w3-container">
+    <a href="/executions" class="w3-button {{ 'w3-blue' if not status_filter else 'w3-light-grey' }}">All</a>
+    <a href="/executions?status=running" class="w3-button {{ 'w3-amber' if status_filter == 'running' else 'w3-light-grey' }}">
+      <i class="fa fa-spinner fa-spin"></i> Running
+    </a>
+    <a href="/executions?status=success" class="w3-button {{ 'w3-green' if status_filter == 'success' else 'w3-light-grey' }}">
+      <i class="fa fa-check"></i> Success
+    </a>
+    <a href="/executions?status=failed" class="w3-button {{ 'w3-red' if status_filter == 'failed' else 'w3-light-grey' }}">
+      <i class="fa fa-times"></i> Failed
+    </a>
+  </div>
+
+  <div class="w3-padding w3-container" id="exec-wrapper"
+       {% if has_running %}hx-get="/executions?status={{ status_filter }}" hx-trigger="every 5s" hx-select="#exec-table" hx-target="#exec-table"{% endif %}>
+    {% if executions.items %}
+    <div id="exec-table">
+      <table class="w3-table w3-bordered w3-hoverable w3-white">
+        <tr class="w3-light-grey">
+          <th>Analysis</th>
+          <th>Status</th>
+          <th>Started</th>
+          <th>Duration</th>
+          <th>User</th>
+        </tr>
+        {% for exe in executions.items %}
+        <tr>
+          <td>
+            <a href="/outputs/?name={{ exe.analysis_name|replace(' ', '512') }}">
+              <b>{{ exe.analysis_name }}</b>
+            </a>
+          </td>
+          <td>
+            {% if exe.status == 'running' %}
+            <span class="w3-badge w3-amber"><i class="fa fa-spinner fa-spin"></i> running</span>
+            {% elif exe.status == 'success' %}
+            <span class="w3-badge w3-green">success</span>
+            {% else %}
+            <span class="w3-badge w3-red">failed</span>
+            {% endif %}
+          </td>
+          <td>{{ exe.started_at.strftime('%Y-%m-%d %H:%M') if exe.started_at else '-' }}</td>
+          <td>
+            {% if exe.finished_at and exe.started_at %}
+              {% set delta = exe.finished_at - exe.started_at %}
+              {{ delta.seconds // 60 }}m {{ delta.seconds % 60 }}s
+            {% elif exe.status == 'running' %}
+              <i class="fa fa-spinner fa-spin"></i>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>{{ exe.user_id or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if executions.pages > 1 %}
+    <div class="w3-bar w3-center w3-margin-top">
+      {% if executions.has_prev %}
+      <a href="/executions?page={{ executions.prev_num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="w3-button">&laquo; Prev</a>
+      {% endif %}
+      <span class="w3-bar-item">Page {{ executions.page }} of {{ executions.pages }}</span>
+      {% if executions.has_next %}
+      <a href="/executions?page={{ executions.next_num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="w3-button">Next &raquo;</a>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    {% with icon='⚡', title='No executions yet', message='Run a structured analysis to see execution history here. Results include status, duration, and live logs.', cta_url='/analysis', cta_icon='fa-play', cta_text='Go to Analyses' %}
+      {% include 'components/empty_state.html' %}
+    {% endwith %}
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>
