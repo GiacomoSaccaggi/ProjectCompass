@@ -103,6 +103,11 @@ header{
       <label for="myInput">Search for a topic:</label><br>
       <input type=text id="myInput" onkeyup="search_function()" placeholder= " Search for a topic "  title="Type in a name">
       <div id="myUL">
+      {% if not analysis or analysis|length == 0 %}
+        {% with icon='🧭', title='No analyses yet', message='Create your first analysis to get started. Use the Pipeline Builder for visual workflows or create one manually.', cta_url='/pipeline_builder', cta_icon='fa-plus', cta_text='Create Pipeline' %}
+          {% include 'components/empty_state.html' %}
+        {% endwith %}
+      {% else %}
       {% for nome, values in analysis.items() %}
         <ul>
           <button class=accordion><li><a href="#{{ nome }}">{{ nome }}</a></li></button>
@@ -162,6 +167,7 @@ header{
           </div>
         </ul>
       {% endfor %}
+      {% endif %}
     </div>
     </div>
 

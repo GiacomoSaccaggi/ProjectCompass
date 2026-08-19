@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+  <header class="w3-container" style="padding-top:22px">
+    <h5><b><i class="fa fa-code-fork"></i> Pipeline History: {{ analysis_name }}</b></h5>
+  </header>
+  <br>
+
+  <!-- Back to analysis link -->
+  <div class="w3-padding w3-container">
+    <a href="/open_version/?name={{ analysis_name|replace(' ', '512') }}" class="w3-button w3-light-grey">
+      <i class="fa fa-arrow-left"></i> Back to Analysis
+    </a>
+    <a href="/create_investigations?name={{ analysis_name|replace(' ', '512') }}" class="w3-button w3-green">
+      <i class="fa fa-play"></i> Run Analysis
+    </a>
+  </div>
+
+  <div class="w3-padding w3-container">
+    {% if versions %}
+    <table class="w3-table w3-bordered w3-hoverable w3-white">
+      <tr class="w3-light-grey">
+        <th>Version</th>
+        <th>Date</th>
+        <th>User</th>
+        <th>Message</th>
+        <th>Actions</th>
+      </tr>
+      {% for v in versions %}
+      <tr>
+        <td><b>v{{ v.version_num }}</b></td>
+        <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') if v.created_at else '-' }}</td>
+        <td>{{ v.username }}</td>
+        <td>{{ v.message or '-' }}</td>
+        <td>
+          {% if not loop.first %}
+          <form action="/analysis/{{ analysis_name|replace(' ', '512') }}/restore/{{ v.id }}" method="post" style="display:inline;">
+            <button type="submit" class="w3-button w3-small w3-amber" 
+                    onclick="return confirm('Restore to version {{ v.version_num }}? This will create a new version.')">
+              <i class="fa fa-undo"></i> Restore
+            </button>
+          </form>
+          {% else %}
+          <span class="w3-badge w3-blue">Current</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <div class="w3-panel w3-pale-blue w3-border w3-border-blue" style="border-radius:6px;">
+      <p><i class="fa fa-info-circle"></i> No version history available for this pipeline. Version history starts when pipelines are saved via the Pipeline Builder.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Footer -->
+  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
+    <hr><br>
+    <strong>About ProjectCompass</strong><br>
+    Pipeline versioning allows you to track changes over time and restore previous versions if needed.<br>
+    Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+  </footer>
+</div>
+</body>
+</html>

@@ -63,8 +63,9 @@ docker compose build --no-cache
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SECRET_KEY` | random | Flask session key |
-| `ADMIN_USERNAME` | `admin` | Login username |
-| `ADMIN_PASSWORD_HASH` | *(empty)* | Werkzeug password hash |
+| `ADMIN_USERNAME` | `admin` | Initial admin username |
+| `ADMIN_PASSWORD_HASH` | *(empty)* | Werkzeug password hash for initial admin |
+| `DATABASE_URL` | `sqlite:///projectcompass.db` | Database connection string |
 | `PORT` | `8080` | Internal port |
 | `FLASK_DEBUG` | `False` | Debug mode |
 | `OLLAMA_HOST` | `ollama:11434` | Ollama endpoint |
@@ -79,7 +80,29 @@ docker compose build --no-cache
 | `./data/Analyses` | `/app/Analyses` | Analysis storage |
 | `./data/Saved_data` | `/app/Saved_data` | Uploaded datasets |
 | `./data/Saved_queries` | `/app/Saved_queries` | Saved SQL queries |
+| `./data/projectcompass.db` | `/app/projectcompass.db` | SQLite database (users, audit log, etc.) |
 | `ollama_data` | `/root/.ollama` | LLM model storage |
+
+---
+
+## Multi-User Setup
+
+ProjectCompass supports multiple users with role-based access control (RBAC).
+
+**First startup:**
+- The app creates an initial admin user from `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` environment variables
+- If no password hash is set, the admin account has no password (development only)
+
+**Adding more users:**
+- Log in as admin and navigate to `/admin/users`
+- Create users with roles: `admin`, `editor`, or `viewer`
+
+**Roles:**
+| Role | Permissions |
+|------|-------------|
+| `admin` | Full access, user management, system settings |
+| `editor` | Create/edit/execute analyses, upload data |
+| `viewer` | Read-only access to analyses and data |
 
 ---
 
@@ -124,6 +147,7 @@ Recommended environment:
 environment:
   - SECRET_KEY=<random-64-char-string>
   - ADMIN_PASSWORD_HASH=<werkzeug-hash>
+  - DATABASE_URL=sqlite:////app/data/projectcompass.db
   - ALLOWED_ORIGINS=https://yourdomain.com
   - FLASK_DEBUG=False
 ```
@@ -133,13 +157,15 @@ environment:
 ## Backup
 
 ```bash
-# Backup data
+# Backup data (includes database)
 tar -czf backup_$(date +%Y%m%d).tar.gz data/
 
 # Backup Ollama models
 docker run --rm -v ollama_data:/data -v $(pwd):/backup \
   alpine tar czf /backup/ollama_models.tar.gz -C /data .
 ```
+
+**Important:** The SQLite database (`projectcompass.db`) contains users, audit logs, execution history, and comments. Always include it in backups.
 
 ---
 
@@ -152,3 +178,5 @@ docker run --rm -v ollama_data:/data -v $(pwd):/backup \
 | Model download fails | `docker exec ollama ollama pull llama3` manually |
 | Permission denied | `sudo chown -R $USER data/` |
 | App won't start | Check `docker compose logs projectcompass` |
+| Database locked | Stop other processes accessing `projectcompass.db` |
+| Lost admin password | Delete `projectcompass.db` and restart to recreate admin |

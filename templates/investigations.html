@@ -46,8 +46,22 @@
 
             <br>
             <button type="submit" class="w3-button w3-dark-grey" onclick="submitRun()"><i class="fa fa-play w3-margin-right"></i> Run Now</button>
+            <button type="button" class="w3-button w3-teal" onclick="startStreamExecution('{{ title }}')" style="margin-left:8px;"><i class="fa fa-terminal w3-margin-right"></i> Run with Live Log</button>
             <button type="button" class="w3-button w3-blue" id="btn-schedule" style="display:none;" onclick="submitSchedule()"><i class="fa fa-calendar w3-margin-right"></i> Schedule</button>
         </form>
+
+        <!-- Real-time Execution Panel -->
+        <div id="exec-panel" style="display:none;margin-top:1rem;" data-name="">
+          <div class="w3-card w3-padding">
+            <h5><i class="fa fa-terminal"></i> Execution Log</h5>
+            <div class="w3-light-grey" style="height:8px;margin-bottom:.5rem;">
+              <div id="exec-progress" class="w3-green" style="height:8px;width:0%;transition:width .3s;"></div>
+            </div>
+            <pre id="exec-log" style="max-height:300px;overflow-y:auto;background:#1a1a2e;color:#4fc3f7;padding:10px;border-radius:4px;font-size:.75rem;"></pre>
+            <button onclick="abortExecution()" class="w3-button w3-red w3-small w3-margin-top"><i class="fa fa-stop"></i> Abort</button>
+          </div>
+        </div>
+
         <script>
         function toggleSchedule(){
           var t=document.getElementById("schedule_type").value;
@@ -57,6 +71,39 @@
         }
         function submitRun(){document.getElementById("analysis-form").action="/run_investigation/";myloadershow()}
         function submitSchedule(){document.getElementById("analysis-form").action="/schedule_analysis/";document.getElementById("analysis-form").submit()}
+
+        /* SSE Real-time Execution */
+        var _execSource = null;
+        function startStreamExecution(name){
+          document.getElementById('exec-panel').style.display='block';
+          document.getElementById('exec-panel').dataset.name=name;
+          document.getElementById('exec-log').textContent='';
+          document.getElementById('exec-progress').style.width='5%';
+          _execSource = new EventSource('/execute_stream/'+encodeURIComponent(name));
+          var lineCount=0;
+          _execSource.onmessage=function(e){
+            var d=JSON.parse(e.data);
+            if(d.line){document.getElementById('exec-log').textContent+=d.line+'\n';lineCount++;}
+            document.getElementById('exec-progress').style.width=Math.min(5+lineCount*2,95)+'%';
+            document.getElementById('exec-log').scrollTop=99999;
+            if(d.done){
+              _execSource.close();
+              document.getElementById('exec-progress').style.width='100%';
+              if(d.status==='success'){
+                if(typeof showToast==='function')showToast('Execution completed!','success');
+              }else{
+                if(typeof showToast==='function')showToast('Execution failed','error');
+              }
+            }
+          };
+          _execSource.onerror=function(){_execSource.close();if(typeof showToast==='function')showToast('Connection lost','error');};
+        }
+        function abortExecution(){
+          if(_execSource)_execSource.close();
+          var name=document.getElementById('exec-panel').dataset.name;
+          fetch('/execute_abort/'+encodeURIComponent(name),{method:'POST'});
+          if(typeof showToast==='function')showToast('Execution aborted','warning');
+        }
         </script>
       </div>
     </div>
