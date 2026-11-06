@@ -12,7 +12,7 @@ services:
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD_HASH=
       - PORT=8080
-      - OLLAMA_HOST=http://ollama:11434
+      - MITHRIL_HOST=http://mithril:16180
       - ALLOWED_ORIGINS=*
     volumes:
       - ./data/Analyses:/app/Analyses
@@ -20,30 +20,27 @@ services:
       - ./data/Saved_queries:/app/Saved_queries
     restart: unless-stopped
     depends_on:
-      - ollama
+      - mithril
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
 
-  ollama:
-    image: ollama/ollama
+  mithril:
+    image: ghcr.io/giacomosaccaggi/mithril:latest
     ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-
-  # Pull default model on first start
-  ollama-pull:
-    image: ollama/ollama
-    depends_on:
-      - ollama
-    entrypoint: ["/bin/sh", "-c", "sleep 5 && ollama pull qwen3:0.6b"]
+      - "16180:16180"
     environment:
-      - OLLAMA_HOST=http://ollama:11434
-    restart: "no"
-
-volumes:
-  ollama_data:
+      - MITHRIL_KEY_GEMINI=${MITHRIL_KEY_GEMINI:-}
+      - MITHRIL_KEY_OPENAI=${MITHRIL_KEY_OPENAI:-}
+      - MITHRIL_KEY_ANTHROPIC=${MITHRIL_KEY_ANTHROPIC:-}
+      - MITHRIL_KEY_GROQ=${MITHRIL_KEY_GROQ:-}
+    volumes:
+      - ./.mithril:/root/.mithril
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16180/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

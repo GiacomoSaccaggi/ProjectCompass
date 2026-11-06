@@ -197,6 +197,13 @@ def produce_analysis():
         error = webapp.modify_analysis(request)
     if error == '':
         logger.info(f"Analysis saved: {request.form.get('title', 'unknown')}")
+        # Auto-rebuild RAG if index exists
+        try:
+            from blueprints.rag import trigger_rag_rebuild
+            title = request.form.get('title', 'unknown')
+            trigger_rag_rebuild(current_app._get_current_object(), title)
+        except Exception:
+            pass
         return render_template('process_complete.html')
     else:
         logger.error(f"Analysis save failed: {error}")
@@ -991,6 +998,12 @@ def add_comment(name):
     comment = Comment(analysis_name=name, user_id=session.get('user_id'), text=text)
     db.session.add(comment)
     db.session.commit()
+    # Auto-rebuild RAG on new comment
+    try:
+        from blueprints.rag import trigger_rag_rebuild
+        trigger_rag_rebuild(current_app._get_current_object(), name)
+    except Exception:
+        pass
     username = session.get('username', 'user')
     html = (
         f'<div style="padding:8px 0;border-bottom:1px solid #eee;">'

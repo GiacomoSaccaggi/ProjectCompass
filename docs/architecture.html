@@ -105,7 +105,7 @@ ProjectCompass/
 │   ├── html_utils.py       # HTMLUtils – header injection, YAML loading
 │   ├── data_utils.py       # DataUtils – DuckDB, file upload
 │   ├── analysis_utils.py   # AnalysisUtils – catalog CRUD
-│   └── agent_utils.py      # LLM agent (lazy-loaded Ollama)
+│   └── mithril_client.py      # Mithril LLM client (httpx)
 ├── templates/
 │   ├── header.html         # Shared layout partial (top bar + sidebar)
 │   ├── chat.html           # AI data assistant
@@ -128,7 +128,7 @@ ProjectCompass/
   <h2>LLM Chat Layer</h2>
   <p>
     The <code>blueprints/agent.py</code> blueprint provides an AI chat interface at <code>/chat</code>.
-    Ollama is <strong>lazy-loaded</strong> — the application starts and works fully without it.
+    Mithril is <strong>lazy-loaded</strong> — the application starts and works fully without it.
     User questions are converted to pandas expressions by the LLM, then executed via <code>safe_execute_pandas()</code>
     which uses AST validation to block <code>import</code>, <code>open()</code>, <code>exec()</code>, and <code>eval()</code>.
   </p>

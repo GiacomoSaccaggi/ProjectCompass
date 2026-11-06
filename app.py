@@ -37,6 +37,7 @@ def create_app(config_class=Config):
     # Register blueprints
     from blueprints.agent import agent_bp
     from blueprints.api import api_bp
+    from blueprints.rag import rag_bp
     from blueprints.auth import auth_bp
     from blueprints.catalog import catalog_bp
     from blueprints.data import data_bp
@@ -46,6 +47,7 @@ def create_app(config_class=Config):
     app.register_blueprint(data_bp)
     app.register_blueprint(agent_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(rag_bp)
 
     # Scheduler
     app.config['SCHEDULER_JOBSTORES'] = {'default': {'type': 'sqlalchemy', 'url': f'sqlite:///{path}scheduler_jobs.db'}}
@@ -63,6 +65,7 @@ def create_app(config_class=Config):
 
     # Ensure directories exist
     os.makedirs(os.path.join(path, 'tmp'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'rag_data'), exist_ok=True)
 
     return app
 

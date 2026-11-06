@@ -7,7 +7,7 @@ Business logic modules for ProjectCompass. These are consumed by the blueprints.
 | `analysis_utils.py` | Analysis CRUD: read/write metadata YAML, upload files, extract requirements/queries, manage versions |
 | `data_utils.py` | DuckDB SQL execution on CSV/SQLite files, file upload, data listing |
 | `html_utils.py` | Template header parsing, constants loading, HTML substitution |
-| `agent_utils.py` | LLM agent (lazy-loaded Ollama), AST-validated safe pandas execution |
+| `mithril_client.py` | Mithril LLM client (httpx, Ollama-compatible API) |
 
 ## Class Hierarchy
 

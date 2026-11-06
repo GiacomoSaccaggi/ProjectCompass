@@ -16,22 +16,11 @@ dependencies = [
     "duckdb>=0.9.0",
     "python-dotenv==1.0.1",
     "werkzeug>=3.0.0",
-    "scomp-link>=2.2.0",
+    "scomp-link[nlp] @ file:///Users/giacomo.saccaggi/Documents/Gitlab/scomp_link",
     "flask-apscheduler>=1.13.1",
     "flask-sqlalchemy>=3.1.0",
-]
-
-[project.optional-dependencies]
-llm = [
-    "llama-index-core>=0.10.0",
-    "llama-index-llms-ollama",
-    "llama-index-embeddings-ollama",
-    "pydantic>=2.0.0",
-]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
-    "ruff>=0.4.0",
+    "httpx>=0.27.0",
+    "chromadb>=0.5.0",
 ]
 
 [tool.ruff]

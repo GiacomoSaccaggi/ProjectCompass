@@ -8,7 +8,7 @@
         .chat-messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
         .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; max-width: 80%; }
         .msg-user { background: #e3f2fd; margin-left: auto; text-align: right; }
-        .msg-bot { background: #f5f5f5; }
+        .msg-bot { background: #f5f5f5; white-space: pre-wrap; }
         .chat-input { display: flex; gap: 10px; }
         .chat-input input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
         .chat-input button { padding: 10px 20px; background: #3F51B5; color: white; border: none; border-radius: 6px; cursor: pointer; }
@@ -17,6 +17,14 @@
         .context-box { background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 0.9em; }
         .context-box h4 { margin: 0 0 8px 0; color: #2e7d32; }
         .context-box p { margin: 2px 0; color: #555; }
+        .controls { display: flex; gap: 15px; align-items: center; margin-bottom: 10px; }
+        .controls label { font-size: 0.9em; color: #555; }
+        select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; }
+        .status-ok { background: #c8e6c9; color: #2e7d32; }
+        .status-err { background: #ffcdd2; color: #c62828; }
+        .streaming-indicator { display: none; color: #666; font-style: italic; font-size: 0.85em; }
+        .provenance { margin-top: 8px; padding: 6px 10px; background: #f0f7f0; border-radius: 4px; font-size: 0.8em; color: #555; font-family: monospace; border-left: 3px solid #4caf50; }
     </style>
 </head>
 <body>
@@ -24,7 +32,7 @@
 {{ sidebar_menu | safe }}
 <div style="margin-left:300px">
     <div class="chat-container">
-        <h2>🤖 Analysis Chat</h2>
+        <h2>🤖 Analysis Chat <span id="statusBadge" class="status-badge"></span></h2>
         <p style="color:#666">Ask questions about this analysis. The AI has the full analysis context loaded.</p>
         {% if analysis %}
         <div class="context-box">
@@ -34,7 +42,17 @@
             <p><b>Description:</b> {{ analysis.get('description', 'N/A') }}</p>
         </div>
         {% endif %}
+        <div class="controls">
+            <div>
+                <label for="model">Model: </label>
+                <select id="model">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+            <label><input type="checkbox" id="useStreaming" checked> Streaming</label>
+        </div>
         <div class="chat-messages" id="messages"></div>
+        <span class="streaming-indicator" id="streamingIndicator">⏳ Generating...</span>
         <div class="chat-input">
             <input type="text" id="question" placeholder="Ask about this analysis..." onkeypress="if(event.key==='Enter')sendMsg()">
             <button onclick="sendMsg()" id="sendBtn">Send</button>
@@ -43,26 +61,81 @@
 </div>
 <script>
 const analysisName = "{{ analysis_name }}";
+
+// Load available models
+(function loadModels() {
+    fetch('/chat/models')
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById('model');
+            sel.innerHTML = '';
+            if (data.models && data.models.length > 0) {
+                data.models.forEach(m => {
+                    sel.innerHTML += `<option value="${m}">${m}</option>`;
+                });
+                document.getElementById('statusBadge').innerHTML = 'Mithril ✓';
+                document.getElementById('statusBadge').className = 'status-badge status-ok';
+            } else {
+                sel.innerHTML = '<option value="">No models available</option>';
+                document.getElementById('statusBadge').innerHTML = 'Mithril ✗';
+                document.getElementById('statusBadge').className = 'status-badge status-err';
+            }
+        })
+        .catch(() => {
+            document.getElementById('model').innerHTML = '<option value="">Mithril unavailable</option>';
+            document.getElementById('statusBadge').innerHTML = 'Mithril ✗';
+            document.getElementById('statusBadge').className = 'status-badge status-err';
+        });
+    // Check RAG status
+    fetch('/rag/status/' + analysisName.replace(/ /g, '512'))
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('statusBadge');
+            if (data.exists) {
+                badge.innerHTML += ' | 🧠 RAG';
+            }
+        })
+        .catch(() => {});
+})();
+
 function sendMsg() {
     const q = document.getElementById('question');
+    const model = document.getElementById('model').value;
     const msgs = document.getElementById('messages');
     const btn = document.getElementById('sendBtn');
+    const useStreaming = document.getElementById('useStreaming').checked;
     if (!q.value.trim()) return;
 
     msgs.innerHTML += `<div class="msg msg-user">${q.value}</div>`;
     btn.disabled = true;
+    const userQuestion = q.value;
+    q.value = '';
 
-    fetch('/chat/analysis/ask', {
+    if (useStreaming) {
+        sendStreaming(userQuestion, model, msgs, btn);
+    } else {
+        sendNormal(userQuestion, model, msgs, btn);
+    }
+}
+
+function sendNormal(question, model, msgs, btn) {
+    // Try RAG endpoint first, fall back to metadata-only
+    fetch('/chat/analysis/rag', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({question: q.value, analysis_name: analysisName})
+        body: JSON.stringify({question: question, analysis_name: analysisName, model: model})
     })
     .then(r => r.json())
     .then(data => {
         if (data.error) {
             msgs.innerHTML += `<div class="msg msg-bot" style="color:red">⚠️ ${data.error}</div>`;
         } else {
-            msgs.innerHTML += `<div class="msg msg-bot">${data.answer}</div>`;
+            let html = `<div class="msg msg-bot">${data.answer}`;
+            if (data.mode === 'rag' && data.provenance) {
+                html += `<div class="provenance">${data.mode === 'rag' ? '🧠' : '📋'} ${data.provenance}</div>`;
+            }
+            html += '</div>';
+            msgs.innerHTML += html;
         }
         msgs.scrollTop = msgs.scrollHeight;
     })
@@ -70,8 +143,87 @@ function sendMsg() {
         msgs.innerHTML += `<div class="msg msg-bot" style="color:red">Error: ${e}</div>`;
     })
     .finally(() => { btn.disabled = false; });
+}
 
-    q.value = '';
+function sendStreaming(question, model, msgs, btn) {
+    const indicator = document.getElementById('streamingIndicator');
+    indicator.style.display = 'inline';
+
+    // Create bot message div for progressive fill
+    const botDiv = document.createElement('div');
+    botDiv.className = 'msg msg-bot';
+    msgs.appendChild(botDiv);
+
+    fetch('/chat/analysis/rag/stream', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question: question, model: model, analysis_name: analysisName})
+    }).then(response => {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        function read() {
+            reader.read().then(({done, value}) => {
+                if (done) {
+                    indicator.style.display = 'none';
+                    btn.disabled = false;
+                    msgs.scrollTop = msgs.scrollHeight;
+                    return;
+                }
+                buffer += decoder.decode(value, {stream: true});
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const payload = line.slice(6);
+                        if (payload === '[DONE]') {
+                            indicator.style.display = 'none';
+                            btn.disabled = false;
+                            return;
+                        }
+                        try {
+                            const chunk = JSON.parse(payload);
+                            if (chunk.content) {
+                                botDiv.textContent += chunk.content;
+                                msgs.scrollTop = msgs.scrollHeight;
+                            }
+                            if (chunk.provenance) {
+                                const prov = document.createElement('div');
+                                prov.className = 'provenance';
+                                prov.innerHTML = (chunk.mode === 'rag' ? '🧠 ' : '📋 ') + chunk.provenance;
+                                botDiv.appendChild(prov);
+                            }
+                            if (chunk.error) {
+                                botDiv.innerHTML += `<span style="color:red"> [${chunk.error}]</span>`;
+                            }
+                        } catch(e) {}
+                    }
+                }
+                read();
+            });
+        }
+        read();
+    }).catch(e => {
+        indicator.style.display = 'none';
+        btn.disabled = false;
+        botDiv.innerHTML = `<span style="color:red">Stream error: ${e}</span>`;
+    });
+}
+
+function buildContext() {
+    {% if analysis %}
+    return `Analysis: {{ analysis.get('title', '') }}
+Product: {{ analysis.get('product', '') }}
+Owner: {{ analysis.get('owner', '') }}
+Collaborators: {{ analysis.get('collaborators', '') }}
+Countries: {{ analysis.get('countries', '') }}
+Description: {{ analysis.get('description', '') }}
+Output type: {{ analysis.get('output_type', '') }}
+Start date: {{ analysis.get('start_date', '') }}`;
+    {% else %}
+    return '';
+    {% endif %}
 }
 </script>
 </body>

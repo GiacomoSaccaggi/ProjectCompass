@@ -1,12 +1,10 @@
 #!/bin/bash
-# Docker health check script for ProjectCompass
+# Docker health check for ProjectCompass
 
-# Check if Flask application is responding
-curl -f http://localhost:5000/ || exit 1
+# Check if Flask is responding
+curl -f http://localhost:8080/health || exit 1
 
-# Check if Ollama is responding (if running)
-if [ "$OLLAMA_HOST" ]; then
-    curl -f http://ollama:11434/api/tags || exit 1
+# Check if Mithril is responding (if configured, non-blocking)
+if [ "$MITHRIL_HOST" ]; then
+    curl -sf "$MITHRIL_HOST/health" > /dev/null 2>&1 || true
 fi
-
-exit 0

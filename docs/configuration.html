@@ -87,7 +87,7 @@ Giacomo Saccaggi: https://giacomosaccaggi.github.io/</pre>
     <tr><td><code>ADMIN_USERNAME</code></td><td><code>ADMIN_USERNAME</code></td><td>admin</td><td>Login username.</td></tr>
     <tr><td><code>ADMIN_PASSWORD_HASH</code></td><td><code>ADMIN_PASSWORD_HASH</code></td><td>(empty)</td><td>Werkzeug-hashed password. Generate with: <code>python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('pass'))"</code></td></tr>
     <tr><td><code>USE_GITLAB_REPO</code></td><td><code>USE_GITLAB_REPO</code></td><td>False</td><td>Enables automatic git add/commit/push on every POST request.</td></tr>
-    <tr><td><code>OLLAMA_HOST</code></td><td><code>OLLAMA_HOST</code></td><td>http://localhost:11434</td><td>Ollama LLM endpoint (optional, app works without it).</td></tr>
+    <tr><td><code>MITHRIL_HOST</code></td><td><code>MITHRIL_HOST</code></td><td>http://localhost:16180</td><td>Mithril LLM endpoint (optional, app works without it).</td></tr>
     <tr><td><code>ALLOWED_ORIGINS</code></td><td><code>ALLOWED_ORIGINS</code></td><td>*</td><td>Comma-separated list of allowed CORS origins for API routes.</td></tr>
   </table>
 
@@ -100,7 +100,7 @@ Giacomo Saccaggi: https://giacomosaccaggi.github.io/</pre>
     <tr><td><code>PORT</code></td><td><code>config.py</code>, <code>HTMLUtils</code></td><td>Overrides the port in <code>constants.yaml</code> and the Flask run port.</td></tr>
     <tr><td><code>FLASK_DEBUG</code></td><td><code>config.py</code></td><td>Set to <code>true</code> to enable debug mode.</td></tr>
     <tr><td><code>FLASK_ENV</code></td><td><code>app.py</code></td><td>Set to <code>production</code> to bind on <code>0.0.0.0</code>.</td></tr>
-    <tr><td><code>OLLAMA_HOST</code></td><td><code>blueprints/agent.py</code></td><td>Ollama LLM endpoint. Optional.</td></tr>
+    <tr><td><code>MITHRIL_HOST</code></td><td><code>blueprints/agent.py</code></td><td>Mithril LLM endpoint. Optional.</td></tr>
     <tr><td><code>ALLOWED_ORIGINS</code></td><td><code>app.py</code></td><td>CORS allowed origins for API routes.</td></tr>
     <tr><td><code>USE_GITLAB_REPO</code></td><td><code>config.py</code></td><td>Enables GitLab auto-sync.</td></tr>
   </table>

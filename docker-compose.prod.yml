@@ -1,8 +1,6 @@
 # Docker Compose Production Configuration
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-version: '3.8'
-
 services:
   projectcompass:
     restart: always
@@ -18,7 +16,7 @@ services:
           memory: 1G
           cpus: '0.5'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,22 +27,22 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  ollama:
+  mithril:
     restart: always
     deploy:
       resources:
         limits:
-          memory: 8G
+          memory: 4G
           cpus: '2.0'
         reservations:
-          memory: 4G
-          cpus: '1.0'
+          memory: 1G
+          cpus: '0.5'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://localhost:16180/health"]
       interval: 60s
-      timeout: 30s
+      timeout: 10s
       retries: 3
-      start_period: 120s
+      start_period: 30s
     logging:
       driver: "json-file"
       options:

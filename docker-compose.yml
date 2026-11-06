@@ -10,7 +10,7 @@ services:
       - PORT=8080
       - USE_GITLAB_REPO=False
       - USERNAME=docker_user
-      - OLLAMA_HOST=ollama:11434
+      - MITHRIL_HOST=http://mithril:16180
     volumes:
       - ./Analyses:/app/Analyses
       - ./Saved_data:/app/Saved_data
@@ -22,16 +22,23 @@ services:
     restart: unless-stopped
     container_name: projectcompass_app
     depends_on:
-      - ollama
+      - mithril
 
-  ollama:
-    image: ollama/ollama
+  mithril:
+    image: ghcr.io/giacomosaccaggi/mithril:latest
     ports:
-      - "11434:11434"
+      - "16180:16180"
+    environment:
+      - MITHRIL_KEY_GEMINI=${MITHRIL_KEY_GEMINI:-}
+      - MITHRIL_KEY_OPENAI=${MITHRIL_KEY_OPENAI:-}
+      - MITHRIL_KEY_ANTHROPIC=${MITHRIL_KEY_ANTHROPIC:-}
+      - MITHRIL_KEY_GROQ=${MITHRIL_KEY_GROQ:-}
     volumes:
-      - ollama_data:/root/.ollama
+      - ./.mithril:/root/.mithril
     restart: unless-stopped
-    container_name: ollama
-
-volumes:
-  ollama_data:
+    container_name: mithril
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16180/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

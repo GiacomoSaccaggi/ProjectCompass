@@ -83,25 +83,25 @@ services:
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD_HASH=
       - PORT=8080
-      - OLLAMA_HOST=http://ollama:11434
+      - MITHRIL_HOST=http://mithril:16180
     volumes:
       - ./data/Analyses:/app/Analyses
       - ./data/Saved_data:/app/Saved_data
       - ./data/Saved_queries:/app/Saved_queries
     restart: unless-stopped
     depends_on:
-      - ollama
+      - mithril
 
-  ollama:
-    image: ollama/ollama
+  mithril:
+    image: ghcr.io/giacomosaccaggi/mithril:latest
     ports:
       - "11434:11434"
     volumes:
-      - ollama_data:/root/.ollama
+      - mithril_data:/root/.ollama
     restart: unless-stopped
 
 volumes:
-  ollama_data:
+  # no named volumes needed
 ```
 
 Then:

@@ -1,10 +1,27 @@
 import os
 import sys
+from unittest.mock import patch
 
 import pytest
 
-# Ensure project root is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+class _MockEmbedder:
+    """Deterministic embedder for tests — no model download."""
+    def embed(self, texts):
+        return [[0.1, 0.2, 0.3] * 128 for _ in texts]
+    def embed_query(self, text):
+        return [0.1, 0.2, 0.3] * 128
+
+
+@pytest.fixture(autouse=True)
+def _mock_local_embedder():
+    """Globally prevent scomp-link from downloading embedding models in tests.
+    Must patch at the USAGE site (pipeline.py), not the definition site (embedder.py).
+    """
+    with patch('scomp_link.llm.rag.pipeline.get_local_embedder', return_value=_MockEmbedder()):
+        yield
 
 
 @pytest.fixture
@@ -23,7 +40,6 @@ def app():
 
     with app.app_context():
         db.create_all()
-        # Initialize FTS table
         from sqlalchemy import text
         db.session.execute(text(
             'CREATE VIRTUAL TABLE IF NOT EXISTS analyses_fts USING fts5'
@@ -38,7 +54,6 @@ def app():
 def client(app):
     with app.test_client() as client:
         with app.app_context():
-            # Auto-authenticate for tests
             with client.session_transaction() as sess:
                 sess['authenticated'] = True
         yield client

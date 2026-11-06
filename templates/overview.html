@@ -77,7 +77,7 @@
     </div>
     <div class="ov-card">
       <h4><i class="fa fa-comments"></i> AI Chat</h4>
-      <p>Ask questions about your data in natural language. Uses Ollama + LLaMA with AST-validated safe code execution (sandboxed pandas).</p>
+      <p>Ask questions about your data in natural language. Uses Mithril multi-model orchestration with AST-validated safe code execution (sandboxed pandas).</p>
     </div>
     <div class="ov-card">
       <h4><i class="fa fa-plug"></i> REST API</h4>
@@ -103,7 +103,7 @@
     <tr><td>/outputs/</td><td>View analysis outputs per run</td></tr>
     <tr><td>/rawgraphs</td><td>RAWGraphs visualization (empty canvas)</td></tr>
     <tr><td>/upload_data/</td><td>Upload new data files</td></tr>
-    <tr><td>/chat</td><td>AI data assistant (requires Ollama)</td></tr>
+    <tr><td>/chat</td><td>AI data assistant (requires Mithril)</td></tr>
     <tr><td>/create_investigations</td><td>Structured analysis execution with dynamic forms</td></tr>
     <tr><td>/todo</td><td>Notes/todo page (localStorage)</td></tr>
   </table>
@@ -131,7 +131,7 @@
 │   ├── auth.py             # Authentication (session + werkzeug hash)
 │   ├── catalog.py          # Analysis CRUD, search, filter, pagination
 │   ├── data.py             # Query runner, data upload, RAWGraphs
-│   ├── agent.py            # LLM chat (Ollama, sandboxed execution)
+│   ├── agent.py            # LLM chat (Mithril, sandboxed execution)
 │   └── api.py              # REST API (JSON endpoints)
 ├── utils/
 │   ├── analysis_utils.py   # Metadata management
@@ -153,7 +153,7 @@
     <span>Flask 3.0</span>
     <span>DuckDB</span>
     <span>pandas</span>
-    <span>Ollama / LLaMA</span>
+    <span>Mithril (multi-model)</span>
     <span>W3.CSS</span>
     <span>Chart.js</span>
     <span>RAWGraphs</span>
@@ -170,7 +170,7 @@
     <tr><td>Database</td><td>DuckDB (in-memory)</td><td>SQL on CSV without loading into memory; zero infrastructure</td></tr>
     <tr><td>Storage</td><td>File-based</td><td>Analyses stored as folders with YAML metadata; no external DB needed</td></tr>
     <tr><td>Auth</td><td>Session + werkzeug hash</td><td>Simple, secure; no OAuth complexity for internal tools</td></tr>
-    <tr><td>AI</td><td>Ollama (local LLM)</td><td>Privacy-first; no data leaves the server; lazy-loaded</td></tr>
+    <tr><td>AI</td><td>Mithril (multi-model)</td><td>Privacy-first local models or cloud providers; no data leaves unless you configure cloud keys; lazy-loaded</td></tr>
     <tr><td>Code safety</td><td>AST validation</td><td>LLM-generated pandas code is validated against a whitelist before execution</td></tr>
     <tr><td>Frontend</td><td>W3.CSS + Jinja2</td><td>Lightweight, no build step, responsive out of the box</td></tr>
   </table>

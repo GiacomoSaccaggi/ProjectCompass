@@ -30,7 +30,7 @@
 <body>
 <header>
   <h1>Docker Deployment</h1>
-  <p>Running ProjectCompass and Ollama with Docker Compose</p>
+  <p>Running ProjectCompass and Mithril with Docker Compose</p>
 </header>
 <nav>
   <a href="../index.html">Home</a>
@@ -48,7 +48,7 @@
   <table>
     <tr><th>Service</th><th>Image</th><th>External Port</th><th>Internal Port</th><th>Purpose</th></tr>
     <tr><td><code>projectcompass_app</code></td><td>Custom (Dockerfile)</td><td>8080</td><td>5000</td><td>Flask app served by Gunicorn</td></tr>
-    <tr><td><code>ollama</code></td><td>ollama/ollama</td><td>11434</td><td>11434</td><td>Local LLM API (llama3 + nomic-embed-text)</td></tr>
+    <tr><td><code>mithril</code></td><td>ghcr.io/giacomosaccaggi/mithril:latest</td><td>16180</td><td>16180</td><td>Multi-model LLM orchestration engine</td></tr>
   </table>
 
   <h2>Quick Start</h2>
@@ -66,7 +66,7 @@ docker-compose down</pre>
     <tr><th>Host Path</th><th>Container Path</th><th>Description</th></tr>
     <tr><td><code>./Analyses</code></td><td><code>/app/Analyses</code></td><td>Analysis repository – persisted across restarts</td></tr>
     <tr><td><code>./logs</code></td><td><code>/app/log</code></td><td>Application and Gunicorn logs</td></tr>
-    <tr><td><code>ollama_data</code> (named)</td><td><code>/root/.ollama</code></td><td>Downloaded LLM model weights</td></tr>
+    <tr><td><code>.mithril | /root/.mithril | Fellowship config and model settings</td></tr>
   </table>
 
   <h2>Environment Variables (Docker)</h2>
@@ -81,8 +81,8 @@ docker-compose down</pre>
   <pre># Build image and start containers automatically
 ./docker_build_and_run.sh
 
-# Pull and configure Ollama models only
-./setup_ollama.sh
+# Configure Mithril API keys
+# Set MITHRIL_KEY_GEMINI=... in .env
 
 # Docker maintenance (cleanup, rebuild)
 ./scripts/docker_maintenance.sh</pre>
@@ -98,7 +98,7 @@ docker logs ollama
 docker exec -it projectcompass_app bash
 
 # Test Ollama API
-curl http://localhost:11434/api/tags
+curl http://localhost:16180/api/tags
 
 # Stop containers without removing them
 docker stop projectcompass_app ollama
@@ -120,7 +120,7 @@ docker volume rm ollama_data</pre>
   <ul>
     <li><strong>RAM:</strong> Ollama with llama3 requires at least 8 GB of available RAM.</li>
     <li><strong>Disk:</strong> LLM model weights require several GB of disk space in the <code>ollama_data</code> volume.</li>
-    <li><strong>Ports:</strong> Ensure ports 8080 and 11434 are not blocked by a firewall.</li>
+    <li><strong>Ports:</strong> Ensure ports 8080 and 16180 are not blocked by a firewall.</li>
     <li><strong>Backups:</strong> Regularly back up the <code>./Analyses</code> directory and the <code>ollama_data</code> volume.</li>
     <li><strong>CORS:</strong> Update <code>ALLOWED_ORIGINS</code> in <code>config.py</code> or via environment variable to restrict cross-origin access.</li>
     <li><strong>Gunicorn:</strong> The production image uses Gunicorn as the WSGI server. Tune workers and timeout in <code>docker-compose.prod.yml</code> as needed.</li>

@@ -14,7 +14,10 @@ class Config:
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
     ADMIN_PASSWORD_HASH = os.environ.get('ADMIN_PASSWORD_HASH', '')
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-    OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
+    MITHRIL_HOST = os.environ.get('MITHRIL_HOST', 'http://localhost:16180')
+    MITHRIL_EMBED_MODEL = os.environ.get('MITHRIL_EMBED_MODEL', 'gemini-embedding-exp-03-07')
+    MITHRIL_RERANK_MODEL = os.environ.get('MITHRIL_RERANK_MODEL', 'gemini-2.5-flash')
+    RAG_EMBED_BACKEND = os.environ.get('RAG_EMBED_BACKEND', 'local')  # 'local' (E5) or 'mithril' (cloud)
     WTF_CSRF_ENABLED = True
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL',

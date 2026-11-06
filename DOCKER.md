@@ -68,7 +68,7 @@ docker compose build --no-cache
 | `DATABASE_URL` | `sqlite:///projectcompass.db` | Database connection string |
 | `PORT` | `8080` | Internal port |
 | `FLASK_DEBUG` | `False` | Debug mode |
-| `OLLAMA_HOST` | `ollama:11434` | Ollama endpoint |
+| `MITHRIL_HOST` | `mithril:16180` | Ollama endpoint |
 | `ALLOWED_ORIGINS` | `*` | CORS origins |
 
 ---
@@ -81,7 +81,7 @@ docker compose build --no-cache
 | `./data/Saved_data` | `/app/Saved_data` | Uploaded datasets |
 | `./data/Saved_queries` | `/app/Saved_queries` | Saved SQL queries |
 | `./data/projectcompass.db` | `/app/projectcompass.db` | SQLite database (users, audit log, etc.) |
-| `ollama_data` | `/root/.ollama` | LLM model storage |
+| `.mithril | /root/.mithril | Fellowship config and credentials |
 
 ---
 
@@ -121,11 +121,13 @@ docker inspect --format='{{.State.Health.Status}}' projectcompass_app
 
 ---
 
-## Ollama Setup
+## Mithril Setup
 
 ```bash
 # Pull required models (optional — app works without them)
-docker exec ollama ollama pull llama3
+# Configure API keys in .env:
+# MITHRIL_KEY_GEMINI=AIza...
+# MITHRIL_KEY_OPENAI=sk-...
 docker exec ollama ollama pull nomic-embed-text
 
 # List installed models
@@ -175,7 +177,9 @@ docker run --rm -v ollama_data:/data -v $(pwd):/backup \
 |-------|----------|
 | Port conflict | Change port mapping in compose file |
 | Out of memory | Increase Docker memory to 8GB+ |
-| Model download fails | `docker exec ollama ollama pull llama3` manually |
+| Model download fails | `# Configure API keys in .env:
+# MITHRIL_KEY_GEMINI=AIza...
+# MITHRIL_KEY_OPENAI=sk-...` manually |
 | Permission denied | `sudo chown -R $USER data/` |
 | App won't start | Check `docker compose logs projectcompass` |
 | Database locked | Stop other processes accessing `projectcompass.db` |

@@ -152,12 +152,12 @@
 
   <!-- ── agent_utils ── -->
   <h2>LLM Agent <small style="font-size:.7em;color:#888">utils/agent_utils.py + blueprints/agent.py</small></h2>
-  <p>Lazy-loaded module. Ollama is only initialised when the <code>/chat</code> route is used. The application starts and works fully without an LLM service.</p>
+  <p>Lazy-loaded module. Mithril is only initialised when the <code>/chat</code> route is used. The application starts and works fully without Mithril.</p>
 
   <table class="attr-table">
     <tr><th>Component</th><th>Description</th></tr>
     <tr><td><code>safe_execute_pandas()</code></td><td>AST-validated execution. Parses the expression, walks the AST to block imports/open/exec/eval, then executes in a restricted namespace with only <code>main_df</code> and <code>pd</code> available.</td></tr>
-    <tr><td><code>_get_llm()</code></td><td>Lazy-loads Ollama connection. Returns <code>None</code> if Ollama is unavailable — the app gracefully handles this.</td></tr>
+    <tr><td><code>_get_llm()</code></td><td>Lazy-loads Mithril connection. Returns <code>None</code> if Mithril is unavailable — the app gracefully handles this.</td></tr>
     <tr><td><code>/chat</code> route</td><td>Web UI for asking natural language questions about datasets. LLM generates a pandas expression, which is safely executed.</td></tr>
     <tr><td><code>/chat/ask</code> API</td><td>JSON endpoint: accepts <code>{"question": ..., "dataset": ...}</code>, returns <code>{"answer": ..., "expression": ...}</code>.</td></tr>
   </table>

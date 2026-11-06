@@ -196,3 +196,4 @@ tmp/
 .env
 .DS_Store
 *.db
+rag_data/

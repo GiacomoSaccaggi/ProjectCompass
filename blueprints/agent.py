@@ -1,38 +1,13 @@
 import ast
+import json
 import os
 
 import pandas as pd
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, Response, current_app, jsonify, render_template, request
 
 from logging_config import logger
 
 agent_bp = Blueprint('agent', __name__)
-
-# Lazy-loaded LLM components
-_llm = None
-_embed_model = None
-
-
-def _get_llm():
-    """Lazy-load Ollama LLM. Returns None if unavailable."""
-    global _llm, _embed_model
-    if _llm is not None:
-        return _llm
-    try:
-        from llama_index.core import Settings
-        from llama_index.embeddings.ollama import OllamaEmbedding
-        from llama_index.llms.ollama import Ollama
-
-        host = current_app.config.get('OLLAMA_HOST', 'http://localhost:11434')
-        _llm = Ollama(model="qwen3:0.6b", base_url=host)
-        _embed_model = OllamaEmbedding(model_name="nomic-embed-text", base_url=host)
-        Settings.llm = _llm
-        Settings.embed_model = _embed_model
-        logger.info("Ollama LLM loaded successfully")
-        return _llm
-    except Exception as e:
-        logger.warning(f"Ollama not available: {e}")
-        return None
 
 
 # Safe expression evaluator — NO eval()
@@ -79,6 +54,12 @@ def safe_execute_pandas(expression: str, df: pd.DataFrame) -> str:
         return f"Execution error: {e}"
 
 
+def _get_client():
+    """Get MithrilClient instance (lazy-loaded)."""
+    from utils.mithril_client import get_client
+    return get_client()
+
+
 @agent_bp.route('/chat')
 def chat_page():
     webapp = current_app.config['WEBAPP']
@@ -94,19 +75,41 @@ def chat_page():
                            datasets=datasets)
 
 
+@agent_bp.route('/chat/models')
+def chat_models():
+    """Return available models from Mithril."""
+    try:
+        client = _get_client()
+        models = client.list_models()
+        return jsonify({'models': models})
+    except Exception as e:
+        logger.warning(f"Cannot fetch models: {e}")
+        return jsonify({'models': [], 'error': str(e)}), 503
+
+
 @agent_bp.route('/chat/ask', methods=['POST'])
 def chat_ask():
     webapp = current_app.config['WEBAPP']
     data = request.get_json()
     question = data.get('question', '')
     dataset = data.get('dataset', '')
+    model = data.get('model', '')
 
     if not question:
         return jsonify({'error': 'No question provided'}), 400
 
-    llm = _get_llm()
-    if llm is None:
-        return jsonify({'error': 'LLM service not available. Is Ollama running?'}), 503
+    # Check Mithril availability
+    try:
+        client = _get_client()
+        if not client.health():
+            return jsonify({'error': 'LLM service not available. Is Mithril running?'}), 503
+    except Exception:
+        return jsonify({'error': 'LLM service not available. Is Mithril running?'}), 503
+
+    # Use first available model if none specified
+    if not model:
+        models = client.list_models()
+        model = models[0] if models else "qwen2:1.5b"
 
     # Load dataset
     dataset_path = os.path.join(webapp.save_data_path, f"{dataset}.csv")
@@ -128,9 +131,9 @@ Question: {question}
 Expression:"""
 
     try:
-        from llama_index.core import Settings
-        response = Settings.llm.complete(prompt)
-        expression = str(response).strip().split('\n')[0]
+        messages = [{"role": "user", "content": prompt}]
+        response = client.chat(model, messages)
+        expression = response.strip().split('\n')[0]
         logger.info(f"LLM generated expression: {expression}")
 
         # Safe execution
@@ -142,6 +145,46 @@ Expression:"""
     except Exception as e:
         logger.error(f"Chat error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@agent_bp.route('/chat/stream', methods=['POST'])
+def chat_stream():
+    """Streaming chat endpoint via Server-Sent Events."""
+    data = request.get_json()
+    question = data.get('question', '')
+    model = data.get('model', '')
+    context = data.get('context', '')
+
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+
+    try:
+        client = _get_client()
+        if not client.health():
+            return jsonify({'error': 'LLM service not available'}), 503
+    except Exception:
+        return jsonify({'error': 'LLM service not available'}), 503
+
+    if not model:
+        models = client.list_models()
+        model = models[0] if models else "qwen2:1.5b"
+
+    content = question
+    if context:
+        content = f"{context}\n\nQuestion: {question}\n\nAnswer:"
+
+    messages = [{"role": "user", "content": content}]
+
+    def generate():
+        try:
+            for chunk in client.chat_stream(model, messages):
+                yield f"data: {json.dumps({'content': chunk})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
 @agent_bp.route('/chat/analysis')
@@ -173,13 +216,21 @@ def chat_analysis_ask():
     data = request.get_json()
     question = data.get('question', '')
     analysis_name = data.get('analysis_name', '')
+    model = data.get('model', '')
 
     if not question:
         return jsonify({'error': 'No question provided'}), 400
 
-    llm = _get_llm()
-    if llm is None:
-        return jsonify({'error': 'LLM service not available. Is Ollama running?'}), 503
+    try:
+        client = _get_client()
+        if not client.health():
+            return jsonify({'error': 'LLM service not available. Is Mithril running?'}), 503
+    except Exception:
+        return jsonify({'error': 'LLM service not available. Is Mithril running?'}), 503
+
+    if not model:
+        models = client.list_models()
+        model = models[0] if models else "qwen2:1.5b"
 
     # Load analysis context
     context = ""
@@ -208,9 +259,218 @@ Question: {question}
 Answer:"""
 
     try:
-        from llama_index.core import Settings
-        response = Settings.llm.complete(prompt)
-        return jsonify({'answer': str(response).strip()})
+        messages = [{"role": "user", "content": prompt}]
+        response = client.chat(model, messages)
+        return jsonify({'answer': response.strip()})
     except Exception as e:
         logger.error(f"Analysis chat error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@agent_bp.route('/chat/analysis/rag', methods=['POST'])
+def chat_analysis_rag():
+    """RAG-enhanced analysis chat endpoint."""
+    from utils.rag_guardrails import build_rag_prompt, format_provenance, validate_query, validate_response
+    from utils.rag_store import RAGStore
+
+    webapp = current_app.config['WEBAPP']
+    data = request.get_json()
+    question = data.get('question', '')
+    analysis_name = data.get('analysis_name', '')
+    model = data.get('model', '')
+
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+
+    # Validate query
+    is_valid, error_msg = validate_query(question)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+
+    try:
+        client = _get_client()
+        if not client.health():
+            return jsonify({'error': 'LLM service not available. Is Mithril running?'}), 503
+    except Exception:
+        return jsonify({'error': 'LLM service not available. Is Mithril running?'}), 503
+
+    if not model:
+        models = client.list_models()
+        model = models[0] if models else 'qwen2:1.5b'
+
+    # Check if RAG index exists
+    store = RAGStore()
+    if not store.has_index(analysis_name):
+        # Fallback to metadata-only chat
+        return _chat_with_metadata(client, model, question, analysis_name, webapp)
+
+    try:
+        # Hybrid query
+        results = store.hybrid_query(analysis_name, question, top_k=10)
+
+        # Rerank
+        try:
+            results = store.rerank(question, results, top_n=5)
+        except Exception as e:
+            logger.warning(f'Reranking failed, using hybrid results: {e}')
+            results = results[:5]
+
+        # Load analysis metadata
+        analysis_meta = {}
+        try:
+            analysis_meta = webapp.read_single_analysis(webapp.extract_main_folder(), analysis_name)
+        except Exception:
+            pass
+
+        # Build RAG prompt
+        prompt = build_rag_prompt(question, results, analysis_meta)
+        messages = [{'role': 'user', 'content': prompt}]
+        response = client.chat(model, messages)
+
+        # Validate response
+        response = validate_response(response)
+
+        # Format sources
+        sources = [{
+            'file': r.source_file,
+            'lines': f'{r.start_line}-{r.end_line}' if r.start_line else '',
+            'type': r.chunk_type,
+            'relevance': round(r.score, 3),
+        } for r in results]
+
+        provenance = format_provenance(results)
+
+        return jsonify({
+            'answer': response.strip(),
+            'sources': sources,
+            'provenance': provenance,
+            'mode': 'rag',
+        })
+    except Exception as e:
+        logger.error(f'RAG chat error: {e}')
+        # Fallback to metadata-only
+        return _chat_with_metadata(client, model, question, analysis_name, webapp)
+
+
+@agent_bp.route('/chat/analysis/rag/stream', methods=['POST'])
+def chat_analysis_rag_stream():
+    """Streaming RAG-enhanced analysis chat via SSE."""
+    from utils.rag_guardrails import build_rag_prompt, format_provenance, validate_query
+    from utils.rag_store import RAGStore
+
+    data = request.get_json()
+    question = data.get('question', '')
+    analysis_name = data.get('analysis_name', '')
+    model = data.get('model', '')
+
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+
+    is_valid, error_msg = validate_query(question)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+
+    try:
+        client = _get_client()
+        if not client.health():
+            return jsonify({'error': 'LLM service not available'}), 503
+    except Exception:
+        return jsonify({'error': 'LLM service not available'}), 503
+
+    if not model:
+        models = client.list_models()
+        model = models[0] if models else 'qwen2:1.5b'
+
+    store = RAGStore()
+    webapp = current_app.config['WEBAPP']
+
+    # Build context
+    results = []
+    mode = 'metadata'
+    if store.has_index(analysis_name):
+        mode = 'rag'
+        results = store.hybrid_query(analysis_name, question, top_k=10)
+        try:
+            results = store.rerank(question, results, top_n=5)
+        except Exception:
+            results = results[:5]
+
+    analysis_meta = {}
+    try:
+        analysis_meta = webapp.read_single_analysis(webapp.extract_main_folder(), analysis_name)
+    except Exception:
+        pass
+
+    if mode == 'rag' and results:
+        prompt = build_rag_prompt(question, results, analysis_meta)
+    else:
+        context = _build_metadata_context(analysis_meta)
+        prompt = f"""You are a helpful assistant knowledgeable about data analysis projects.
+Use the following context to answer the question.
+
+{context}
+
+Question: {question}
+
+Answer:"""
+
+    messages = [{'role': 'user', 'content': prompt}]
+
+    def generate():
+        try:
+            for chunk in client.chat_stream(model, messages):
+                yield f'data: {json.dumps({"content": chunk})}\n\n'
+            # Send provenance at the end
+            if results:
+                sources = [{
+                    'file': r.source_file,
+                    'lines': f'{r.start_line}-{r.end_line}' if r.start_line else '',
+                    'type': r.chunk_type,
+                    'relevance': round(r.score, 3),
+                } for r in results]
+                provenance = format_provenance(results)
+                yield f'data: {json.dumps({"provenance": provenance, "sources": sources, "mode": mode})}\n\n'
+            yield 'data: [DONE]\n\n'
+        except Exception as e:
+            yield f'data: {json.dumps({"error": str(e)})}\n\n'
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
+
+
+def _chat_with_metadata(client, model, question, analysis_name, webapp):
+    """Fallback: chat using only metadata.yaml context."""
+    analysis_meta = {}
+    try:
+        analysis_meta = webapp.read_single_analysis(webapp.extract_main_folder(), analysis_name)
+    except Exception:
+        pass
+
+    context = _build_metadata_context(analysis_meta)
+    prompt = f"""You are a helpful assistant knowledgeable about data analysis projects.
+Use the following analysis context to answer the user's question.
+
+{context}
+
+Question: {question}
+
+Answer:"""
+
+    try:
+        messages = [{'role': 'user', 'content': prompt}]
+        response = client.chat(model, messages)
+        return jsonify({'answer': response.strip(), 'sources': [], 'provenance': '', 'mode': 'metadata'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _build_metadata_context(analysis: dict) -> str:
+    """Build a simple metadata context string."""
+    if not analysis:
+        return ''
+    parts = []
+    for key in ('title', 'product', 'owner', 'collaborators', 'countries', 'description', 'output_type', 'output description', 'start_date'):
+        val = analysis.get(key, '')
+        if val:
+            parts.append(f'{key}: {val}')
+    return '\n'.join(parts)

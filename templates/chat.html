@@ -16,6 +16,11 @@
         .chat-input button:hover { background: #303F9F; }
         .chat-input button:disabled { background: #ccc; }
         select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 10px; }
+        .controls { display: flex; gap: 15px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .controls label { font-size: 0.9em; color: #555; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; }
+        .status-ok { background: #c8e6c9; color: #2e7d32; }
+        .status-err { background: #ffcdd2; color: #c62828; }
     </style>
 </head>
 <body>
@@ -23,15 +28,23 @@
 {{ sidebar_menu | safe }}
 <div style="margin-left:300px">
     <div class="chat-container">
-        <h2>🤖 Data Chat Assistant</h2>
+        <h2>🤖 Data Chat Assistant <span id="statusBadge" class="status-badge"></span></h2>
         <p style="color:#666">Ask questions about your datasets in natural language. The AI will generate and execute pandas queries safely.</p>
-        <div style="margin-bottom:10px">
-            <label for="dataset">Dataset: </label>
-            <select id="dataset">
-                {% for ds in datasets %}
-                <option value="{{ ds }}">{{ ds }}</option>
-                {% endfor %}
-            </select>
+        <div class="controls">
+            <div>
+                <label for="dataset">Dataset: </label>
+                <select id="dataset">
+                    {% for ds in datasets %}
+                    <option value="{{ ds }}">{{ ds }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="model">Model: </label>
+                <select id="model">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
         </div>
         <div class="chat-messages" id="messages"></div>
         <div class="chat-input">
@@ -41,20 +54,47 @@
     </div>
 </div>
 <script>
+// Load available models on page init
+(function loadModels() {
+    fetch('/chat/models')
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById('model');
+            sel.innerHTML = '';
+            if (data.models && data.models.length > 0) {
+                data.models.forEach(m => {
+                    sel.innerHTML += `<option value="${m}">${m}</option>`;
+                });
+                document.getElementById('statusBadge').innerHTML = 'Mithril ✓';
+                document.getElementById('statusBadge').className = 'status-badge status-ok';
+            } else {
+                sel.innerHTML = '<option value="">No models available</option>';
+                document.getElementById('statusBadge').innerHTML = 'Mithril ✗';
+                document.getElementById('statusBadge').className = 'status-badge status-err';
+            }
+        })
+        .catch(() => {
+            document.getElementById('model').innerHTML = '<option value="">Mithril unavailable</option>';
+            document.getElementById('statusBadge').innerHTML = 'Mithril ✗';
+            document.getElementById('statusBadge').className = 'status-badge status-err';
+        });
+})();
+
 function sendMsg() {
     const q = document.getElementById('question');
     const ds = document.getElementById('dataset').value;
+    const model = document.getElementById('model').value;
     const msgs = document.getElementById('messages');
     const btn = document.getElementById('sendBtn');
     if (!q.value.trim()) return;
-    
+
     msgs.innerHTML += `<div class="msg msg-user">${q.value}</div>`;
     btn.disabled = true;
-    
+
     fetch('/chat/ask', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({question: q.value, dataset: ds})
+        body: JSON.stringify({question: q.value, dataset: ds, model: model})
     })
     .then(r => r.json())
     .then(data => {
@@ -69,7 +109,7 @@ function sendMsg() {
         msgs.innerHTML += `<div class="msg msg-bot" style="color:red">Error: ${e}</div>`;
     })
     .finally(() => { btn.disabled = false; });
-    
+
     q.value = '';
 }
 </script>

@@ -161,6 +161,9 @@ header{
               <br>
               <h6><b><i class="fa fa-comments"></i>    <a href="/chat/analysis?name={{ nome.replace(' ','512') }}">Chat about this analysis</a></b></h6>
               <br>
+              <h6><b><i class="fa fa-brain"></i>    <span id="rag-status-{{ loop.index }}" style="font-weight:normal;color:#999;">Loading...</span>
+                <button onclick="buildRag('{{ nome.replace(' ','512') }}', this, {{ loop.index }})" class="w3-button w3-small w3-round" style="background:#e3f2fd;color:#1565c0;margin-left:8px;padding:2px 12px;font-size:0.8rem;">🧠 Build RAG</button></b></h6>
+              <br>
               <h6><b><i class="fa fa-recycle"></i>    <a href="/delete_analysis?name={{ nome.replace(' ','512') }}">Delete the analysis</a></b></h6>
 
             </p>
@@ -244,6 +247,53 @@ header{
             }
         });
     }
+    </script>
+
+    <script>
+    // RAG status check and build
+    function buildRag(name, btn, idx) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Building...';
+        fetch('/rag/build/' + name, {method: 'POST'})
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    btn.textContent = '❌ Failed';
+                    btn.disabled = false;
+                    setTimeout(() => { btn.textContent = '🧠 Build RAG'; }, 3000);
+                } else {
+                    document.getElementById('rag-status-' + idx).innerHTML = '<span style="color:#2e7d32;">✅ RAG Ready (' + data.chunks + ' chunks)</span>';
+                    btn.textContent = '🔄 Rebuild';
+                    btn.disabled = false;
+                }
+            })
+            .catch(() => {
+                btn.textContent = '❌ Error';
+                btn.disabled = false;
+            });
+    }
+
+    // Check RAG status on page load for visible analyses
+    document.querySelectorAll('[id^="rag-status-"]').forEach(el => {
+        const idx = el.id.split('-')[2];
+        // Get analysis name from the nearby link
+        const accordion = el.closest('.panel');
+        if (!accordion) return;
+        const chatLink = accordion.querySelector('a[href*="/chat/analysis"]');
+        if (!chatLink) return;
+        const name = chatLink.href.split('name=')[1];
+        if (!name) return;
+        fetch('/rag/status/' + name)
+            .then(r => r.json())
+            .then(data => {
+                if (data.exists) {
+                    el.innerHTML = '<span style="color:#2e7d32;">✅ RAG Ready (' + data.chunks + ' chunks)</span>';
+                } else {
+                    el.innerHTML = '<span style="color:#999;">No RAG index</span>';
+                }
+            })
+            .catch(() => { el.innerHTML = '<span style="color:#999;">-</span>'; });
+    });
     </script>
 
     <!-- Footer -->
