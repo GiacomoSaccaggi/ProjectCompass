@@ -4,54 +4,67 @@
 
 <style>
 .import-container {
-    max-width: 600px;
+    max-width: 640px;
     margin: 40px auto;
 }
 .drop-zone {
-    border: 3px dashed #ccc;
-    border-radius: 12px;
-    padding: 60px 40px;
+    border: 2px dashed var(--mariner-border-strong, rgba(2, 132, 199, 0.42));
+    border-radius: 16px;
+    padding: 56px 40px;
     text-align: center;
-    background: #f9f9f9;
-    transition: all 0.3s;
+    background: var(--mariner-bg-card, #fffdf8);
+    box-shadow: var(--mariner-shadow-card);
+    transition: all 0.25s ease;
     cursor: pointer;
 }
 .drop-zone:hover, .drop-zone.dragover {
-    border-color: #4DFFD6;
-    background: #e8fff9;
+    border-color: var(--mariner-gold, #b45309);
+    background: rgba(2, 132, 199, 0.08);
+    transform: translateY(-2px);
 }
 .drop-zone i {
     font-size: 48px;
-    color: #999;
+    color: var(--mariner-cyan, #0284c7);
     margin-bottom: 15px;
 }
 .drop-zone p {
     font-size: 1rem;
-    color: #666;
+    color: var(--mariner-text-secondary, #334155);
 }
 .drop-zone input[type="file"] {
     display: none;
 }
 .btn-import {
-    background: #2D323A;
+    background: linear-gradient(135deg, var(--mariner-cyan, #0284c7) 0%, var(--mariner-teal, #0d9488) 100%);
     color: white;
-    border: none;
+    border: 1px solid rgba(251, 191, 36, 0.45);
     padding: 12px 30px;
-    border-radius: 6px;
+    border-radius: 10px;
     font-size: 1rem;
+    font-weight: 700;
     cursor: pointer;
     margin-top: 20px;
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.28);
+    transition: all 0.2s ease;
 }
 .btn-import:hover {
-    background: #4DFFD6;
-    color: #2D323A;
+    background: linear-gradient(135deg, #0369a1 0%, var(--mariner-navy, #0b1629) 100%);
+    color: #fbbf24;
+    transform: translateY(-2px);
 }
 .file-selected {
     margin-top: 15px;
-    padding: 10px;
-    background: #e8f4e8;
-    border-radius: 6px;
-    color: #2d5a2d;
+    padding: 10px 14px;
+    background: rgba(13, 148, 136, 0.12);
+    border: 1px solid rgba(13, 148, 136, 0.35);
+    border-radius: 8px;
+    color: #0d9488;
+}
+body.dark-mode .drop-zone {
+    background: rgba(14, 25, 47, 0.88);
+}
+body.dark-mode .drop-zone p {
+    color: #cbd5e1;
 }
 </style>
 
@@ -59,7 +72,7 @@
 {{ top_container|safe }}
 {{ sidebar_menu|safe }}
 
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
     <div class="w3-container import-container">
         <h2><i class="fa fa-upload"></i> Import Analysis</h2>
         <p>Upload a ZIP file containing an analysis package. The analysis will be extracted to the Analyses folder.</p>

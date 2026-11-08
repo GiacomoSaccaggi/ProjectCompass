@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <style>
+    .conn-hero {
+      background:
+        var(--mariner-wave-overlay),
+        linear-gradient(135deg, #060d1a 0%, #0b1930 60%, #0e2240 100%);
+      background-position: bottom center, center;
+      background-repeat: no-repeat;
+      background-size: 100% 42px, cover;
+      color: #f8fafc;
+      padding: 22px 28px 28px;
+      border-bottom: 2px solid rgba(251, 191, 36, 0.42);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .conn-hero h1 { margin: 0; font-size: 1.65rem; font-weight: 800; color: #f8fafc !important; }
+    .conn-hero h1 i { color: #fbbf24; margin-right: 8px; }
+    .conn-hero p { margin: 4px 0 0 0; font-size: 0.9rem; color: #cbd5e1; }
+    .conn-wrap { padding: 20px 24px 32px; max-width: 1360px; margin: 0 auto; }
+    .conn-quick-drawer {
+      margin-bottom: 20px;
+      padding: 22px 24px !important;
+      border-radius: 14px;
+      border: 1px solid rgba(2, 132, 199, 0.35);
+      border-top: 3px solid #fbbf24;
+    }
+    .conn-quick-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .conn-quick-grid label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+      color: var(--mariner-text-secondary);
+    }
+  </style>
+
+  <header class="conn-hero">
+    <div>
+      <h1><i class="fa fa-database"></i> DB connections</h1>
+      <p>Manage saved database connections for live, read-only SQL queries via ConnectorX &amp; DuckDB.</p>
+    </div>
+    {% if can_manage %}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button type="button" onclick="toggleQuickConnDrawer()" class="w3-button w3-teal w3-round" style="border-radius:10px;">
+        <i class="fa fa-bolt"></i> Quick Add Here
+      </button>
+      <a href="/connections/new" class="w3-button w3-blue w3-round" style="text-decoration:none;border-radius:10px;">
+        <i class="fa fa-plus"></i> New connection
+      </a>
+    </div>
+    {% endif %}
+  </header>
+
+  <div class="conn-wrap">
+    {% if can_manage %}
+    <div id="quick-conn-drawer" class="w3-card w3-white conn-quick-drawer" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h4 style="margin:0;font-weight:700;"><i class="fa fa-plus-circle" style="color:var(--mariner-cyan);margin-right:6px;"></i>Quick Add Database Connection</h4>
+        <a href="/connections/new" style="font-size:0.84rem;font-weight:600;color:var(--mariner-cyan);text-decoration:none;">Open Full Guided Form &rarr;</a>
+      </div>
+      <form method="post" action="/connections/save">
+        <div class="conn-quick-grid">
+          <div>
+            <label for="qc-name">Connection Name *</label>
+            <input id="qc-name" class="w3-input w3-border w3-round" type="text" name="name" required placeholder="e.g. Analytics Warehouse">
+          </div>
+          <div>
+            <label for="qc-type">Database Dialect *</label>
+            <select id="qc-type" class="w3-select w3-border w3-round" name="db_type" onchange="syncQuickConnFields()">
+              <option value="postgres">PostgreSQL</option>
+              <option value="sqlite">SQLite (File)</option>
+              <option value="mysql">MySQL</option>
+              <option value="mariadb">MariaDB</option>
+              <option value="mssql">SQL Server</option>
+              <option value="clickhouse">ClickHouse</option>
+              <option value="redshift">Amazon Redshift</option>
+              <option value="trino">Trino</option>
+              <option value="oracle">Oracle</option>
+              <option value="bigquery">BigQuery</option>
+              <option value="custom">Custom URI</option>
+            </select>
+          </div>
+          <div id="qc-host-wrap">
+            <label for="qc-host">Host</label>
+            <input id="qc-host" class="w3-input w3-border w3-round" type="text" name="host" placeholder="db.example.com">
+          </div>
+          <div id="qc-port-wrap">
+            <label for="qc-port">Port</label>
+            <input id="qc-port" class="w3-input w3-border w3-round" type="number" name="port" value="5432" placeholder="5432">
+          </div>
+          <div id="qc-db-wrap">
+            <label for="qc-db">Database</label>
+            <input id="qc-db" class="w3-input w3-border w3-round" type="text" name="database" placeholder="analytics">
+          </div>
+          <div id="qc-user-wrap">
+            <label for="qc-user">Username</label>
+            <input id="qc-user" class="w3-input w3-border w3-round" type="text" name="username" placeholder="readonly_user">
+          </div>
+          <div id="qc-pass-wrap">
+            <label for="qc-pass">Password (encrypted)</label>
+            <input id="qc-pass" class="w3-input w3-border w3-round" type="password" name="password" autocomplete="new-password" placeholder="••••••••">
+          </div>
+          <div id="qc-file-wrap" style="display:none;grid-column:span 2;">
+            <label for="qc-file">SQLite / BigQuery File Path</label>
+            <input id="qc-file" class="w3-input w3-border w3-round" type="text" name="file_path" placeholder="/app/data/projectcompass.db">
+          </div>
+          <div id="qc-uri-wrap" style="display:none;grid-column:span 2;">
+            <label for="qc-uri">Custom ConnectorX URI</label>
+            <input id="qc-uri" class="w3-input w3-border w3-round" type="text" name="custom_uri" autocomplete="off" placeholder="postgresql://user:pass@host:5432/db">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button type="submit" class="w3-button w3-blue w3-round"><i class="fa fa-save"></i> Save Connection</button>
+          <button type="button" onclick="toggleQuickConnDrawer()" class="w3-button w3-light-grey w3-round">Cancel</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="w3-card w3-white w3-round-large w3-padding" style="padding:22px !important;">
+      {% if not connections %}
+        {% set cta_url = '/connections/new' if can_manage else None %}
+        {% set cta_text = 'New connection' %}
+        {% set cta_icon = 'fa-plus' %}
+        {% with icon='🔌', title='No database connections yet', message='Add a connection to run SQL directly against an external database.' %}
+          {% include 'components/empty_state.html' %}
+        {% endwith %}
+      {% else %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+        {% for connection in connections %}
+        {% set dialect = dialects.get(connection.db_type, {'label': connection.db_type, 'icon': 'fa-database'}) %}
+        <article class="w3-card w3-round-large w3-padding" style="border-left:4px solid var(--mariner-cyan, #0284c7);padding:18px !important;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <h3 style="margin:0;font-size:1.15rem;"><i class="fa {{ dialect.icon }}" style="color:var(--mariner-cyan);margin-right:6px;"></i> {{ connection.name }}</h3>
+            {% if connection.managed %}<span class="w3-tag w3-pale-blue">Managed by config</span>{% endif %}
+          </div>
+          <p style="margin:10px 0 6px;"><b>Type:</b> {{ dialect.label }}</p>
+          <p style="margin:6px 0;"><b>Host / database:</b>
+            {% if connection.db_type == 'custom' %}
+              Custom URI saved securely
+            {% elif connection.file_path %}
+              <code>{{ connection.file_path }}</code>
+            {% else %}
+              <code>{{ connection.host or '—' }}{% if connection.port %}:{{ connection.port }}{% endif %}{% if connection.database %} / {{ connection.database }}{% endif %}</code>
+            {% endif %}
+          </p>
+          <p style="margin:6px 0;">
+            <b>Last test:</b>
+            {% if connection.last_test_ok is none %}
+              <span id="test-status-{{ connection.id }}" class="w3-tag w3-light-grey">Never tested</span>
+            {% elif connection.last_test_ok %}
+              <span id="test-status-{{ connection.id }}" class="w3-tag w3-pale-green">OK</span>
+            {% else %}
+              <span id="test-status-{{ connection.id }}" class="w3-tag w3-pale-red">Error</span>
+            {% endif %}
+          </p>
+          {% if connection.last_test_message %}
+          <p id="test-message-{{ connection.id }}" class="w3-small w3-text-grey">{{ connection.last_test_message }}</p>
+          {% else %}
+          <p id="test-message-{{ connection.id }}" class="w3-small w3-text-grey"></p>
+          {% endif %}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+            <a href="/query_runner/?connection_id={{ connection.id }}" class="w3-button w3-small w3-teal w3-round" style="text-decoration:none;">
+              <i class="fa fa-terminal"></i> Query
+            </a>
+            {% if can_manage %}
+            <button type="button" class="w3-button w3-small w3-blue w3-round" onclick="testSavedConnection({{ connection.id }})">
+              <i class="fa fa-plug"></i> Test
+            </button>
+            {% if not connection.managed %}
+            <a href="/connections/{{ connection.id }}/edit" class="w3-button w3-small w3-light-grey w3-round">
+              <i class="fa fa-edit"></i> Edit
+            </a>
+            <form method="post" action="/connections/{{ connection.id }}/delete" style="display:inline;"
+                  onsubmit="return confirm('Delete this database connection?');">
+              <button type="submit" class="w3-button w3-small w3-red w3-round">
+                <i class="fa fa-trash"></i> Delete
+              </button>
+            </form>
+            {% endif %}
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleQuickConnDrawer() {
+  var el = document.getElementById('quick-conn-drawer');
+  if (!el) return;
+  el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+}
+function syncQuickConnFields() {
+  var t = document.getElementById('qc-type').value;
+  var isFile = (t === 'sqlite' || t === 'bigquery');
+  var isCustom = (t === 'custom');
+  var isServer = (!isFile && !isCustom);
+  ['qc-host-wrap','qc-port-wrap','qc-db-wrap','qc-user-wrap','qc-pass-wrap'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = isServer ? 'block' : 'none';
+  });
+  var fw = document.getElementById('qc-file-wrap');
+  if (fw) fw.style.display = isFile ? 'block' : 'none';
+  var uw = document.getElementById('qc-uri-wrap');
+  if (uw) uw.style.display = isCustom ? 'block' : 'none';
+  var defaultPorts = {postgres:5432, redshift:5439, mysql:3306, mariadb:3306, mssql:1433, oracle:1521, clickhouse:8123, trino:8080};
+  var portInput = document.getElementById('qc-port');
+  if (portInput && defaultPorts[t]) portInput.value = defaultPorts[t];
+}
+async function testSavedConnection(connectionId) {
+  const status = document.getElementById('test-status-' + connectionId);
+  const message = document.getElementById('test-message-' + connectionId);
+  if (status) status.textContent = 'Testing…';
+  try {
+    const response = await fetch('/connections/' + connectionId + '/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: '{}'
+    });
+    const result = await response.json();
+    if (status) {
+      status.textContent = result.ok ? 'OK' : 'Error';
+      status.className = result.ok ? 'w3-tag w3-pale-green' : 'w3-tag w3-pale-red';
+    }
+    if (message) message.textContent = result.message || '';
+  } catch (error) {
+    if (status) status.textContent = 'Error';
+    if (message) message.textContent = 'Connection test could not be completed.';
+  }
+}
+</script>
+</body>
+</html>

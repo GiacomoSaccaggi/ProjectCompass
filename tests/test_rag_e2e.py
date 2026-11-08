@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from utils.chunker import Chunk, chunk_analysis, chunk_file
+from utils.chunker import chunk_analysis
 from utils.rag_guardrails import build_rag_prompt, format_provenance, validate_query, validate_response
-from utils.rag_store import RAGStore, RetrievalResult, _sanitize_collection_name
+from utils.rag_store import RAGStore, RetrievalResult
 
 
 @pytest.fixture

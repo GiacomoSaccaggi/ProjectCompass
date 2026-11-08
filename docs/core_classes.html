@@ -1,168 +1,357 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Core Classes – ProjectCompass Docs</title>
-  <style>
-    *{box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
-    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
-    header h1{margin:0;font-size:1.8rem}
-    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
-    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
-    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
-    nav a:hover{text-decoration:underline}
-    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
-    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5;margin-top:2.5rem}
-    h3{color:#2d323a;margin-top:1.8rem;font-size:1.05rem}
-    p,li{line-height:1.7;font-size:.95rem}
-    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.85rem}
-    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.84rem;line-height:1.6}
-    .method-block{background:#fff;border-radius:8px;padding:1.2rem 1.5rem;margin:.8rem 0;box-shadow:0 2px 6px rgba(0,0,0,.07);border-left:4px solid #3F51B5}
-    .method-block h4{margin:0 0 .4rem;font-family:monospace;font-size:.95rem;color:#3F51B5}
-    .method-block p{margin:0;font-size:.9rem;color:#555;line-height:1.6}
-    .attr-table{width:100%;border-collapse:collapse;margin:.8rem 0}
-    .attr-table th{background:#e8eaf6;padding:.5rem .8rem;text-align:left;font-size:.85rem;color:#3F51B5}
-    .attr-table td{padding:.5rem .8rem;border-bottom:1px solid #eef;font-size:.85rem;vertical-align:top}
-    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
-  </style>
+  <title>Core Classes &amp; Cooperative MRO — ProjectCompass Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="assets/docs.css">
 </head>
 <body>
-<header>
-  <h1>Core Classes</h1>
-  <p>Reference for all Python classes in ProjectCompass</p>
+
+<header class="top-nav">
+  <div class="top-nav-inner">
+    <a href="../index.html" class="brand-link">
+      <svg class="compass-mini" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="18" r="15.5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6"/>
+        <circle cx="18" cy="18" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M18 7 L18 24" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18 8 L26 22 L18 22 Z" fill="currentColor" fill-opacity="0.32" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M16.5 10.5 L11 22 L16.5 22 Z" fill="#fbbf24" fill-opacity="0.45" stroke="#fbbf24" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M10 24.5 L26 24.5 L23.5 27.5 L12.5 27.5 Z" fill="currentColor" fill-opacity="0.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+      <span>ProjectCompass</span>
+      <span class="brand-tag">⛵ Regatta Docs</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary Documentation Navigation">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="user_guide.html">User Guide</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="core_classes.html" class="active">Core Classes</a>
+      <a href="templates.html">Templates</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle-btn">
+        <span aria-hidden="true">⛵</span> <span>Day Sail</span>
+      </button>
+    </div>
+  </div>
 </header>
-<nav>
-  <a href="../index.html">Home</a>
-  <a href="overview.html">Overview</a>
-  <a href="architecture.html">Architecture</a>
-  <a href="routes.html">API Routes</a>
-  <a href="core_classes.html">Core Classes</a>
-  <a href="templates.html">Templates</a>
-  <a href="configuration.html">Configuration</a>
-  <a href="docker.html">Docker</a>
-</nav>
-<main>
 
-  <!-- ── HTMLUtils ── -->
-  <h2>HTMLUtils <small style="font-size:.7em;color:#888">utils/html_utils.py</small></h2>
-  <p>Base class in the inheritance chain. Responsible for loading all environment configuration and parsing the shared <code>header.html</code> partial into named sections.</p>
-
-  <h3>Constructor</h3>
-  <pre>HTMLUtils(dir_path: str, **kwargs)</pre>
-  <p>On initialisation it:</p>
-  <ul>
-    <li>Reads <code>templates/environment_variables/constants.yaml</code> → <code>self.constants</code></li>
-    <li>Reads <code>templates/environment_variables/tool_choices.yaml</code> → <code>self.tool_choices</code></li>
-    <li>Reads <code>intro.txt</code>, <code>links.yaml</code>, <code>title.txt</code> → <code>self.environments_info</code></li>
-    <li>Parses <code>header.html</code> using HTML comment markers (<code>&lt;!-- start X --&gt;</code> / <code>&lt;!-- end X --&gt;</code>) into <code>self.html_parts</code> dict</li>
-    <li>Overrides <code>self.constants['port']</code> from the <code>PORT</code> environment variable if set</li>
-  </ul>
-
-  <h3>Key method</h3>
-  <div class="method-block">
-    <h4>substitute_html(**kwargs) → dict</h4>
-    <p>Iterates over <code>self.html_parts</code> and replaces <code>{{ key }}</code> placeholders with the provided keyword arguments. Returns a dict of rendered HTML strings (e.g. <code>head</code>, <code>top_container</code>, <code>sidebar_menu</code>) ready to be passed to <code>render_template()</code>.</p>
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb">
+      <a href="../index.html">⛵ Command Deck</a>
+      <span>/</span>
+      <span>Pillar II: Shipwright's Hull &amp; Rigging</span>
+      <span>/</span>
+      <span>Core Classes &amp; Cooperative MRO</span>
+    </div>
+    <h1>Core Classes &amp; Cooperative MRO Reference</h1>
+    <p class="lead">
+      Complete class hierarchy, constructors, and method signatures for <code>ProjectCompass</code>, the 9-class cooperative inheritance chain, the ConnectorX database service, the Mithril/RAG engines, and the CLI SDK.
+    </p>
+    <div class="page-meta-badges">
+      <span class="badge badge-purple">04 • Standing Rigging</span>
+      <span class="badge badge-cyan">9-Class MRO Chain</span>
+      <span class="badge badge-gold">Strict OOP Standards</span>
+    </div>
   </div>
+</section>
 
-  <!-- ── DataUtils ── -->
-  <h2>DataUtils <small style="font-size:.7em;color:#888">utils/data_utils.py</small></h2>
-  <p>Handles all data file operations and SQL execution. Inherits from <code>HTMLUtils</code>.</p>
+<div class="docs-layout">
+  <main class="docs-content">
 
-  <h3>Constructor</h3>
-  <pre>DataUtils(dir_path: str, **kwargs)</pre>
-  <p>Sets <code>self.save_queries_path</code> and <code>self.save_data_path</code>, creating both directories if they do not exist.</p>
+    <h2 id="mro-hierarchy">1. The Cooperative Inheritance Chain</h2>
+    <p>
+      At the heart of ProjectCompass is the <code>ProjectCompass</code> facade class (`basefun.py`), which unifies catalog management, DuckDB/ConnectorX queries, Git synchronization, HTML template injection, and Kubernetes cluster/flow/chain orchestration through cooperative multiple inheritance:
+    </p>
 
-  <h3>Methods</h3>
-  <div class="method-block">
-    <h4>sql(sql_query: str) → pd.DataFrame</h4>
-    <p>Opens an in-memory DuckDB connection. Scans <code>Saved_data/</code> for CSV files and maps each filename (without extension) to a <code>read_csv_auto('/path/file.csv') AS alias</code> expression. SQLite/DB files are attached as separate schemas via <code>ATTACH … (TYPE sqlite)</code>. The user query is rewritten with these substitutions and executed. The connection is always closed in a <code>finally</code> block. Returns an empty DataFrame on error.</p>
-  </div>
-  <div class="method-block">
-    <h4>upload_text_files(request)</h4>
-    <p>Iterates over <code>request.files.getlist('upload_files')</code>. Each file is saved temporarily, read with <code>read_data()</code> using the form-supplied separator and header row, then written as a normalised CSV. The temporary file is removed afterwards.</p>
-  </div>
-  <div class="method-block">
-    <h4>list_data() → list[str]</h4>
-    <p>Returns the names (without extension) of all <code>.csv</code>, <code>.sqlite</code>, and <code>.db</code> files in <code>Saved_data/</code>.</p>
-  </div>
-  <div class="method-block">
-    <h4>read_data(file_path, separator, header) → pd.DataFrame  <em>[static]</em></h4>
-    <p>Thin wrapper around <code>pd.read_csv()</code>. Normalises the separator (<code>\\t</code> → tab, empty → comma) and the header row (<code>-1</code> → <code>None</code>). Uses the Python engine for compatibility with complex delimiters.</p>
-  </div>
+    <div class="mermaid-card">
+      <pre class="mermaid">
+classDiagram
+  class BaseK8sClient {
+    +k8s_namespace: str
+    +k8s_default_image: str
+    +_load_k8s_Clients()
+    +k8s_is_available() bool
+  }
+  class K8sClusterUtils {
+    +k8s_list_nodes() list
+    +k8s_sync_workers_with_db() list
+    +k8s_register_worker() dict
+    +k8s_drain_worker() dict
+    +k8s_generate_join_token() dict
+  }
+  class K8sFlowRunnerUtils {
+    +k8s_run_flow() dict
+    +k8s_get_run_logs() str
+    +k8s_sync_run_status() dict
+    +k8s_delete_flow_resources() dict
+  }
+  class K8sChainRunnerUtils {
+    +k8s_create_or_update_chain() dict
+    +k8s_run_chain() dict
+    +k8s_list_chains() list
+  }
+  class HTMLUtils {
+    +constants: dict
+    +html_parts: dict
+    +substitute_html() dict
+    +apply_settings()
+  }
+  class GitSyncUtils {
+    +git_init_or_clone() bool
+    +git_pull() bool
+    +git_commit_and_push() bool
+  }
+  class AnalysisUtils {
+    +read_single_analysis() dict
+    +read_multiple_analysis() dict
+    +upload_new_analysis() str
+    +save_k8s_flow_analysis() dict
+  }
+  class DataUtils {
+    +sql(sql_query) DataFrame
+    +run_sql(sql_query, connection_id) DataFrame
+    +upload_text_files(request)
+    +list_data() list
+  }
+  class ProjectCompass {
+    +project_folder: str
+    +create_job_request() dict
+  }
 
-  <!-- ── AnalysisUtils ── -->
-  <h2>AnalysisUtils <small style="font-size:.7em;color:#888">utils/analysis_utils.py</small></h2>
-  <p>Manages the analysis catalog stored under <code>Analyses/</code>. Inherits from <code>DataUtils</code>.</p>
+  BaseK8sClient <|-- K8sClusterUtils
+  K8sClusterUtils <|-- K8sFlowRunnerUtils
+  K8sFlowRunnerUtils <|-- K8sChainRunnerUtils
+  K8sChainRunnerUtils <|-- HTMLUtils
+  HTMLUtils <|-- GitSyncUtils
+  GitSyncUtils <|-- AnalysisUtils
+  HTMLUtils <|-- DataUtils
+  DataUtils <|-- ProjectCompass
+  AnalysisUtils <|-- ProjectCompass
+      </pre>
+      <div class="mermaid-caption">
+        Figure 1 — Complete UML class hierarchy of `ProjectCompass` (`basefun.py` and `utils/`).
+      </div>
+    </div>
 
-  <h3>Constructor</h3>
-  <pre>AnalysisUtils(dir_path: str, **kwargs)</pre>
-  <p>Sets <code>self.save_folder_path = dir_path + 'Analyses'</code> and creates the directory.</p>
+    <h2 id="projectcompass-and-datautils">2. Top-Level Facade &amp; Data Engine</h2>
 
-  <h3>Methods</h3>
-  <div class="method-block">
-    <h4>read_single_analysis(main_folder, folder) → dict</h4>
-    <p>Reads <code>metadata.yaml</code> and <code>output_versions.yaml</code> for one analysis folder. Enriches the dict with computed fields: <code>last_modified</code>, <code>gitlab_link_viz</code>, <code>gdrive_link_viz</code>, <code>inline_inputs</code>, <code>inline_links</code>, <code>embedded</code>, <code>physical_output</code>, <code>versions_output</code>, <code>versions_dashboard</code>. Detects structured analyses by checking for <code>structured_analysis_main.py</code> and <code>metadata_automatic_report.yaml</code> in the <code>analysis/</code> subfolder. Also regenerates the per-analysis <code>readme.md</code>.</p>
-  </div>
-  <div class="method-block">
-    <h4>read_multiple_analysis() → dict</h4>
-    <p>Lists all non-hidden subdirectories of <code>Analyses/</code> and calls <code>read_single_analysis()</code> for each. Returns a dict keyed by folder name.</p>
-  </div>
-  <div class="method-block">
-    <h4>upload_new_analysis(request) → str</h4>
-    <p>Creates the full folder structure for a new analysis (<code>analysis/</code>, <code>physical_output/main/</code>, <code>sql_extractions/</code>), writes <code>metadata.yaml</code> and <code>output_versions.yaml</code>, saves uploaded files, auto-generates API documentation with <code>pdoc</code>, extracts <code>import</code> statements into <code>requirements.txt</code>, and extracts SQL queries from docstrings into <code>sql_extractions/</code>. Returns an error string (empty on success).</p>
-  </div>
-  <div class="method-block">
-    <h4>modify_analysis(request) → str</h4>
-    <p>Overwrites <code>metadata.yaml</code> and updates the main version in <code>output_versions.yaml</code> for an existing analysis. Replaces the main physical output file if a new one is uploaded.</p>
-  </div>
-  <div class="method-block">
-    <h4>produce_readme()</h4>
-    <p>Regenerates the top-level <code>Analyses/readme.md</code> with a summary table of all analyses (product, title, owner).</p>
-  </div>
-  <div class="method-block">
-    <h4>make_archive(source, destination)  <em>[static]</em></h4>
-    <p>Creates a ZIP archive of a source directory and moves it to the destination path.</p>
-  </div>
+    <h3 id="class-projectcompass"><code>ProjectCompass(DataUtils, AnalysisUtils)</code> — <code>basefun.py</code></h3>
+    <p>
+      Instantiated once at startup as <code>app.config['WEBAPP']</code>. Separates code assets (<code>dir_path</code>) from mutable runtime storage (<code>data_dir</code>).
+    </p>
+    <ul>
+      <li><code>__init__(dir_path: str, data_dir: str | None = None)</code> — Resolves <code>self.project_folder</code> and initializes all parent mixins via <code>super().__init__(dir_path=dir_path, data_dir=resolved_data)</code>.</li>
+      <li><code>create_job_request(RECIPE_ID: str, RECIPE_VERSION: str, **kwargs) -&gt; dict</code> <em>(static)</em> — Builds a structured v2 job-request payload.</li>
+      <li><code>encrypt_and_compress(text: str, key: str = 'key') -&gt; str</code> &amp; <code>decrypt_and_decompress(...) -&gt; str</code> — Module-level XOR + zlib + Base64 helpers in <code>basefun.py</code>.</li>
+    </ul>
 
-  <!-- ── ProjectCompass ── -->
-  <h2>ProjectCompass <small style="font-size:.7em;color:#888">basefun.py</small></h2>
-  <p>Top-level class. Inherits from <code>DataUtils</code>, <code>AnalysisUtils</code>, and <code>HTMLUtils</code> (via the MRO chain). Adds project-folder path resolution and the recipe job-request builder.</p>
+    <h3 id="class-datautils"><code>DataUtils</code> — <code>utils/data_utils.py</code></h3>
+    <p>
+      Manages <code>Saved_data/</code> and <code>Saved_queries/</code> and executes SQL queries locally or across remote databases.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Method Signature</th>
+            <th>Behavior &amp; Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>sql(sql_query: str) -&gt; pd.DataFrame</code></td>
+            <td>Opens an in-memory DuckDB connection, maps every <code>.csv</code> in <code>Saved_data/</code> to <code>read_csv_auto('/abs/path.csv') AS alias</code>, attaches <code>.sqlite</code>/<code>.db</code> files via <code>ATTACH ... (TYPE sqlite)</code>, executes the query, and always closes the connection in a <code>finally</code> block.</td>
+          </tr>
+          <tr>
+            <td><code>run_sql(sql_query: str, connection_id: int | None = None) -&gt; pd.DataFrame</code></td>
+            <td>Routes to local DuckDB (`self.sql`) when <code>connection_id is None</code>, or delegates to <code>DbConnectionService().run_query(connection_id, sql_query)</code> for remote ConnectorX databases.</td>
+          </tr>
+          <tr>
+            <td><code>upload_text_files(request) -&gt; None</code></td>
+            <td>Normalizes uploaded CSV/TSV/delimited files using form-supplied <code>separator</code> and <code>header</code> settings and saves them as clean CSVs in <code>Saved_data/</code>.</td>
+          </tr>
+          <tr>
+            <td><code>list_data() -&gt; list[str]</code></td>
+            <td>Returns dataset stem names for all <code>.csv</code>, <code>.sqlite</code>, and <code>.db</code> files in <code>Saved_data/</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-  <h3>Constructor</h3>
-  <pre>ProjectCompass(dir_path: str)</pre>
-  <p>Resolves <code>self.project_folder</code> (the URL-safe last path segment of <code>dir_path</code>) and populates <code>self.environments</code> with the template and analysis folder paths.</p>
+    <h2 id="analysis-git-html-utils">3. Catalog, Git Sync &amp; HTML Injection Classes</h2>
 
-  <div class="method-block">
-    <h4>create_job_request(RECIPE_ID, RECIPE_VERSION, **kwargs) → dict  <em>[static]</em></h4>
-    <p>Builds a v2 job-request payload for the Intelligence Studio Recipe API. Accepts arbitrary keyword arguments under <code>input_recipe</code>.</p>
+    <h3 id="class-analysisutils"><code>AnalysisUtils(GitSyncUtils)</code> — <code>utils/analysis_utils.py</code></h3>
+    <p>
+      Bridges the file-based <code>Analyses/</code> directory with the SQLite <code>AnalysisRecord</code> model and Kubernetes Flow definitions.
+    </p>
+    <ul>
+      <li><code>read_single_analysis(main_folder: str, folder: str) -&gt; dict</code> — Parses <code>metadata.yaml</code> and <code>output_versions.yaml</code>, detects <code>structured_analysis_main.py</code> or K8s flow scripts (`flow.py`), and computes UI display fields.</li>
+      <li><code>read_multiple_analysis() -&gt; dict[str, dict]</code> — Loads all catalog items and syncs them with SQLite and FTS5.</li>
+      <li><code>upload_new_analysis(request) -&gt; str</code> &amp; <code>modify_analysis(request) -&gt; str</code> — Handles web form uploads, runs <code>pdoc</code>, extracts imports into <code>requirements.txt</code>, extracts SQL from docstrings, and triggers optional Git commit/push.</li>
+      <li><code>save_k8s_flow_analysis(...) -&gt; dict</code> &amp; <code>list_k8s_flows() -&gt; list[dict]</code> — Persists Kubernetes Flow definitions (`flow.py`, `metadata.yaml` with `is_flow: True`, `k8s_config` JSON) and synchronizes them with `AnalysisRecord`.</li>
+    </ul>
+
+    <h3 id="class-gitsyncutils"><code>GitSyncUtils(HTMLUtils)</code> — <code>utils/git_utils.py</code></h3>
+    <p>
+      Provides non-interactive Git repository synchronization (`GIT_TERMINAL_PROMPT=0`) for `Analyses/` with automatic credential redaction (`_sanitize_git_text`).
+    </p>
+    <ul>
+      <li><code>git_init_or_clone(repo_url, branch, target_dir, token) -&gt; bool</code> — Clones a remote repo into `Analyses/` on startup or initializes and pulls if files already exist.</li>
+      <li><code>git_pull(target_dir, branch, token) -&gt; bool</code> — Pulls with `--no-rebase`; if a merge conflict occurs, aborts the merge and preserves local files safely.</li>
+      <li><code>git_commit_and_push(target_dir, message, branch, token) -&gt; bool</code> — Stages all changes (`git add -A`), commits as `ProjectCompass &lt;compass@cluster.local&gt;`, and pushes to `origin`.</li>
+    </ul>
+
+    <h3 id="class-htmlutils"><code>HTMLUtils(K8sChainRunnerUtils)</code> — <code>utils/html_utils.py</code></h3>
+    <ul>
+      <li><code>__init__(dir_path, data_dir=None, **kwargs)</code> — Loads `constants.yaml`, `tool_choices.yaml`, `links.yaml`, `intro.txt`, `title.txt`, and splits `templates/header.html` by `<!-- start X -->` / `<!-- end X -->` markers into `self.html_parts`.</li>
+      <li><code>substitute_html(**kwargs) -&gt; dict[str, str]</code> — Renders `head`, `top_container`, and `sidebar_menu` partials with current port, branding, and feature-gate flags.</li>
+      <li><code>apply_settings(settings: PublicAppSettings) -&gt; None</code> — Applies branding, theme colors, and navigation overrides loaded from `projectcompass.yaml`.</li>
+    </ul>
+
+    <h2 id="k8s-class-hierarchy">4. Kubernetes 4-Tier MRO Hierarchy (<code>utils/k8s_utils.py</code>)</h2>
+    <p>
+      All Kubernetes cluster and workload orchestration is implemented across four single-responsibility classes in <code>utils/k8s_utils.py</code>:
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Parent</th>
+            <th>Key Methods &amp; Responsibilities</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>BaseK8sClient</code></td>
+            <td><code>object</code></td>
+            <td>Loads kubeconfig (`KUBECONFIG_PATH` &rarr; `KUBECONFIG` &rarr; in-cluster ServiceAccount &rarr; `~/.kube/config` &rarr; `/var/lib/k0s/pki/admin.conf`), initializes `CoreV1Api` and `BatchV1Api`, and provides `k8s_ensure_namespace()`.</td>
+          </tr>
+          <tr>
+            <td><code>K8sClusterUtils</code></td>
+            <td><code>BaseK8sClient</code></td>
+            <td>Manages worker nodes: `k8s_list_nodes()`, `k8s_sync_workers_with_db()` (reconciles `Ready`, `NotReady`, `Removed`), `k8s_register_worker()`, `k8s_drain_worker()`, `k8s_delete_worker()`, and `k8s_generate_join_token()`.</td>
+          </tr>
+          <tr>
+            <td><code>K8sFlowRunnerUtils</code></td>
+            <td><code>K8sClusterUtils</code></td>
+            <td>Executes isolated `batch/v1` Jobs: creates `pc-flow-cfg-<id>` ConfigMap (`/workspace/flow.py`, `params.json`, `requirements.txt`, `entrypoint.sh`), optional `pc-flow-sec-<id>` Secret, and `pc-flow-job-<id>` Job; spawns background log watcher thread (`_watch_flow_job`).</td>
+          </tr>
+          <tr>
+            <td><code>K8sChainRunnerUtils</code></td>
+            <td><code>K8sFlowRunnerUtils</code></td>
+            <td>Orchestrates linear `FlowChain` sequences: `k8s_create_or_update_chain()`, `k8s_run_chain()` (background thread `_execute_chain_worker` running steps sequentially and halting on failure when `stop_on_failure=True`).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="services-rag-cli">5. Database Connections, Settings, RAG &amp; CLI Classes</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Classes / Functions</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>utils/db_connection_service.py</code></td>
+            <td><code>DbConnectionService</code>, <code>TestResult</code></td>
+            <td>Validates connection forms, encrypts secrets via <code>CredentialVault</code>, tests connectivity, enforces read-only SQL, and executes queries via <code>connectorx.read_sql()</code>.</td>
+          </tr>
+          <tr>
+            <td><code>utils/credential_vault.py</code></td>
+            <td><code>CredentialVault</code></td>
+            <td>Fernet symmetric encryption wrapper for database credentials stored in SQLite.</td>
+          </tr>
+          <tr>
+            <td><code>utils/db_dialects.py</code></td>
+            <td><code>BaseDbDialect</code> (ABC), <code>DialectRegistry</code>, 7 concrete dialect subclasses</td>
+            <td>Dialect-specific URI builders, default ports, and read-only query validators for PostgreSQL, MySQL, MariaDB, MSSQL, Oracle, ClickHouse, and SQLite.</td>
+          </tr>
+          <tr>
+            <td><code>utils/app_settings.py</code> &amp; <code>utils/feature_gate.py</code></td>
+            <td><code>SettingsLoader</code>, <code>AppSettings</code>, <code>FeatureGate</code></td>
+            <td>Loads and validates <code>projectcompass.yaml</code> + <code>PC_*</code> env overrides; blocks disabled modules at request time.</td>
+          </tr>
+          <tr>
+            <td><code>utils/mithril_client.py</code></td>
+            <td><code>MithrilClient</code></td>
+            <td>HTTPX client for Mithril (`/api/generate`, `/api/chat`, `/api/embeddings`, `/api/rerank`, `/api/tags`).</td>
+          </tr>
+          <tr>
+            <td><code>utils/rag_store.py</code> &amp; <code>utils/chunker.py</code></td>
+            <td><code>RAGStore</code>, <code>chunk_analysis()</code>, <code>chunk_comments()</code></td>
+            <td>Wraps `scomp_link.llm.rag.RAGPipeline` with ChromaDB persistence, BM25 hybrid retrieval, and Mithril reranking.</td>
+          </tr>
+          <tr>
+            <td><code>utils/cli_utils.py</code></td>
+            <td><code>CompassAPIClient</code>, <code>CompassCLI</code></td>
+            <td>Object-oriented HTTP client and `argparse` command dispatcher powering `scripts/compass_cli.py`.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="page-pager">
+      <a href="architecture.html" class="pager-link">
+        <span class="pager-label">&larr; Previous</span>
+        <span class="pager-title">System Architecture &amp; Storage</span>
+      </a>
+      <a href="templates.html" class="pager-link" style="text-align: right;">
+        <span class="pager-label">Next &rarr;</span>
+        <span class="pager-title">Templates, Header Injection &amp; HTMX</span>
+      </a>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc" aria-label="On this page">
+    <div class="docs-toc-title">🧭 On This Page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <strong>ProjectCompass</strong> — <em>Organization Is Everything®</em> &bull; By
+      <a href="https://giacomosaccaggi.github.io/" target="_blank" rel="noopener">Giacomo Saccaggi</a>
+    </div>
+    <div class="footer-links">
+      <a href="../index.html">Hub</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="templates.html">Templates</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+    </div>
   </div>
+</footer>
 
-  <!-- ── Crypto helpers ── -->
-  <h2>Crypto Helpers <small style="font-size:.7em;color:#888">basefun.py</small></h2>
-  <div class="method-block">
-    <h4>encrypt_and_compress(text, key='key') → str</h4>
-    <p>XOR-encrypts the text with the key, compresses with zlib, and encodes with Base64. Used to protect sensitive configuration values.</p>
-  </div>
-  <div class="method-block">
-    <h4>decrypt_and_decompress(encrypted_string, key='key') → str</h4>
-    <p>Reverses the above: Base64 decode → zlib decompress → XOR decrypt.</p>
-  </div>
-
-  <!-- ── agent_utils ── -->
-  <h2>LLM Agent <small style="font-size:.7em;color:#888">utils/agent_utils.py + blueprints/agent.py</small></h2>
-  <p>Lazy-loaded module. Mithril is only initialised when the <code>/chat</code> route is used. The application starts and works fully without Mithril.</p>
-
-  <table class="attr-table">
-    <tr><th>Component</th><th>Description</th></tr>
-    <tr><td><code>safe_execute_pandas()</code></td><td>AST-validated execution. Parses the expression, walks the AST to block imports/open/exec/eval, then executes in a restricted namespace with only <code>main_df</code> and <code>pd</code> available.</td></tr>
-    <tr><td><code>_get_llm()</code></td><td>Lazy-loads Mithril connection. Returns <code>None</code> if Mithril is unavailable — the app gracefully handles this.</td></tr>
-    <tr><td><code>/chat</code> route</td><td>Web UI for asking natural language questions about datasets. LLM generates a pandas expression, which is safely executed.</td></tr>
-    <tr><td><code>/chat/ask</code> API</td><td>JSON endpoint: accepts <code>{"question": ..., "dataset": ...}</code>, returns <code>{"answer": ..., "expression": ...}</code>.</td></tr>
-  </table>
-
-</main>
-<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="assets/docs.js"></script>
 </body>
 </html>

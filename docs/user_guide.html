@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>End-to-End User Guide — ProjectCompass Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body>
+
+<header class="top-nav">
+  <div class="top-nav-inner">
+    <a href="../index.html" class="brand-link">
+      <svg class="compass-mini" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="18" r="15.5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6"/>
+        <circle cx="18" cy="18" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M18 7 L18 24" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18 8 L26 22 L18 22 Z" fill="currentColor" fill-opacity="0.32" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M16.5 10.5 L11 22 L16.5 22 Z" fill="#fbbf24" fill-opacity="0.45" stroke="#fbbf24" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M10 24.5 L26 24.5 L23.5 27.5 L12.5 27.5 Z" fill="currentColor" fill-opacity="0.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+      <span>ProjectCompass</span>
+      <span class="brand-tag">⛵ Regatta Docs</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary Documentation Navigation">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="user_guide.html" class="active">User Guide</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="core_classes.html">Core Classes</a>
+      <a href="templates.html">Templates</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle-btn">
+        <span aria-hidden="true">⛵</span> <span>Day Sail</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb">
+      <a href="../index.html">⛵ Command Deck</a>
+      <span>/</span>
+      <span>Pillar I: Hoisting Sail &amp; First Tack</span>
+      <span>/</span>
+      <span>End-to-End User Guide</span>
+    </div>
+    <h1>End-to-End User Guide (Skipper's Manual)</h1>
+    <p class="lead">
+      Practical, step-by-step seamanship for every workflow in ProjectCompass: cataloging analyses, writing executable Structured Analyses, rigging visual <code>scomp-link</code> ML pipelines, querying local/remote databases, and chatting with per-analysis RAG.
+    </p>
+    <div class="page-meta-badges">
+      <span class="badge badge-emerald">02 • Skipper's Manual</span>
+      <span class="badge badge-cyan">Catalog &amp; Pipelines</span>
+      <span class="badge badge-gold">SQL + RAWGraphs + RAG</span>
+    </div>
+  </div>
+</section>
+
+<div class="docs-layout">
+  <main class="docs-content">
+
+    <h2 id="first-login-and-setup">1. First-Time Setup &amp; Navigation</h2>
+    <p>
+      When you launch ProjectCompass (default <code>http://localhost:5002</code> in local dev or <code>http://localhost:5000</code> via Gunicorn/Docker), if no administrator account exists yet, the application automatically redirects to the <strong>Setup Wizard</strong> (<code>/setup</code>).
+    </p>
+    <ol>
+      <li>Create the initial <strong>Admin</strong> user and configure optional workspace defaults.</li>
+      <li>Once signed in, use the left sidebar (injected via <code>header.html</code>) to switch between:
+        <ul>
+          <li><strong>Overview / Dashboard (<code>/</code>)</strong> — KPI counters, recent executions, and product distribution charts.</li>
+          <li><strong>Analysis Catalog (<code>/analysis/</code>)</strong> — Search, filter, launch, rate, and manage all analyses.</li>
+          <li><strong>Pipeline Builder (<code>/pipeline_builder/</code>)</strong> — Compose and run <code>scomp-link</code> pipelines.</li>
+          <li><strong>Data Explorer (<code>/query_results/</code> &amp; <code>/connections</code>)</strong> — Run DuckDB or remote ConnectorX SQL queries.</li>
+          <li><strong>AI Chat (<code>/chat</code>)</strong> — Ask natural-language questions over datasets or per-analysis RAG indexes.</li>
+          <li><strong>Kubernetes Console (<code>/workers</code>, <code>/flows</code>, <code>/chains</code>, <code>/runs</code>)</strong> — Operate distributed k0s jobs.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h2 id="managing-analyses">2. Creating &amp; Managing Catalog Analyses</h2>
+    <p>
+      ProjectCompass stores every analysis inside its own subdirectory under <code>Analyses/&lt;Analysis Name&gt;/</code>, synchronized with the SQLite <code>AnalysisRecord</code> table and <code>analyses_fts</code> full-text index.
+      Navigate to <strong>Create Analysis</strong> (<code>/create_analysis/?new_analysis=True</code>) or <strong>Import</strong> (<code>/import/</code>) to register work in one of four modes:
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Analysis Mode</th>
+            <th>Required Files</th>
+            <th>How ProjectCompass Renders &amp; Executes It</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Static HTML / Report</strong></td>
+            <td>Any <code>.html</code> report or external dashboard URL</td>
+            <td>Served inside the iframe viewer (<code>/iframetemplate/</code>) with versioned history in <code>output_versions.yaml</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Jupyter Notebook (<code>.ipynb</code>)</strong></td>
+            <td><code>.ipynb</code> file uploaded via Create or Import</td>
+            <td>Automatically converted to standalone HTML via <code>nbconvert</code> and indexed for code/markdown RAG search.</td>
+          </tr>
+          <tr>
+            <td><strong>Structured Analysis</strong></td>
+            <td><code>structured_analysis_main.py</code> + <code>metadata_automatic_report.yaml</code></td>
+            <td>Generates a dynamic parameter form at <code>/investigations/</code>, executes in a background thread (or k0s Pod), and streams logs via SSE.</td>
+          </tr>
+          <tr>
+            <td><strong>Scomp-Link Pipeline</strong></td>
+            <td><code>pipeline_config.json</code> + generated <code>structured_analysis_main.py</code></td>
+            <td>Created visually in <code>/pipeline_builder/</code>; supports versioned snapshots (<code>PipelineVersion</code>) and one-click execution.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="structured-analysis-contract">Authoring a Structured Analysis</h3>
+    <p>
+      To make a Python analysis executable from the Web UI, API, or Scheduler, include two files inside its <code>analysis/</code> subfolder:
+    </p>
+    <ol>
+      <li><code>metadata_automatic_report.yaml</code> — Declares the form inputs shown to users.</li>
+      <li><code>structured_analysis_main.py</code> — Defines a <code>run(inputs: dict, output_path: str)</code> function (or executes directly as a script).</li>
+    </ol>
+
+    <pre><code class="language-yaml"># Analyses/Sales Performance Report/analysis/metadata_automatic_report.yaml
+region:
+  name: "Target Region"
+  description: "Geographic region to filter sales records"
+  type: "select"
+  options: ["All", "North", "South", "East", "West"]
+  default: "All"
+
+min_amount:
+  name: "Minimum Order Amount ($)"
+  description: "Exclude transactions below this threshold"
+  type: "number"
+  default: 100</code></pre>
+
+    <pre><code class="language-python"># Analyses/Sales Performance Report/analysis/structured_analysis_main.py
+from pathlib import Path
+import pandas as pd
+
+
+def run(inputs: dict, output_path: str) -> str:
+    """Execute parameterized analysis and write an HTML report to output_path."""
+    region = inputs.get("region", "All")
+    min_amount = float(inputs.get("min_amount", 100))
+
+    print(f"[SalesReport] Filtering region={region}, min_amount={min_amount}")
+    # Load data, compute KPIs, and write output HTML
+    out_file = Path(output_path) / "report.html"
+    out_file.write_text(f"&lt;h1&gt;Sales Report ({region})&lt;/h1&gt;&lt;p&gt;Threshold: ${min_amount}&lt;/p&gt;", encoding="utf-8")
+    return str(out_file)</code></pre>
+
+    <div class="callout callout-voyage">
+      <div class="callout-title">⚓ Voyage Tip — Automatic Documentation &amp; Dependency Extraction</div>
+      <p>
+        When you upload `.py` files into an analysis, <code>AnalysisUtils.upload_new_analysis()</code> automatically extracts imported third-party packages into <code>requirements.txt</code>, pulls SQL queries from docstrings into <code>sql_extractions/</code>, and generates API documentation via <code>pdoc</code>.
+      </p>
+    </div>
+
+    <h2 id="visual-pipeline-builder">3. Visual Pipeline Builder &amp; Scomp-Link</h2>
+    <p>
+      Open <strong>Pipeline Builder</strong> (<code>/pipeline_builder/</code>) to construct end-to-end machine learning and data processing pipelines using <a href="https://giacomosaccaggi.github.io/scomp_link/index.html" target="_blank" rel="noopener"><code>scomp-link</code></a> blocks.
+    </p>
+
+    <div class="mermaid-card">
+      <pre class="mermaid">
+flowchart LR
+  A["📥 DataLoaderBlock (CSV / SQL)"] --> B["🧹 Clean and Impute Block"]
+  B --> C["⚙️ FeatureEngineeringBlock"]
+  C --> D["🎯 ModelTrainerBlock (LightGBM / XGBoost / Sklearn)"]
+  D --> E["📊 ScompLinkHTMLReport (KPIs, Plots and Drift)"]
+      </pre>
+      <div class="mermaid-caption">
+        Figure 1 — Visual Scomp-Link pipelines compile directly to composable Python `&gt;&gt;` expressions and versioned `PipelineVersion` records.
+      </div>
+    </div>
+
+    <ul>
+      <li><strong>Visual Block Wiring &amp; Live Code Preview</strong> — Add blocks from the palette, configure hyperparameters in the inspector, and inspect the generated Python script (`pipeline = loader &gt;&gt; cleaner &gt;&gt; trainer &gt;&gt; evaluator`).</li>
+      <li><strong>Dry-Run Validation (<code>/api/pipeline/validate</code>)</strong> — Verify block compatibility and parameter schemas before saving.</li>
+      <li><strong>Version Control (<code>/pipeline_versions/&lt;name&gt;</code>)</strong> — Every save creates an immutable <code>PipelineVersion</code> snapshot. You can compare versions and restore any prior configuration with one click.</li>
+    </ul>
+
+    <h2 id="sql-data-explorer">4. Data Explorer: DuckDB, ConnectorX &amp; RAWGraphs</h2>
+    <p>
+      ProjectCompass provides a dual-engine SQL workbench at <code>/query_results/</code>:
+    </p>
+
+    <h3 id="local-duckdb-queries">Local CSV &amp; SQLite Queries (DuckDB)</h3>
+    <ol>
+      <li>Upload CSV/TSV files at <strong>Data Upload</strong> (<code>/data_upload/</code>) or drop <code>.csv</code> / <code>.sqlite</code> files into <code>Saved_data/</code>.</li>
+      <li>In <strong>SQL Runner</strong> (<code>/query_results/</code>), leave the connection selector on <strong>Local (DuckDB)</strong> and reference any file by its filename without extension:</li>
+    </ol>
+    <pre><code class="language-sql">-- Automatically rewritten by DataUtils.sql() to read_csv_auto('.../Saved_data/orders.csv') AS orders
+SELECT
+    region,
+    COUNT(*) AS total_orders,
+    ROUND(AVG(order_amount), 2) AS avg_order_value
+FROM orders
+WHERE status = 'COMPLETED'
+GROUP BY region
+ORDER BY total_orders DESC;</code></pre>
+
+    <h3 id="remote-connectorx-queries">Remote Database Connections (ConnectorX)</h3>
+    <ol>
+      <li>Navigate to <strong>Database Connections</strong> (<code>/connections</code>) and click <strong>New Connection</strong> (or declare preset connections in <code>projectcompass.yaml</code>).</li>
+      <li>Supported dialects: <code>postgresql</code>, <code>mysql</code>, <code>mariadb</code>, <code>mssql</code>, <code>oracle</code>, <code>clickhouse</code>, and <code>sqlite</code>.</li>
+      <li>Click <strong>Test Connection</strong> to verify connectivity and latency, then select the connection inside the SQL Runner or pass <code>"connection": "warehouse_ro"</code> to <code>POST /api/query</code>.</li>
+    </ol>
+
+    <div class="callout callout-helm">
+      <div class="callout-title">🛡️ Helm Control — Read-Only Enforcement &amp; Encrypted Vault</div>
+      <p>
+        All remote credentials are encrypted at rest via <code>CredentialVault</code> (Fernet AES-128-CBC + HMAC-SHA256 using <code>DB_CONNECTIONS_KEY</code>). Remote queries are strictly read-only (<code>SELECT</code> / <code>WITH</code> / <code>EXPLAIN</code>) and capped at <code>DB_CONNECTIONS_MAX_ROWS</code> (default <code>100,000</code> rows).
+      </p>
+    </div>
+
+    <h3 id="rawgraphs-visualization">Visualizing Results with RAWGraphs</h3>
+    <p>
+      From any query result in <code>/query_results/</code>:
+    </p>
+    <ul>
+      <li>Click <strong>Save as Temporary Table</strong> (<code>/tmp_table/</code>) to materialize the SQL result as a new CSV in <code>Saved_data/</code>.</li>
+      <li>Click <strong>Open in RAWGraphs</strong> (<code>/graph_analysis/</code>) to inject the result dataset directly into the embedded RAWGraphs charting canvas.</li>
+    </ul>
+
+    <h2 id="ai-chat-and-rag">5. AI Data Assistant &amp; Per-Analysis Hybrid RAG</h2>
+    <p>
+      ProjectCompass features two complementary AI modes powered by <strong>Mithril</strong>:
+    </p>
+
+    <h3 id="dataset-pandas-chat">Mode A: Sandboxed Dataset Q&amp;A (<code>/chat</code>)</h3>
+    <p>
+      Select any dataset from <code>Saved_data/</code> and ask a question in plain English (e.g., <em>"What is the 90th percentile of revenue by product category?"</em>). The agent generates a pandas expression, validates the AST to ensure zero unsafe calls, executes it against the DataFrame, and returns both the natural-language answer and the exact pandas snippet.
+    </p>
+
+    <h3 id="per-analysis-rag-chat">Mode B: Per-Analysis Hybrid RAG (<code>/chat/&lt;analysis_name&gt;</code>)</h3>
+    <p>
+      Every analysis in the catalog has its own dedicated knowledge base:
+    </p>
+    <ol>
+      <li>Click <strong>Build RAG Index</strong> on an analysis card (or call <code>POST /rag/index/&lt;name&gt;</code>).</li>
+      <li><code>utils/chunker.py</code> splits Python AST nodes, SQL statements, YAML keys, Markdown sections, and user comments into semantic chunks.</li>
+      <li><code>RAGStore</code> embeds the chunks into a per-analysis ChromaDB collection (<code>rag_data/</code>) and pairs vector similarity with BM25 keyword scoring and Mithril cross-encoder reranking.</li>
+      <li>Open <code>/chat/&lt;analysis_name&gt;</code> to ask deep architectural or analytical questions with cited source files and line numbers.</li>
+    </ol>
+
+    <h2 id="schedules-and-executions">6. Schedules, Execution History &amp; Webhooks</h2>
+    <ul>
+      <li><strong>Execution Console (<code>/executions/</code>)</strong> — Inspect every historical run across structured analyses, pipelines, and k0s flows, complete with status badges (<code>running</code>, <code>completed</code>, <code>failed</code>), duration, and live SSE log streaming.</li>
+      <li><strong>Cron Scheduler (<code>/schedules/</code>)</strong> — Attach standard 5-field cron expressions (e.g., <code>0 6 * * 1-5</code>) to either local analyses or Kubernetes flows/chains, and configure optional <code>webhook_url</code> notifications.</li>
+    </ul>
+
+    <div class="page-pager">
+      <a href="overview.html" class="pager-link">
+        <span class="pager-label">&larr; Previous</span>
+        <span class="pager-title">Platform Overview &amp; Ecosystem</span>
+      </a>
+      <a href="architecture.html" class="pager-link" style="text-align: right;">
+        <span class="pager-label">Next &rarr;</span>
+        <span class="pager-title">System Architecture &amp; Storage</span>
+      </a>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc" aria-label="On this page">
+    <div class="docs-toc-title">🧭 On This Page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <strong>ProjectCompass</strong> — <em>Organization Is Everything®</em> &bull; By
+      <a href="https://giacomosaccaggi.github.io/" target="_blank" rel="noopener">Giacomo Saccaggi</a>
+    </div>
+    <div class="footer-links">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="assets/docs.js"></script>
+</body>
+</html>

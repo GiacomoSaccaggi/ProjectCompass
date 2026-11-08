@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+    <div>
+      <h2 style="margin:0;font-size:1.65rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-code" style="color:#fbbf24;margin-right:8px;"></i>Python Flows on k0s</h2>
+      <p style="margin:4px 0 0;font-size:0.88rem;color:#cbd5e1;">
+        Author generic Python scripts (e.g., <code>print("hello world")</code>, cloud SDK calls, or data pipelines) stored in
+        <code>Analyses/&lt;name&gt;/</code>. Each run executes in an isolated Kubernetes Job on your k0s cluster.
+      </p>
+    </div>
+    <a href="/flows?new=1" class="w3-button w3-blue w3-small" style="border-radius:8px;">
+      <i class="fa fa-plus"></i> New Flow
+    </a>
+  </header>
+
+  {% if message %}
+  <div class="w3-container">
+    <div class="w3-panel w3-pale-green w3-leftbar w3-border-green w3-padding">
+      <i class="fa fa-check-circle"></i> {{ message }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div class="w3-container">
+    <div class="w3-panel w3-pale-red w3-leftbar w3-border-red w3-padding">
+      <i class="fa fa-exclamation-circle"></i> {{ error }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="w3-row-padding">
+    <!-- Left column: Flow list -->
+    <div class="w3-col l4 m12 w3-margin-bottom">
+      <div class="w3-card w3-white w3-padding">
+        <h6><b><i class="fa fa-folder-open-o"></i> Saved Flows ({{ flows|length }})</b></h6>
+        <ul class="w3-ul w3-hoverable">
+          {% for item in flows %}
+          <li class="{{ 'w3-pale-blue' if selected_flow and selected_flow.name == item.name else '' }}">
+            <a href="/flows/{{ item.name }}" style="text-decoration:none;display:block;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                <b>{{ item.name }}</b>
+                <span class="w3-tag w3-tiny w3-light-grey" style="flex-shrink:0;">{{ item.image }}</span>
+              </div>
+              <span class="w3-small w3-text-grey" style="display:block;line-height:1.4;">{{ item.description or 'Python flow' }}</span>
+            </a>
+          </li>
+          {% else %}
+          <li class="w3-text-grey w3-small">No flows saved yet. Create your first flow on the right.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      {% if recent_runs %}
+      <div class="w3-card w3-white w3-padding w3-margin-top">
+        <h6><b><i class="fa fa-history"></i> Recent Runs</b></h6>
+        <ul class="w3-ul w3-small">
+          {% for r in recent_runs %}
+          <li>
+            <a href="/runs/{{ r.id }}"><b>#{{ r.id }}</b> {{ r.analysis_name }}</a>
+            <span class="w3-right">
+              {% if r.status == 'running' %}
+              <span class="w3-badge w3-amber">running</span>
+              {% elif r.status == 'success' %}
+              <span class="w3-badge w3-green">success</span>
+              {% else %}
+              <span class="w3-badge w3-red">{{ r.status }}</span>
+              {% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right column: Flow Editor & Run Configuration -->
+    <div class="w3-col l8 m12">
+      <div class="w3-card w3-white w3-padding-large">
+        <h6>
+          <b>
+            {% if selected_flow %}
+              <i class="fa fa-edit"></i> Edit Flow: <code>{{ selected_flow.name }}</code>
+            {% else %}
+              <i class="fa fa-plus-circle"></i> Create New Flow
+            {% endif %}
+          </b>
+        </h6>
+
+        <form method="POST" action="{{ '/flows/' ~ selected_flow.name ~ '/save' if selected_flow else '/flows/new' }}">
+          <div class="w3-row-padding" style="margin:0 -16px;">
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Flow Name</b></label>
+              <input class="w3-input w3-border" type="text" name="name"
+                     value="{{ selected_flow.name if selected_flow else '' }}"
+                     placeholder="e.g. HelloWorld" required>
+            </div>
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Base Container Image</b></label>
+              <input class="w3-input w3-border" type="text" name="image"
+                     value="{{ selected_flow.image if selected_flow else default_image }}"
+                     placeholder="python:3.11-slim">
+            </div>
+          </div>
+
+          <div class="w3-margin-bottom">
+            <label class="w3-small"><b>Description</b></label>
+            <input class="w3-input w3-border" type="text" name="description"
+                   value="{{ selected_flow.description if selected_flow else '' }}"
+                   placeholder="Short description of what this Python script does">
+          </div>
+
+          <div class="w3-margin-bottom">
+            <label class="w3-small"><b>Python Code (<code>flow.py</code>)</b></label>
+            <textarea class="w3-input w3-border" name="code" rows="12"
+                      style="font-family:monospace;font-size:13px;background:#1e293b;color:#f8fafc;"
+                      required>{{ selected_flow.code if selected_flow else 'print("hello world")\n' }}</textarea>
+          </div>
+
+          <div class="w3-row-padding" style="margin:0 -16px;">
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Default Parameters (JSON or <code>KEY=VALUE</code>)</b></label>
+              <textarea class="w3-input w3-border" name="parameters" rows="4"
+                        style="font-family:monospace;font-size:12px;"
+                        placeholder='{"env": "dev"}'
+              >{{ selected_flow.parameters_json if selected_flow else '{}' }}</textarea>
+            </div>
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Python Dependencies (<code>pip</code> packages, one per line)</b></label>
+              <textarea class="w3-input w3-border" name="pip_requirements" rows="4"
+                        style="font-family:monospace;font-size:12px;"
+                        placeholder="requests==2.31.0&#10;boto3"
+              >{{ selected_flow.pip_requirements_text if selected_flow else '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="w3-margin-bottom">
+            <label class="w3-small">
+              <b>Cluster Secret References (comma-separated Kubernetes <code>Secret</code> names mounted via <code>envFrom</code>)</b>
+            </label>
+            <input class="w3-input w3-border" type="text" name="secret_refs"
+                   value="{{ selected_flow.secret_refs_text if selected_flow else '' }}"
+                   placeholder="e.g. db-credentials, storage-credentials">
+          </div>
+
+          <div class="w3-margin-bottom">
+            <label class="w3-small">
+              <b>Credentials / Environment Variables (<code>KEY=VALUE</code> per line — injected via K8s Secret at runtime)</b>
+            </label>
+            <textarea class="w3-input w3-border" name="env_vars" rows="3"
+                      style="font-family:monospace;font-size:12px;"
+                      placeholder="AWS_ACCESS_KEY_ID=...&#10;API_TOKEN=..."
+            ></textarea>
+            {% if selected_flow and selected_flow.env_keys %}
+            <span class="w3-tiny w3-text-grey">
+              Configured credential keys: <code>{{ selected_flow.env_keys|join(', ') }}</code>
+            </span>
+            {% endif %}
+          </div>
+
+          <div class="w3-margin-bottom">
+            <label class="w3-small"><b>Version Note (optional)</b></label>
+            <input class="w3-input w3-border" type="text" name="version_message"
+                   placeholder="e.g. Updated query filter or added retry logic">
+          </div>
+
+          <div class="w3-bar">
+            <button type="submit" class="w3-button w3-green">
+              <i class="fa fa-save"></i> Save Flow
+            </button>
+          </div>
+        </form>
+
+        {% if inspected_version and selected_flow %}
+        <div class="w3-panel w3-pale-blue w3-leftbar w3-border-blue w3-padding w3-margin-top">
+          <div class="w3-bar">
+            <b>
+              <i class="fa fa-eye"></i> Inspecting Snapshot <code>v{{ inspected_version.version_num }}</code>
+              ({{ inspected_version.created_at.strftime('%Y-%m-%d %H:%M:%S') if inspected_version.created_at else '-' }}
+              by {{ inspected_version.username }})
+            </b>
+            <form method="POST" action="/flows/{{ selected_flow.name }}/versions/{{ inspected_version.version_num }}/restore"
+                  style="display:inline;" class="w3-right">
+              <button type="submit" class="w3-button w3-tiny w3-blue">
+                <i class="fa fa-undo"></i> Restore v{{ inspected_version.version_num }}
+              </button>
+            </form>
+          </div>
+          {% if inspected_version.message %}
+          <p class="w3-small w3-text-grey" style="margin:4px 0;">Note: {{ inspected_version.message }}</p>
+          {% endif %}
+          <pre class="w3-code w3-small" style="background:#0f172a;color:#e2e8f0;overflow-x:auto;">{{ inspected_version.code }}</pre>
+        </div>
+        {% endif %}
+
+        {% if selected_flow %}
+        <hr>
+        <h6><b><i class="fa fa-play-circle"></i> Run Flow on k0s Cluster: <code>{{ selected_flow.name }}</code></b></h6>
+        <form method="POST" action="/flows/{{ selected_flow.name }}/run">
+          <div class="w3-row-padding" style="margin:0 -16px;">
+            <div class="w3-third w3-margin-bottom">
+              <label class="w3-small"><b>Run Parameters Override</b></label>
+              <textarea class="w3-input w3-border" name="parameters" rows="3"
+                        style="font-family:monospace;font-size:12px;">{{ selected_flow.parameters_json }}</textarea>
+            </div>
+            <div class="w3-third w3-margin-bottom">
+              <label class="w3-small"><b>Run <code>pip</code> Packages Override</b></label>
+              <textarea class="w3-input w3-border" name="pip_requirements" rows="3"
+                        style="font-family:monospace;font-size:12px;">{{ selected_flow.pip_requirements_text }}</textarea>
+            </div>
+            <div class="w3-third w3-margin-bottom">
+              <label class="w3-small"><b>Run Secret Credentials (<code>KEY=VALUE</code>)</b></label>
+              <textarea class="w3-input w3-border" name="env_vars" rows="3"
+                        style="font-family:monospace;font-size:12px;"
+                        placeholder="SECRET_KEY=..."></textarea>
+            </div>
+          </div>
+          <div class="w3-row-padding" style="margin:0 -16px;">
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Cluster Secret References Override (optional)</b></label>
+              <input class="w3-input w3-border" type="text" name="secret_refs"
+                     value="{{ selected_flow.secret_refs_text }}">
+            </div>
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Container Image Override (optional)</b></label>
+              <input class="w3-input w3-border" type="text" name="image" value="{{ selected_flow.image }}">
+            </div>
+          </div>
+          <button type="submit" class="w3-button w3-indigo">
+            <i class="fa fa-rocket"></i> Run as Kubernetes Job
+          </button>
+        </form>
+
+        <hr>
+        <h6>
+          <b><i class="fa fa-code-fork"></i> Version History ({{ selected_flow.versions|length if selected_flow.versions else 0 }})</b>
+        </h6>
+        {% if selected_flow.versions %}
+        <div class="w3-responsive">
+          <table class="w3-table w3-bordered w3-striped w3-small">
+            <thead>
+              <tr class="w3-light-grey">
+                <th>Version</th>
+                <th>Author</th>
+                <th>Saved At</th>
+                <th>Message</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ver in selected_flow.versions %}
+              <tr>
+                <td><span class="w3-tag w3-round w3-blue-grey">v{{ ver.version_num }}</span></td>
+                <td>{{ ver.username }}</td>
+                <td>{{ ver.created_at.strftime('%Y-%m-%d %H:%M:%S') if ver.created_at else '-' }}</td>
+                <td>{{ ver.message }}</td>
+                <td>
+                  <a href="/flows/{{ selected_flow.name }}/versions/{{ ver.version_num }}"
+                     class="w3-button w3-tiny w3-light-grey">
+                    <i class="fa fa-eye"></i> View
+                  </a>
+                  <form method="POST" action="/flows/{{ selected_flow.name }}/versions/{{ ver.version_num }}/restore"
+                        style="display:inline;">
+                    <button type="submit" class="w3-button w3-tiny w3-amber">
+                      <i class="fa fa-undo"></i> Restore
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="w3-small w3-text-grey">No version snapshots recorded yet.</p>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

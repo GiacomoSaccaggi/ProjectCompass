@@ -2,19 +2,27 @@
 
 # Import Pkg
 import datetime
+import json
 import os
 import re
 import shutil
+from typing import Any
 
 import yaml
 
+from utils.git_utils import GitSyncUtils
 
-class AnalysisUtils:
-    def __init__(self, dir_path, **kwargs):
+
+class AnalysisUtils(GitSyncUtils):
+    def __init__(self, dir_path, data_dir=None, **kwargs):
+        base_data = data_dir or dir_path
+        if not base_data.endswith('/'):
+            base_data = base_data + '/'
+        self.data_dir = base_data
         self.analysis_folder = 'Analyses'
-        self.save_folder_path = f'{dir_path}{self.analysis_folder}'
+        self.save_folder_path = f'{base_data}{self.analysis_folder}'
         os.makedirs(self.save_folder_path, exist_ok=True)
-        super().__init__(dir_path=dir_path, **kwargs)
+        super().__init__(dir_path=dir_path, data_dir=base_data, **kwargs)
 
     def extract_main_folder(self):
         return self.save_folder_path
@@ -291,6 +299,11 @@ class AnalysisUtils:
                     with open(f"{self.save_folder_path}/{title}/sql_extractions/query{n}.sql", 'w') as f:
                         f.write(final_query)
             self.produce_readme()
+            if self._is_git_sync_on_save_enabled():
+                self.git_commit_and_push(
+                    target_dir=self.save_folder_path,
+                    message=f"Add analysis {title}",
+                )
         except Exception as e:
             error += str(e)
             pass
@@ -361,7 +374,469 @@ class AnalysisUtils:
                         f"{self.save_folder_path}/{title}/physical_output/main/{file_name}")
             except Exception:
                 pass
+            if self._is_git_sync_on_save_enabled():
+                self.git_commit_and_push(
+                    target_dir=self.save_folder_path,
+                    message=f"Update analysis {title}",
+                )
         except Exception as e:
             error += str(e)
             pass
         return error
+
+    @staticmethod
+    def parse_flow_parameters(raw_params: str | dict[str, Any] | None) -> dict[str, Any]:
+        """Parse flow parameters from a dict, JSON string, or KEY=VALUE lines."""
+        if raw_params is None:
+            return {}
+        if isinstance(raw_params, dict):
+            return dict(raw_params)
+        text = str(raw_params).strip()
+        if not text:
+            return {}
+        if text.startswith("{"):
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, dict):
+                    return parsed
+            except ValueError:
+                pass
+        result: dict[str, Any] = {}
+        for chunk in re.split(r"[\r\n;]+", text):
+            line = chunk.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, val = line.split("=", 1)
+                k = key.strip()
+                if ":" in k:
+                    k = k.split(":", 1)[0].strip()
+                v_str = val.strip()
+                if k:
+                    result[k] = v_str
+        return result
+
+    @staticmethod
+    def parse_pip_requirements(raw_reqs: str | list[str] | None) -> list[str]:
+        """Parse pip package requirements from a list or newline/comma-separated string."""
+        if raw_reqs is None:
+            return []
+        if isinstance(raw_reqs, list):
+            return [str(pkg).strip() for pkg in raw_reqs if str(pkg).strip() and not str(pkg).strip().startswith("#")]
+        text = str(raw_reqs).strip()
+        if not text:
+            return []
+        packages: list[str] = []
+        for token in re.split(r"[\r\n,]+", text):
+            cleaned = token.strip()
+            if cleaned and not cleaned.startswith("#"):
+                packages.append(cleaned)
+        return packages
+
+    @staticmethod
+    def parse_env_vars(raw_env: str | dict[str, str] | None) -> dict[str, str]:
+        """Parse environment variable / credential key-values from dict, JSON, or KEY=VALUE lines."""
+        if raw_env is None:
+            return {}
+        if isinstance(raw_env, dict):
+            return {str(k).strip(): str(v) for k, v in raw_env.items() if str(k).strip()}
+        text = str(raw_env).strip()
+        if not text:
+            return {}
+        if text.startswith("{"):
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, dict):
+                    return {str(k).strip(): str(v) for k, v in parsed.items() if str(k).strip()}
+            except ValueError:
+                pass
+        env_map: dict[str, str] = {}
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, val = stripped.split("=", 1)
+            k = key.strip()
+            if k:
+                env_map[k] = val.strip()
+        return env_map
+
+    @staticmethod
+    def parse_secret_refs(raw_refs: str | list[str] | None) -> list[str]:
+        """Parse pre-existing Kubernetes Secret names from a list or comma/newline-separated string."""
+        if raw_refs is None:
+            return []
+        items: list[str]
+        if isinstance(raw_refs, list):
+            items = [str(item).strip() for item in raw_refs]
+        else:
+            items = [token.strip() for token in re.split(r"[\r\n,]+", str(raw_refs))]
+        seen: set[str] = set()
+        result: list[str] = []
+        for item in items:
+            if item and not item.startswith("#") and item not in seen:
+                seen.add(item)
+                result.append(item)
+        return result
+
+    def _validate_flow_name(self, name: str) -> str:
+        """Sanitize and validate a flow folder name inside Analyses/."""
+        cleaned = (name or "").strip()
+        if not cleaned or "/" in cleaned or "\\" in cleaned or ".." in cleaned or cleaned.startswith("."):
+            raise ValueError(f"Invalid flow name: {name!r}")
+        return cleaned
+
+    def save_flow(
+        self,
+        name: str,
+        code: str,
+        description: str = "",
+        parameters: str | dict[str, Any] | None = None,
+        pip_requirements: str | list[str] | None = None,
+        env_vars: str | dict[str, str] | None = None,
+        secret_refs: str | list[str] | None = None,
+        image: str = "",
+        owner: str = "flow-author",
+        user_id: int | None = None,
+        version_message: str = "",
+    ) -> dict[str, Any]:
+        """Create or update a generic Python Flow inside Analyses/<name>/ and record a FlowVersion."""
+        flow_name = self._validate_flow_name(name)
+        flow_dir = os.path.join(self.save_folder_path, flow_name)
+        analysis_subdir = os.path.join(flow_dir, "analysis")
+        phys_main_dir = os.path.join(flow_dir, "physical_output", "main")
+        sql_dir = os.path.join(flow_dir, "sql_extractions")
+
+        os.makedirs(analysis_subdir, exist_ok=True)
+        os.makedirs(phys_main_dir, exist_ok=True)
+        os.makedirs(sql_dir, exist_ok=True)
+
+        existing_cfg: dict[str, Any] = {}
+        flow_cfg_path = os.path.join(flow_dir, "flow_config.yaml")
+        if os.path.isfile(flow_cfg_path):
+            try:
+                with open(flow_cfg_path, encoding="utf-8") as f_existing:
+                    existing_cfg = yaml.safe_load(f_existing) or {}
+            except (OSError, yaml.YAMLError):
+                existing_cfg = {}
+
+        parsed_params = self.parse_flow_parameters(parameters)
+        parsed_reqs = self.parse_pip_requirements(pip_requirements)
+        parsed_env = self.parse_env_vars(env_vars)
+        if secret_refs is None and "secret_refs" in existing_cfg:
+            parsed_secret_refs = self.parse_secret_refs(existing_cfg.get("secret_refs"))
+        else:
+            parsed_secret_refs = self.parse_secret_refs(secret_refs)
+        resolved_env_keys = (
+            sorted(parsed_env.keys())
+            if parsed_env
+            else list(existing_cfg.get("env_keys") or [])
+        )
+        resolved_image = (image or "").strip() or os.environ.get("K8S_DEFAULT_IMAGE", "python:3.11-slim")
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+
+        script_body = code if code.endswith("\n") else f"{code}\n"
+        flow_py_path = os.path.join(flow_dir, "flow.py")
+        with open(flow_py_path, "w", encoding="utf-8") as f_py:
+            f_py.write(script_body)
+
+        flow_cfg = {
+            "name": flow_name,
+            "description": description or "Generic Python flow executed on k0s",
+            "parameters": parsed_params,
+            "pip_requirements": parsed_reqs,
+            "env_keys": resolved_env_keys,
+            "secret_refs": parsed_secret_refs,
+            "image": resolved_image,
+            "owner": owner,
+            "updated_at": datetime.datetime.utcnow().isoformat(),
+        }
+        with open(flow_cfg_path, "w", encoding="utf-8") as f_cfg:
+            yaml.safe_dump(flow_cfg, f_cfg, sort_keys=False)
+
+        req_path = os.path.join(flow_dir, "requirements.txt")
+        with open(req_path, "w", encoding="utf-8") as f_req:
+            for pkg in parsed_reqs:
+                f_req.write(f"{pkg}\n")
+
+        inputs_meta = {
+            str(k): {"default": str(v), "type": "str"}
+            for k, v in parsed_params.items()
+        }
+        metadata_payload = {
+            "title": flow_name,
+            "start_date": today_str,
+            "description": description or "Generic Python flow executed on k0s",
+            "owner": owner,
+            "collaborators": "",
+            "product": "k0s Flow",
+            "countries": "All",
+            "inputs": inputs_meta,
+            "links": {},
+            "gitlab": "",
+            "gdrive": "",
+            "dashboard link": "",
+            "output_type": "log",
+            "output description": "Standard output/error logs captured per Kubernetes Job run",
+        }
+        with open(os.path.join(flow_dir, "metadata.yaml"), "w", encoding="utf-8") as f_meta:
+            yaml.safe_dump(metadata_payload, f_meta, sort_keys=False)
+
+        versions_path = os.path.join(flow_dir, "output_versions.yaml")
+        if not os.path.exists(versions_path):
+            with open(versions_path, "w", encoding="utf-8") as f_ver:
+                f_ver.write('main version: ""\n')
+
+        auto_meta_path = os.path.join(analysis_subdir, "metadata_automatic_report.yaml")
+        with open(auto_meta_path, "w", encoding="utf-8") as f_auto:
+            yaml.safe_dump({"flow": flow_name, "image": resolved_image}, f_auto, sort_keys=False)
+
+        shim_path = os.path.join(analysis_subdir, "structured_analysis_main.py")
+        shim_code = (
+            '"""Backwards-compatible analysis wrapper delegating to ../flow.py."""\n'
+            "import os\n"
+            "import runpy\n\n"
+            "FLOW_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'flow.py'))\n"
+            "if __name__ == '__main__' and os.path.exists(FLOW_PATH):\n"
+            "    runpy.run_path(FLOW_PATH, run_name='__main__')\n"
+        )
+        with open(shim_path, "w", encoding="utf-8") as f_shim:
+            f_shim.write(shim_code)
+
+        self._record_flow_version(
+            flow_name=flow_name,
+            code=script_body,
+            flow_cfg=flow_cfg,
+            user_id=user_id,
+            message=version_message,
+        )
+
+        if self._is_git_sync_on_save_enabled():
+            self.git_commit_and_push(
+                target_dir=self.save_folder_path,
+                message=version_message or f"Save flow {flow_name}",
+            )
+
+        return self.read_flow(flow_name) or flow_cfg
+
+    def _record_flow_version(
+        self,
+        flow_name: str,
+        code: str,
+        flow_cfg: dict[str, Any],
+        user_id: int | None = None,
+        message: str = "",
+    ) -> int | None:
+        """Persist an auto-incrementing FlowVersion snapshot in SQLite when an app context is active."""
+        from flask import has_app_context
+
+        if not has_app_context():
+            return None
+
+        from models import FlowVersion, db
+
+        try:
+            max_ver = (
+                db.session.query(db.func.max(FlowVersion.version_num))
+                .filter_by(flow_name=flow_name)
+                .scalar()
+                or 0
+            )
+            next_ver = int(max_ver) + 1
+            snap = FlowVersion(
+                flow_name=flow_name,
+                version_num=next_ver,
+                code=code,
+                config_json=json.dumps(flow_cfg),
+                user_id=user_id,
+                message=(message or "").strip() or f"Version {next_ver}",
+            )
+            db.session.add(snap)
+            db.session.commit()
+            return next_ver
+        except Exception:
+            db.session.rollback()
+            return None
+
+    def read_flow_versions(self, name: str) -> list[dict[str, Any]]:
+        """Return all version snapshots for a flow ordered by version_num descending."""
+        try:
+            flow_name = self._validate_flow_name(name)
+        except ValueError:
+            return []
+
+        from flask import has_app_context
+
+        if not has_app_context():
+            return []
+
+        from models import FlowVersion, User, db
+
+        try:
+            rows = (
+                FlowVersion.query.filter_by(flow_name=flow_name)
+                .order_by(FlowVersion.version_num.desc())
+                .all()
+            )
+        except Exception:
+            db.session.rollback()
+            return []
+
+        versions: list[dict[str, Any]] = []
+        for row in rows:
+            cfg_dict: dict[str, Any] = {}
+            if row.config_json:
+                try:
+                    parsed = json.loads(row.config_json)
+                    if isinstance(parsed, dict):
+                        cfg_dict = parsed
+                except ValueError:
+                    cfg_dict = {}
+            user_obj = db.session.get(User, row.user_id) if row.user_id else None
+            username = user_obj.username if user_obj else str(cfg_dict.get("owner") or "flow-author")
+            versions.append(
+                {
+                    "id": row.id,
+                    "flow_name": row.flow_name,
+                    "version_num": row.version_num,
+                    "code": row.code,
+                    "config_json": row.config_json,
+                    "config": cfg_dict,
+                    "user_id": row.user_id,
+                    "username": username,
+                    "created_at": row.created_at,
+                    "message": row.message or "",
+                }
+            )
+        return versions
+
+    def restore_flow_version(
+        self,
+        name: str,
+        version_num: int,
+        user_id: int | None = None,
+    ) -> dict[str, Any]:
+        """Non-destructively restore a Flow to a previous version snapshot (creating a new version)."""
+        flow_name = self._validate_flow_name(name)
+        from models import FlowVersion
+
+        target = FlowVersion.query.filter_by(flow_name=flow_name, version_num=int(version_num)).first()
+        if target is None:
+            raise ValueError(f"Version {version_num} for flow '{flow_name}' not found.")
+
+        cfg: dict[str, Any] = {}
+        if target.config_json:
+            try:
+                parsed = json.loads(target.config_json)
+                if isinstance(parsed, dict):
+                    cfg = parsed
+            except ValueError:
+                cfg = {}
+
+        return self.save_flow(
+            name=flow_name,
+            code=target.code,
+            description=str(cfg.get("description") or ""),
+            parameters=cfg.get("parameters") or {},
+            pip_requirements=cfg.get("pip_requirements") or [],
+            secret_refs=cfg.get("secret_refs") or [],
+            image=str(cfg.get("image") or ""),
+            owner=str(cfg.get("owner") or "flow-author"),
+            user_id=user_id,
+            version_message=f"Restored from version {version_num}",
+        )
+
+    def read_flow(self, name: str) -> dict[str, Any] | None:
+        """Read a Flow definition from Analyses/<name>/."""
+        try:
+            flow_name = self._validate_flow_name(name)
+        except ValueError:
+            return None
+
+        flow_dir = os.path.join(self.save_folder_path, flow_name)
+        if not os.path.isdir(flow_dir):
+            return None
+
+        flow_py_path = os.path.join(flow_dir, "flow.py")
+        legacy_py_path = os.path.join(flow_dir, "analysis", "structured_analysis_main.py")
+        flow_cfg_path = os.path.join(flow_dir, "flow_config.yaml")
+        metadata_path = os.path.join(flow_dir, "metadata.yaml")
+
+        code = ""
+        if os.path.isfile(flow_py_path):
+            with open(flow_py_path, encoding="utf-8") as f_py:
+                code = f_py.read()
+        elif os.path.isfile(legacy_py_path):
+            with open(legacy_py_path, encoding="utf-8") as f_leg:
+                code = f_leg.read()
+
+        cfg: dict[str, Any] = {}
+        if os.path.isfile(flow_cfg_path):
+            with open(flow_cfg_path, encoding="utf-8") as f_cfg:
+                try:
+                    cfg = yaml.safe_load(f_cfg) or {}
+                except yaml.YAMLError:
+                    cfg = {}
+
+        meta: dict[str, Any] = {}
+        if os.path.isfile(metadata_path):
+            with open(metadata_path, encoding="utf-8") as f_meta:
+                try:
+                    meta = yaml.safe_load(f_meta) or {}
+                except yaml.YAMLError:
+                    meta = {}
+
+        params: dict[str, Any] = cfg.get("parameters") or {}
+        if not params and isinstance(meta.get("inputs"), dict):
+            params = {
+                str(k): (v.get("default", "") if isinstance(v, dict) else str(v))
+                for k, v in meta["inputs"].items()
+            }
+
+        pip_reqs: list[str] = cfg.get("pip_requirements") or []
+        req_file = os.path.join(flow_dir, "requirements.txt")
+        if not pip_reqs and os.path.isfile(req_file):
+            with open(req_file, encoding="utf-8") as f_req:
+                pip_reqs = self.parse_pip_requirements(f_req.read())
+
+        default_image = os.environ.get("K8S_DEFAULT_IMAGE", "python:3.11-slim")
+        last_mod = datetime.datetime.fromtimestamp(os.path.getmtime(flow_dir)).strftime("%Y-%m-%d %H:%M")
+        secret_refs = self.parse_secret_refs(cfg.get("secret_refs"))
+        versions = self.read_flow_versions(flow_name)
+        latest_version_num = versions[0]["version_num"] if versions else 1
+
+        return {
+            "name": flow_name,
+            "description": str(cfg.get("description") or meta.get("description") or "").strip(),
+            "code": code,
+            "parameters": params,
+            "parameters_json": json.dumps(params, indent=2),
+            "pip_requirements": pip_reqs,
+            "pip_requirements_text": "\n".join(pip_reqs),
+            "env_keys": cfg.get("env_keys") or [],
+            "secret_refs": secret_refs,
+            "secret_refs_text": ", ".join(secret_refs),
+            "image": str(cfg.get("image") or default_image),
+            "owner": str(cfg.get("owner") or meta.get("owner") or ""),
+            "version_num": latest_version_num,
+            "versions": versions,
+            "has_flow_py": os.path.isfile(flow_py_path),
+            "last_modified": last_mod,
+            "folder": flow_dir,
+        }
+
+    def list_flows(self) -> list[dict[str, Any]]:
+        """Return all Flows available in the Analyses/ directory."""
+        if not os.path.isdir(self.save_folder_path):
+            return []
+        flows: list[dict[str, Any]] = []
+        for entry in sorted(os.listdir(self.save_folder_path)):
+            if "." in entry or "~" in entry:
+                continue
+            full_path = os.path.join(self.save_folder_path, entry)
+            if not os.path.isdir(full_path):
+                continue
+            flow_data = self.read_flow(entry)
+            if flow_data is not None:
+                flows.append(flow_data)
+        return flows

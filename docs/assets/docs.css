@@ -1,0 +1,1267 @@
+/* ============================================================================
+ * ProjectCompass — Mariner & Sailboat Command Deck ("Barca a Vela") Theme
+ * Shared stylesheet for index.html and docs/*.html
+ * Inspired by giacomosaccaggi.github.io (Mithril, Celebrimbot, Scomp-Link)
+ * ============================================================================ */
+
+:root,
+[data-theme="dark"] {
+  --bg-primary: #060d1a;
+  --bg-secondary: #0b1629;
+  --bg-elevated: rgba(13, 24, 44, 0.86);
+  --bg-card: rgba(14, 25, 47, 0.82);
+  --bg-card-hover: rgba(20, 36, 66, 0.95);
+  --bg-code: #050912;
+  --bg-inline-code: rgba(56, 189, 248, 0.13);
+  --bg-nav: rgba(6, 13, 26, 0.9);
+  --bg-table-head: rgba(24, 39, 68, 0.9);
+  --bg-table-row-alt: rgba(14, 25, 47, 0.48);
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-code: #7dd3fc;
+
+  --accent-cyan: #38bdf8;
+  --accent-cyan-glow: rgba(56, 189, 248, 0.25);
+  --accent-gold: #fbbf24;
+  --accent-gold-glow: rgba(251, 191, 36, 0.22);
+  --accent-teal: #2dd4bf;
+  --accent-emerald: #34d399;
+  --accent-purple: #a78bfa;
+  --accent-crimson: #f87171;
+  --accent-indigo: #818cf8;
+
+  --border-subtle: rgba(148, 163, 184, 0.16);
+  --border-strong: rgba(56, 189, 248, 0.42);
+  --border-gold: rgba(251, 191, 36, 0.44);
+
+  --shadow-card: 0 12px 32px -10px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 28px rgba(56, 189, 248, 0.18);
+
+  --wave-back: rgba(45, 212, 191, 0.14);
+  --wave-mid: rgba(56, 189, 248, 0.22);
+  --wave-front: #060d1a;
+
+  --hero-gradient: radial-gradient(circle at 18% 22%, rgba(56, 189, 248, 0.18) 0%, transparent 46%),
+                   radial-gradient(circle at 82% 18%, rgba(251, 191, 36, 0.14) 0%, transparent 42%),
+                   radial-gradient(circle at 60% 80%, rgba(45, 212, 191, 0.10) 0%, transparent 45%),
+                   linear-gradient(180deg, #040914 0%, #0b1930 65%, #0e2240 100%);
+  --chart-graticule:
+    linear-gradient(to right, rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+    radial-gradient(rgba(251, 191, 36, 0.12) 1px, transparent 1px);
+}
+
+[data-theme="light"] {
+  --bg-primary: #fbf9f4;
+  --bg-secondary: #f2ede2;
+  --bg-elevated: rgba(255, 255, 255, 0.94);
+  --bg-card: rgba(255, 253, 248, 0.95);
+  --bg-card-hover: #ffffff;
+  --bg-code: #0f172a;
+  --bg-inline-code: rgba(2, 132, 199, 0.11);
+  --bg-nav: rgba(251, 249, 244, 0.92);
+  --bg-table-head: #e6dfd1;
+  --bg-table-row-alt: #f6f2e9;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-code: #0369a1;
+
+  --accent-cyan: #0284c7;
+  --accent-cyan-glow: rgba(2, 132, 199, 0.18);
+  --accent-gold: #b45309;
+  --accent-gold-glow: rgba(180, 83, 9, 0.16);
+  --accent-teal: #0d9488;
+  --accent-emerald: #059669;
+  --accent-purple: #7c3aed;
+  --accent-crimson: #dc2626;
+  --accent-indigo: #4f46e5;
+
+  --border-subtle: rgba(15, 23, 42, 0.13);
+  --border-strong: rgba(2, 132, 199, 0.42);
+  --border-gold: rgba(180, 83, 9, 0.4);
+
+  --shadow-card: 0 8px 24px -6px rgba(15, 23, 42, 0.09);
+  --shadow-glow: 0 4px 20px rgba(2, 132, 199, 0.14);
+
+  --wave-back: rgba(13, 148, 136, 0.14);
+  --wave-mid: rgba(2, 132, 199, 0.18);
+  --wave-front: #fbf9f4;
+
+  --hero-gradient: radial-gradient(circle at 18% 20%, rgba(2, 132, 199, 0.12) 0%, transparent 45%),
+                   radial-gradient(circle at 82% 15%, rgba(217, 119, 6, 0.11) 0%, transparent 40%),
+                   linear-gradient(180deg, #f5f0e4 0%, #e4eef7 100%);
+  --chart-graticule:
+    linear-gradient(to right, rgba(2, 132, 199, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(2, 132, 199, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(180, 83, 9, 0.1) 1px, transparent 1px);
+}
+
+/* ── Reset & Base Typography ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background-color: var(--bg-primary);
+  background-image: var(--chart-graticule);
+  background-size: 64px 64px, 64px 64px, 32px 32px;
+  color: var(--text-primary);
+  line-height: 1.68;
+  font-size: 16px;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5 {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+  margin-top: 2.2rem;
+  margin-bottom: 0.85rem;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 3.2vw, 2.65rem);
+  margin-top: 0;
+}
+
+h2 {
+  font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+h3 {
+  font-size: 1.22rem;
+  color: var(--accent-cyan);
+}
+
+h4 {
+  font-size: 1.04rem;
+  color: var(--text-primary);
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+ul, ol {
+  margin-top: 0;
+  margin-bottom: 1.15rem;
+  padding-left: 1.4rem;
+  color: var(--text-secondary);
+}
+
+li {
+  margin-bottom: 0.4rem;
+}
+
+li strong {
+  color: var(--text-primary);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  margin: 2.5rem 0;
+}
+
+/* ── Top Command Navigation Bar ──────────────────────────────────────────── */
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-nav);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0.65rem 1.5rem;
+}
+
+.top-nav-inner {
+  max-width: 1380px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 800;
+  font-size: 1.08rem;
+  color: var(--text-primary);
+  text-decoration: none !important;
+  letter-spacing: -0.02em;
+}
+
+.brand-link .compass-mini {
+  width: 28px;
+  height: 28px;
+  color: var(--accent-cyan);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.brand-link:hover .compass-mini {
+  transform: rotate(45deg) scale(1.08);
+}
+
+.brand-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-inline-code);
+  color: var(--accent-cyan);
+  border: 1px solid var(--border-strong);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.nav-links a {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 0.38rem 0.68rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-links a:hover {
+  color: var(--text-primary);
+  background: var(--bg-inline-code);
+}
+
+.nav-links a.active {
+  color: var(--accent-cyan);
+  background: var(--bg-inline-code);
+  border: 1px solid var(--border-strong);
+  font-weight: 600;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ── Hero Section (Sailboat & Compass Command Deck) ──────────────────────── */
+.hero-deck {
+  background: var(--hero-gradient);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 3.4rem 1.5rem 4.6rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-deck-inner {
+  max-width: 1260px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 310px;
+  gap: 2.5rem;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-gold);
+  background: var(--accent-gold-glow);
+  border: 1px solid var(--border-gold);
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  margin-bottom: 1rem;
+}
+
+.hero-title {
+  font-size: clamp(2.15rem, 3.9vw, 3.2rem);
+  font-weight: 800;
+  margin: 0 0 0.85rem;
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+}
+
+.hero-title .gradient-text {
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-teal) 50%, var(--accent-gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  font-size: 1.08rem;
+  color: var(--text-secondary);
+  max-width: 770px;
+  margin-bottom: 1.4rem;
+}
+
+/* ── Sailboat & 16-Point Compass Rose Hero Figure ────────────────────────── */
+.hero-compass-figure {
+  width: 300px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.compass-rose-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 28px rgba(56, 189, 248, 0.28));
+  overflow: visible;
+}
+
+.compass-outer-bezel {
+  transform-origin: 130px 130px;
+  animation: compassBezelRotate 64s linear infinite;
+}
+
+.sailboat-vessel {
+  transform-origin: 130px 168px;
+  animation: sailboatRock 5.2s ease-in-out infinite;
+}
+
+.sailboat-pennant {
+  transform-origin: 130px 44px;
+  animation: pennantFlutter 1.8s ease-in-out infinite alternate;
+}
+
+.sailboat-wake {
+  animation: wakePulse 2.6s ease-in-out infinite;
+}
+
+@keyframes compassBezelRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sailboatRock {
+  0%, 100% { transform: translateY(0px) rotate(-3deg); }
+  50% { transform: translateY(-6px) rotate(3.5deg); }
+}
+
+@keyframes pennantFlutter {
+  0% { transform: skewY(-4deg) scaleX(0.94); }
+  100% { transform: skewY(6deg) scaleX(1.05); }
+}
+
+@keyframes wakePulse {
+  0%, 100% { opacity: 0.45; transform: translateX(0px); }
+  50% { opacity: 0.9; transform: translateX(-3px); }
+}
+
+@keyframes waveDrift {
+  0%, 100% { transform: translateX(0px); }
+  50% { transform: translateX(-18px); }
+}
+
+/* ── Multi-Layer Ocean Wave Dividers (Hero & Subpages) ───────────────────── */
+.ocean-wave-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 54px;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+  line-height: 0;
+}
+
+.ocean-wave-divider svg {
+  width: calc(100% + 36px);
+  height: 100%;
+  display: block;
+}
+
+.ocean-wave-divider .wave-layer-1 {
+  fill: var(--wave-back);
+  animation: waveDrift 11s ease-in-out infinite;
+}
+
+.ocean-wave-divider .wave-layer-2 {
+  fill: var(--wave-mid);
+  animation: waveDrift 7.5s ease-in-out infinite reverse;
+}
+
+.ocean-wave-divider .wave-layer-3 {
+  fill: var(--wave-front);
+}
+
+/* ── Mariner's Bridge Instrument Telemetry Strip ─────────────────────────── */
+.bridge-telemetry-bar {
+  max-width: 1260px;
+  margin: 1.4rem auto 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-gold);
+  border-radius: 12px;
+  padding: 0.7rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 2;
+}
+
+.bridge-instruments {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+}
+
+.bridge-gauge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.79rem;
+  color: var(--text-secondary);
+  padding-right: 0.9rem;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.bridge-gauge:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.bridge-gauge-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.bridge-gauge-value {
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.bridge-gauge-value.gold {
+  color: var(--accent-gold);
+}
+
+.bridge-gauge-value.emerald {
+  color: var(--accent-emerald);
+}
+
+.bridge-waypoints {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.waypoint-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.28rem 0.6rem;
+  text-decoration: none !important;
+  transition: all 0.16s ease;
+}
+
+.waypoint-btn:hover {
+  color: var(--accent-gold);
+  border-color: var(--border-gold);
+  background: var(--accent-gold-glow);
+  transform: translateY(-1px);
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.4rem;
+}
+
+.stat-chip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-top: 2px solid var(--border-gold);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  backdrop-filter: blur(8px);
+}
+
+.stat-chip .stat-value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  display: block;
+}
+
+.stat-chip .stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Subpage Header Banner (With Ocean Wave Transition) ──────────────────── */
+.page-header {
+  background: var(--hero-gradient);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 2.2rem 1.5rem 3.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a {
+  color: var(--accent-cyan);
+  font-weight: 500;
+}
+
+.page-header h1 {
+  margin-bottom: 0.5rem;
+}
+
+.page-header .lead {
+  font-size: 1.06rem;
+  color: var(--text-secondary);
+  max-width: 880px;
+  margin: 0;
+}
+
+.page-meta-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* ── Search & Quick Filter Bar ───────────────────────────────────────────── */
+.search-bar-wrap {
+  position: relative;
+  max-width: 680px;
+  margin: 0 0 1.2rem;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 0.78rem 3.8rem 0.78rem 2.65rem;
+  font-size: 0.95rem;
+  outline: none;
+  box-shadow: var(--shadow-glow);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 3px var(--accent-gold-glow);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent-cyan);
+  pointer-events: none;
+}
+
+.search-kbd {
+  position: absolute;
+  right: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+/* ── Layout Containers (Hub & 2-Column Docs Layout) ──────────────────────── */
+.hub-container {
+  max-width: 1240px;
+  margin: 2.2rem auto 3.5rem;
+  padding: 0 1.5rem;
+  flex: 1;
+  width: 100%;
+}
+
+.docs-layout {
+  max-width: 1320px;
+  margin: 2rem auto 3.5rem;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 2.5rem;
+  align-items: start;
+  flex: 1;
+  width: 100%;
+}
+
+.docs-content {
+  min-width: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 2.2rem 2.5rem;
+  box-shadow: var(--shadow-card);
+}
+
+/* ── Sticky Right Sidebar TOC ("On This Page") ───────────────────────────── */
+.docs-toc {
+  position: sticky;
+  top: 84px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 1.15rem 1.2rem;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+
+.docs-toc-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--accent-gold);
+  margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.docs-toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.docs-toc li {
+  margin-bottom: 0.25rem;
+}
+
+.docs-toc a {
+  display: block;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  padding: 0.28rem 0.55rem;
+  border-left: 2px solid transparent;
+  border-radius: 0 5px 5px 0;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  line-height: 1.35;
+}
+
+.docs-toc a:hover {
+  color: var(--text-primary);
+  background: var(--bg-inline-code);
+}
+
+.docs-toc a.toc-active {
+  color: var(--accent-cyan);
+  border-left-color: var(--accent-cyan);
+  background: var(--bg-inline-code);
+  font-weight: 600;
+}
+
+.docs-toc .toc-sub {
+  padding-left: 1.15rem;
+  font-size: 0.79rem;
+}
+
+/* ── Pillar Sections & Cards on index.html ───────────────────────────────── */
+.pillar-section {
+  margin-bottom: 3rem;
+}
+
+.pillar-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.6rem;
+}
+
+.pillar-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pillar-subtitle {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.doc-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 1.4rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.doc-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-teal), var(--accent-gold));
+  opacity: 0.85;
+}
+
+.doc-card::after {
+  content: "⛵";
+  position: absolute;
+  top: 0.9rem;
+  right: 1.1rem;
+  font-size: 0.95rem;
+  opacity: 0.18;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.doc-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-strong);
+  background: var(--bg-card-hover);
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+}
+
+.doc-card:hover::after {
+  opacity: 0.65;
+  transform: translate(2px, -2px) rotate(6deg);
+}
+
+.doc-card h3 {
+  margin: 0.45rem 0 0.55rem;
+  font-size: 1.14rem;
+  color: var(--text-primary);
+}
+
+.doc-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  flex: 1;
+}
+
+.doc-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.84rem;
+}
+
+.doc-card-link {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ── Badges & Pills ──────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.58rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.badge-cyan {
+  background: rgba(56, 189, 248, 0.14);
+  color: var(--accent-cyan);
+  border-color: rgba(56, 189, 248, 0.32);
+}
+
+.badge-gold {
+  background: rgba(251, 191, 36, 0.14);
+  color: var(--accent-gold);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.badge-emerald {
+  background: rgba(52, 211, 153, 0.14);
+  color: var(--accent-emerald);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.badge-purple {
+  background: rgba(167, 139, 250, 0.14);
+  color: var(--accent-purple);
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+.badge-crimson {
+  background: rgba(248, 113, 113, 0.14);
+  color: var(--accent-crimson);
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+/* HTTP Method Badges */
+.method {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  text-transform: uppercase;
+}
+
+.method-get {
+  background: rgba(52, 211, 153, 0.18);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.method-post {
+  background: rgba(56, 189, 248, 0.18);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.method-put, .method-patch {
+  background: rgba(251, 191, 36, 0.18);
+  color: var(--accent-gold);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.method-delete {
+  background: rgba(248, 113, 113, 0.18);
+  color: var(--accent-crimson);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+/* ── Nautical Callout Boxes ("Captain's Log", "Kraken Warning", etc.) ────── */
+.callout {
+  border-radius: 10px;
+  padding: 1.05rem 1.25rem;
+  margin: 1.35rem 0;
+  border-left: 4px solid var(--accent-cyan);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.callout-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-primary);
+}
+
+.callout p:last-child,
+.callout ul:last-child {
+  margin-bottom: 0;
+}
+
+.callout-captain {
+  border-left-color: var(--accent-cyan);
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.09) 0%, var(--bg-card) 100%);
+}
+.callout-captain .callout-title { color: var(--accent-cyan); }
+
+.callout-helm {
+  border-left-color: var(--accent-gold);
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.09) 0%, var(--bg-card) 100%);
+}
+.callout-helm .callout-title { color: var(--accent-gold); }
+
+.callout-kraken {
+  border-left-color: var(--accent-crimson);
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.11) 0%, var(--bg-card) 100%);
+}
+.callout-kraken .callout-title { color: var(--accent-crimson); }
+
+.callout-voyage {
+  border-left-color: var(--accent-emerald);
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.09) 0%, var(--bg-card) 100%);
+}
+.callout-voyage .callout-title { color: var(--accent-emerald); }
+
+/* ── Code Blocks, Inline Code & Copy Button ──────────────────────────────── */
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.85em;
+  background: var(--bg-inline-code);
+  color: var(--text-code);
+  padding: 0.15rem 0.4rem;
+  border-radius: 5px;
+}
+
+pre:not(.mermaid) {
+  position: relative;
+  background: var(--bg-code) !important;
+  color: #e2e8f0 !important;
+  padding: 1.15rem 1.3rem !important;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  margin: 1.1rem 0 1.4rem;
+  font-size: 0.86rem;
+  line-height: 1.58;
+}
+
+pre:not(.mermaid) code {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0;
+  font-size: inherit;
+}
+
+pre.mermaid,
+div.mermaid {
+  background: transparent !important;
+  border: none !important;
+  padding: 0.5rem 0 !important;
+  margin: 0 auto !important;
+  text-align: center;
+  overflow-x: auto;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+pre.mermaid svg,
+div.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.copy-code-btn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.65rem;
+  background: rgba(30, 41, 59, 0.85);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.copy-code-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border-color: #38bdf8;
+}
+
+/* ── Mermaid Diagram Container ───────────────────────────────────────────── */
+.mermaid-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1.35rem 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.mermaid-caption {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.65rem;
+  font-style: italic;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  margin: 1.2rem 0 1.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.72rem 0.95rem;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+
+th {
+  background: var(--bg-table-head);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+tr:nth-child(even) td {
+  background: var(--bg-table-row-alt);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Feature & Spec Grids Inside Guides ──────────────────────────────────── */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.feature-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+}
+
+.feature-box h4 {
+  margin: 0 0 0.45rem;
+  color: var(--accent-cyan);
+  font-size: 0.98rem;
+}
+
+.feature-box p {
+  font-size: 0.87rem;
+  margin: 0;
+}
+
+/* ── Prev / Next Page Footer Navigation ──────────────────────────────────── */
+.page-pager {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 2.8rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.pager-link {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.95rem 1.2rem;
+  text-decoration: none !important;
+  transition: all 0.18s ease;
+}
+
+.pager-link:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+}
+
+.pager-label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.pager-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+/* ── Global Footer ───────────────────────────────────────────────────────── */
+.site-footer {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  padding: 2.2rem 1.5rem;
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.site-footer-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+/* ── Responsive Adjustments ──────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+  }
+  .docs-toc {
+    position: static;
+    order: -1;
+    max-height: none;
+  }
+  .hero-deck-inner {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+  .hero-compass-figure {
+    margin: 0.5rem auto 0;
+    width: 240px;
+    height: 240px;
+  }
+}
+
+@media (max-width: 640px) {
+  .docs-content {
+    padding: 1.35rem 1.15rem;
+  }
+  .top-nav {
+    padding: 0.55rem 1rem;
+  }
+}

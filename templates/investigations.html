@@ -7,137 +7,120 @@
 
   {{ sidebar_menu|safe }}
 <!-- !PAGE CONTENT! -->
-<div class="w3-main" id="main_body" style="margin-left:300px;margin-top:43px;">
+<div class="w3-main" id="main_body" style="margin-left:260px;margin-top:54px;">
 
   <!-- Header -->
-  <header class="w3-container" style="padding-top:22px">
-      <h5><b><i class="fa fa-dashboard"></i>    Investigation</b></h5>
+  <header class="w3-container" style="padding:20px 28px 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h4 style="margin:0;font-weight:800;"><i class="fa fa-play-circle" style="color:var(--mariner-cyan);margin-right:8px;"></i>Run Structured Analysis: <code>{{ title }}</code></h4>
+        <p class="w3-small w3-text-grey" style="margin:4px 0 0 0;">Configure runtime parameters, execute immediately or stream live logs, or schedule recurring runs</p>
+      </div>
+      <a href="/analysis" class="w3-button w3-small w3-blue" style="border-radius:8px;"><i class="fa fa-arrow-left"></i> Back to Catalog</a>
+    </div>
+  </header>
 
-  <div class="w3-container">
-    <div class="w3-row">
-        <div class="w3-container w3-blue-grey">
-        <h5><i class="fa fa-rebel w3-margin-right"></i>{{ title }}</h5>
-        </div>
-      <div class="w3-col m10 w3-container ">
-        <form id="analysis-form" action="/run_investigation/" class="w3-padding w3-container w3-card-1" method="post">
-            {% for input in input_form %}
-              {{ input|safe }}
-            {% endfor %}
+  <div class="w3-container" style="padding: 16px 28px 24px; max-width: 960px;">
+    <form id="analysis-form" action="/run_investigation/" class="w3-padding-large w3-container w3-card-1" method="post">
+        <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-sliders" style="color:var(--mariner-cyan);"></i> Execution Parameters</h5>
+        {% for input in input_form %}
+          {{ input|safe }}
+        {% endfor %}
 
-            <!-- Schedule section -->
-            <div style="margin-top:1.2rem;padding-top:1rem;border-top:2px solid #e0e0e0;">
-              <label><b><i class="fa fa-clock-o"></i> Schedule (optional)</b></label><br>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center;">
-                <select name="schedule_type" id="schedule_type" onchange="toggleSchedule()"
-                  style="padding:6px 12px;border:2px solid #00889B;border-radius:4px;">
-                  <option value="">Don't schedule (run once)</option>
-                  <option value="daily">Every day</option>
-                  <option value="hourly">Every hour</option>
-                  <option value="weekly_mon">Every Monday</option>
-                  <option value="weekly_fri">Every Friday</option>
-                  <option value="cron">Custom cron</option>
-                </select>
-                <input type="time" name="schedule_time" id="schedule_time" value="07:00"
-                  style="padding:6px 12px;border:2px solid #00889B;border-radius:4px;display:none;">
-                <input type="text" name="schedule_cron" id="schedule_cron" placeholder="e.g. 0 7 * * MON-FRI"
-                  style="padding:6px 12px;border:2px solid #00889B;border-radius:4px;width:200px;display:none;">
-              </div>
-            </div>
-
-            <br>
-            <button type="submit" class="w3-button w3-dark-grey" onclick="submitRun()"><i class="fa fa-play w3-margin-right"></i> Run Now</button>
-            <button type="button" class="w3-button w3-teal" onclick="startStreamExecution('{{ title }}')" style="margin-left:8px;"><i class="fa fa-terminal w3-margin-right"></i> Run with Live Log</button>
-            <button type="button" class="w3-button w3-blue" id="btn-schedule" style="display:none;" onclick="submitSchedule()"><i class="fa fa-calendar w3-margin-right"></i> Schedule</button>
-        </form>
-
-        <!-- Real-time Execution Panel -->
-        <div id="exec-panel" style="display:none;margin-top:1rem;" data-name="">
-          <div class="w3-card w3-padding">
-            <h5><i class="fa fa-terminal"></i> Execution Log</h5>
-            <div class="w3-light-grey" style="height:8px;margin-bottom:.5rem;">
-              <div id="exec-progress" class="w3-green" style="height:8px;width:0%;transition:width .3s;"></div>
-            </div>
-            <pre id="exec-log" style="max-height:300px;overflow-y:auto;background:#1a1a2e;color:#4fc3f7;padding:10px;border-radius:4px;font-size:.75rem;"></pre>
-            <button onclick="abortExecution()" class="w3-button w3-red w3-small w3-margin-top"><i class="fa fa-stop"></i> Abort</button>
+        <!-- Schedule section -->
+        <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--mariner-border-subtle);">
+          <label class="w3-small"><b><i class="fa fa-clock-o"></i> Schedule Recurring Run (optional)</b></label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+            <select name="schedule_type" id="schedule_type" class="w3-select w3-border" onchange="toggleSchedule()" style="max-width:260px;">
+              <option value="">Don't schedule (run once)</option>
+              <option value="daily">Every day</option>
+              <option value="hourly">Every hour</option>
+              <option value="weekly_mon">Every Monday</option>
+              <option value="weekly_fri">Every Friday</option>
+              <option value="cron">Custom cron</option>
+            </select>
+            <input type="time" name="schedule_time" id="schedule_time" value="07:00" class="w3-input w3-border" style="width:140px;display:none;">
+            <input type="text" name="schedule_cron" id="schedule_cron" placeholder="e.g. 0 7 * * MON-FRI" class="w3-input w3-border" style="width:220px;display:none;">
           </div>
         </div>
 
-        <script>
-        function toggleSchedule(){
-          var t=document.getElementById("schedule_type").value;
-          document.getElementById("schedule_time").style.display=(t&&t!=="hourly"&&t!=="cron")?"inline-block":"none";
-          document.getElementById("schedule_cron").style.display=(t==="cron")?"inline-block":"none";
-          document.getElementById("btn-schedule").style.display=t?"inline-block":"none";
-        }
-        function submitRun(){document.getElementById("analysis-form").action="/run_investigation/";myloadershow()}
-        function submitSchedule(){document.getElementById("analysis-form").action="/schedule_analysis/";document.getElementById("analysis-form").submit()}
+        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="submit" class="w3-button w3-blue" onclick="submitRun()"><i class="fa fa-play w3-margin-right"></i> Run Now</button>
+          <button type="button" class="w3-button w3-teal" onclick="startStreamExecution('{{ title }}')"><i class="fa fa-terminal w3-margin-right"></i> Run with Live Log</button>
+          <button type="button" class="w3-button w3-indigo" id="btn-schedule" style="display:none;" onclick="submitSchedule()"><i class="fa fa-calendar w3-margin-right"></i> Save Schedule</button>
+        </div>
+    </form>
 
-        /* SSE Real-time Execution */
-        var _execSource = null;
-        function startStreamExecution(name){
-          document.getElementById('exec-panel').style.display='block';
-          document.getElementById('exec-panel').dataset.name=name;
-          document.getElementById('exec-log').textContent='';
-          document.getElementById('exec-progress').style.width='5%';
-          _execSource = new EventSource('/execute_stream/'+encodeURIComponent(name));
-          var lineCount=0;
-          _execSource.onmessage=function(e){
-            var d=JSON.parse(e.data);
-            if(d.line){document.getElementById('exec-log').textContent+=d.line+'\n';lineCount++;}
-            document.getElementById('exec-progress').style.width=Math.min(5+lineCount*2,95)+'%';
-            document.getElementById('exec-log').scrollTop=99999;
-            if(d.done){
-              _execSource.close();
-              document.getElementById('exec-progress').style.width='100%';
-              if(d.status==='success'){
-                if(typeof showToast==='function')showToast('Execution completed!','success');
-              }else{
-                if(typeof showToast==='function')showToast('Execution failed','error');
-              }
-            }
-          };
-          _execSource.onerror=function(){_execSource.close();if(typeof showToast==='function')showToast('Connection lost','error');};
-        }
-        function abortExecution(){
-          if(_execSource)_execSource.close();
-          var name=document.getElementById('exec-panel').dataset.name;
-          fetch('/execute_abort/'+encodeURIComponent(name),{method:'POST'});
-          if(typeof showToast==='function')showToast('Execution aborted','warning');
-        }
-        </script>
+    <!-- Real-time Execution Panel -->
+    <div id="exec-panel" style="display:none;margin-top:1rem;" data-name="">
+      <div class="w3-card w3-padding-large">
+        <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-terminal" style="color:var(--mariner-cyan);"></i> Live Execution Log</h5>
+        <div class="w3-light-grey" style="height:8px;margin-bottom:.75rem;border-radius:999px;overflow:hidden;">
+          <div id="exec-progress" class="w3-green" style="height:8px;width:0%;transition:width .3s;"></div>
+        </div>
+        <pre id="exec-log" style="max-height:320px;overflow-y:auto;background:#060d1a;color:#38bdf8;padding:14px;border-radius:8px;font-size:.82rem;"></pre>
+        <button onclick="abortExecution()" class="w3-button w3-red w3-small w3-margin-top"><i class="fa fa-stop"></i> Abort</button>
       </div>
     </div>
-      <br>
-      <div class="loader" id="loader" style="display:none;"></div>
-      <script>
-          function myloadershow() {
-               let params = 'status=no,location=no,toolbar=no,menubar=no,width=600,height=600';
-               window.open('/static/logging_page.html', params);
-               var x = document.getElementById("loader");
-               x.style.display = "block";
-               var main =  document.getElementById("main_body");
-               main.style.display = "none";
-               return true;
-            }
-      </script>
 
+    <div class="loader" id="loader" style="display:none;margin:24px auto;"></div>
+    <script>
+    function toggleSchedule(){
+      var t=document.getElementById("schedule_type").value;
+      document.getElementById("schedule_time").style.display=(t&&t!=="hourly"&&t!=="cron")?"inline-block":"none";
+      document.getElementById("schedule_cron").style.display=(t==="cron")?"inline-block":"none";
+      document.getElementById("btn-schedule").style.display=t?"inline-block":"none";
+    }
+    function submitRun(){document.getElementById("analysis-form").action="/run_investigation/";myloadershow()}
+    function submitSchedule(){document.getElementById("analysis-form").action="/schedule_analysis/";document.getElementById("analysis-form").submit()}
+
+    /* SSE Real-time Execution */
+    var _execSource = null;
+    function startStreamExecution(name){
+      document.getElementById('exec-panel').style.display='block';
+      document.getElementById('exec-panel').dataset.name=name;
+      document.getElementById('exec-log').textContent='';
+      document.getElementById('exec-progress').style.width='5%';
+      _execSource = new EventSource('/execute_stream/'+encodeURIComponent(name));
+      var lineCount=0;
+      _execSource.onmessage=function(e){
+        var d=JSON.parse(e.data);
+        if(d.line){document.getElementById('exec-log').textContent+=d.line+'\n';lineCount++;}
+        document.getElementById('exec-progress').style.width=Math.min(5+lineCount*2,95)+'%';
+        document.getElementById('exec-log').scrollTop=99999;
+        if(d.done){
+          _execSource.close();
+          document.getElementById('exec-progress').style.width='100%';
+          if(d.status==='success'){
+            if(typeof showToast==='function')showToast('Execution completed!','success');
+          }else{
+            if(typeof showToast==='function')showToast('Execution failed','error');
+          }
+        }
+      };
+      _execSource.onerror=function(){_execSource.close();if(typeof showToast==='function')showToast('Connection lost','error');};
+    }
+    function abortExecution(){
+      if(_execSource)_execSource.close();
+      var name=document.getElementById('exec-panel').dataset.name;
+      fetch('/execute_abort/'+encodeURIComponent(name),{method:'POST'});
+      if(typeof showToast==='function')showToast('Execution aborted','warning');
+    }
+    function myloadershow() {
+      let params = 'status=no,location=no,toolbar=no,menubar=no,width=600,height=600';
+      window.open('/static/logging_page.html', params);
+      var x = document.getElementById("loader");
+      x.style.display = "block";
+      var main = document.getElementById("main_body");
+      main.style.display = "none";
+      return true;
+    }
+    </script>
   </div>
 
-    <br><br>
-  </header>
 
 
-
-  <!-- Footer -->
-  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
-                <hr><br>
-
-                <strong>About ProjectCompass</strong><br>
-                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
-                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
-                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
-                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
-  </footer>
+  {% include 'components/branding_footer.html' %}
 
   <!-- End page content -->
 </div>

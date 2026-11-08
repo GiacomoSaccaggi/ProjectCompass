@@ -2,8 +2,15 @@
 import os
 import tempfile
 
-from utils.chunker import (Chunk, chunk_analysis, chunk_file, chunk_markdown,
-                            chunk_python, chunk_sql, chunk_text, chunk_yaml)
+from utils.chunker import (
+    chunk_analysis,
+    chunk_file,
+    chunk_markdown,
+    chunk_python,
+    chunk_sql,
+    chunk_text,
+    chunk_yaml,
+)
 
 
 def test_chunk_python_functions():

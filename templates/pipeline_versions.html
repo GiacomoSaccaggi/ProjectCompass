@@ -5,23 +5,23 @@
 {{ top_container|safe }}
 {{ sidebar_menu|safe }}
 
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
-  <header class="w3-container" style="padding-top:22px">
-    <h5><b><i class="fa fa-code-fork"></i> Pipeline History: {{ analysis_name }}</b></h5>
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;font-size:1.65rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-code-fork" style="color:#fbbf24;margin-right:8px;"></i>Pipeline History: {{ analysis_name }}</h2>
+      <p style="margin:4px 0 0;font-size:0.88rem;color:#cbd5e1;">Inspect saved script snapshots and restore prior versions.</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/open_version/?name={{ analysis_name|replace(' ', '512') }}" class="w3-button w3-blue w3-small" style="border-radius:8px;">
+        <i class="fa fa-arrow-left"></i> Back to Analysis
+      </a>
+      <a href="/create_investigations?name={{ analysis_name|replace(' ', '512') }}" class="w3-button w3-green w3-small" style="border-radius:8px;">
+        <i class="fa fa-play"></i> Run Analysis
+      </a>
+    </div>
   </header>
-  <br>
 
-  <!-- Back to analysis link -->
-  <div class="w3-padding w3-container">
-    <a href="/open_version/?name={{ analysis_name|replace(' ', '512') }}" class="w3-button w3-light-grey">
-      <i class="fa fa-arrow-left"></i> Back to Analysis
-    </a>
-    <a href="/create_investigations?name={{ analysis_name|replace(' ', '512') }}" class="w3-button w3-green">
-      <i class="fa fa-play"></i> Run Analysis
-    </a>
-  </div>
-
-  <div class="w3-padding w3-container">
+  <div class="w3-padding w3-container" style="padding:20px 24px 32px !important;max-width:1200px;margin:0 auto;">
     {% if versions %}
     <table class="w3-table w3-bordered w3-hoverable w3-white">
       <tr class="w3-light-grey">
@@ -59,13 +59,14 @@
     {% endif %}
   </div>
 
-  <!-- Footer -->
+  {% if pc.branding.footer.enabled %}
   <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
     <hr><br>
-    <strong>About ProjectCompass</strong><br>
+    <strong>{{ pc.branding.footer.about }}</strong><br>
     Pipeline versioning allows you to track changes over time and restore previous versions if needed.<br>
-    Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
+    Powered by {{ pc.branding.app_name }} Platform - <strong>{{ pc.branding.footer.slogan }}</strong><br><br>
   </footer>
+  {% endif %}
 </div>
 </body>
 </html>

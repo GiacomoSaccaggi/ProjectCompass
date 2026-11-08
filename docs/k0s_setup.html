@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>k0s Master &amp; Worker Cluster Setup — ProjectCompass Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body>
+
+<header class="top-nav">
+  <div class="top-nav-inner">
+    <a href="../index.html" class="brand-link">
+      <svg class="compass-mini" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="18" r="15.5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6"/>
+        <circle cx="18" cy="18" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M18 7 L18 24" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18 8 L26 22 L18 22 Z" fill="currentColor" fill-opacity="0.32" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M16.5 10.5 L11 22 L16.5 22 Z" fill="#fbbf24" fill-opacity="0.45" stroke="#fbbf24" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M10 24.5 L26 24.5 L23.5 27.5 L12.5 27.5 Z" fill="currentColor" fill-opacity="0.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+      <span>ProjectCompass</span>
+      <span class="brand-tag">⛵ Regatta Docs</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary Documentation Navigation">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="user_guide.html">User Guide</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="core_classes.html">Core Classes</a>
+      <a href="templates.html">Templates</a>
+      <a href="k0s_setup.html" class="active">k0s Setup</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle-btn">
+        <span aria-hidden="true">⛵</span> <span>Day Sail</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb">
+      <a href="../index.html">⛵ Command Deck</a>
+      <span>/</span>
+      <span>Pillar III: The k0s Flotilla &amp; Regatta Fleet</span>
+      <span>/</span>
+      <span>k0s Master &amp; Worker Setup</span>
+    </div>
+    <h1>k0s Master &amp; Worker Cluster Setup</h1>
+    <p class="lead">
+      How to provision a single-binary <code>k0s</code> Kubernetes flagship control plane with <code>scripts/k0s_master_setup.sh</code>, open required network channels, generate join tokens, attach external Linux worker vessels, and safely drain or decommission nodes.
+    </p>
+    <div class="page-meta-badges">
+      <span class="badge badge-gold">06 • Flotilla Provisioning</span>
+      <span class="badge badge-cyan">k0s Control Plane + Workers</span>
+      <span class="badge badge-emerald">Zero-Dependency Binary</span>
+    </div>
+  </div>
+</section>
+
+<div class="docs-layout">
+  <main class="docs-content">
+
+    <h2 id="why-k0s">1. Why k0s Powers the ProjectCompass Fleet</h2>
+    <p>
+      ProjectCompass uses <a href="https://k0sproject.io/" target="_blank" rel="noopener"><strong>k0s</strong></a> as its recommended Kubernetes distribution because k0s ships as a single self-contained Linux binary with zero host OS package dependencies.
+      In this topology:
+    </p>
+    <ul>
+      <li><strong>Master Machine (Control Plane + ProjectCompass Host)</strong> — Runs the <code>k0s</code> control plane (`--enable-worker --no-taints`) and hosts the ProjectCompass Flask application (or schedules it in-cluster).</li>
+      <li><strong>Worker Machines (External Compute Nodes)</strong> — Join the master over the network using a signed join token (`k0s worker &lt;token&gt;`) and execute isolated Python Flow Pods (`batch/v1` Jobs) in the <code>kube-compass</code> namespace.</li>
+    </ul>
+
+    <div class="mermaid-card">
+      <pre class="mermaid">
+flowchart LR
+  subgraph MasterNode["Master Linux Host"]
+    PC["ProjectCompass Master (:5000)"]
+    K0SC["k0s Controller (:6443 / :8132 / :9443)"]
+    KubeCfg["~/.kube/k0s-compass.conf"]
+    PC --> KubeCfg --> K0SC
+  end
+
+  subgraph Worker1["Worker Node A (CPU / ETL)"]
+    K0SW1["k0sworker.service (Kubelet :10250)"]
+    Pod1["Pod: pc-flow-job-101"]
+    K0SW1 --> Pod1
+  end
+
+  subgraph Worker2["Worker Node B (High-RAM / ML)"]
+    K0SW2["k0sworker.service (Kubelet :10250)"]
+    Pod2["Pod: pc-flow-job-102"]
+    K0SW2 --> Pod2
+  end
+
+  K0SC <-->|Konnectivity :8132 + API :6443| K0SW1
+  K0SC <-->|Konnectivity :8132 + API :6443| K0SW2
+  Pod1 <-->|VXLAN :4789/UDP| Pod2
+      </pre>
+      <div class="mermaid-caption">
+        Figure 1 — ProjectCompass Master communicating with the k0s Control Plane and distributed Linux Worker Nodes.
+      </div>
+    </div>
+
+    <h2 id="prerequisites-and-ports">2. Prerequisites &amp; Firewall Port Matrix</h2>
+    <p>
+      Every machine in the cluster must run Linux (`x86_64` or `aarch64`, kernel $\ge 5.4$ recommended) with `systemd`, `curl`, and `sudo`/`root` privileges. Swap must be disabled on all nodes (`sudo swapoff -a`).
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Port</th>
+            <th>Protocol</th>
+            <th>Direction</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>6443</code></td>
+            <td>TCP</td>
+            <td>Workers / ProjectCompass &rarr; Master</td>
+            <td>Kubernetes API server (`kube-apiserver`).</td>
+          </tr>
+          <tr>
+            <td><code>8132</code></td>
+            <td>TCP</td>
+            <td>Workers &rarr; Master</td>
+            <td>Konnectivity server proxy tunnel (control-plane to worker communication).</td>
+          </tr>
+          <tr>
+            <td><code>9443</code></td>
+            <td>TCP</td>
+            <td>Workers &rarr; Master</td>
+            <td><code>k0s</code> controller join API endpoint.</td>
+          </tr>
+          <tr>
+            <td><code>10250</code></td>
+            <td>TCP</td>
+            <td>Master &harr; Workers</td>
+            <td>Kubelet API (used by ProjectCompass to stream `kubectl logs` from worker Pods).</td>
+          </tr>
+          <tr>
+            <td><code>4789</code></td>
+            <td>UDP</td>
+            <td>All Nodes &harr; All Nodes</td>
+            <td>Calico / Kube-Router VXLAN overlay pod-to-pod networking.</td>
+          </tr>
+          <tr>
+            <td><code>179</code></td>
+            <td>TCP</td>
+            <td>All Nodes &harr; All Nodes</td>
+            <td>BGP routing (when Kube-Router CNI is active).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="provisioning-master">3. Provisioning the k0s Master Node</h2>
+    <p>
+      Run the automated setup script <code>scripts/k0s_master_setup.sh</code> on your master machine. It installs `/usr/local/bin/k0s`, generates `/etc/k0s/k0s.yaml`, installs the controller with `--enable-worker --no-taints` (so single-node clusters can run Jobs immediately), waits for node readiness, creates the `kube-compass` namespace, exports a user-readable kubeconfig, and generates a worker join token:
+    </p>
+
+    <pre><code class="language-bash">chmod +x scripts/k0s_master_setup.sh
+sudo ./scripts/k0s_master_setup.sh \
+  --namespace kube-compass \
+  --kubeconfig-out "$HOME/.kube/k0s-compass.conf" \
+  --token-out /etc/k0s/worker-join.token \
+  --token-expiry 24h</code></pre>
+
+    <h3 id="connecting-projectcompass-to-k0s">Connecting ProjectCompass to the k0s Master</h3>
+    <p>
+      Export the generated kubeconfig before launching ProjectCompass (or configure it in <code>.env</code> / <code>projectcompass.yaml</code>):
+    </p>
+    <pre><code class="language-bash">export KUBECONFIG="$HOME/.kube/k0s-compass.conf"
+export KUBECONFIG_PATH="$HOME/.kube/k0s-compass.conf"
+export K8S_NAMESPACE="kube-compass"
+export K8S_DEFAULT_IMAGE="python:3.11-slim"
+
+uv run python run.py</code></pre>
+
+    <div class="callout callout-captain">
+      <div class="callout-title">🧭 Captain's Log — Automatic Kubeconfig Discovery Order</div>
+      <p>
+        <code>BaseK8sClient._load_k8s_clients()</code> automatically checks:
+        <strong>(1)</strong> <code>KUBECONFIG_PATH</code>,
+        <strong>(2)</strong> <code>KUBECONFIG</code>,
+        <strong>(3)</strong> in-cluster ServiceAccount token (when running inside Kubernetes),
+        <strong>(4)</strong> <code>~/.kube/config</code>, and
+        <strong>(5)</strong> <code>/var/lib/k0s/pki/admin.conf</code>.
+      </p>
+    </div>
+
+    <h2 id="joining-worker-nodes">4. Generating Join Tokens &amp; Attaching Worker Nodes</h2>
+
+    <h3 id="step-1-generate-token">Step 1: Generate a Worker Join Token on the Master</h3>
+    <p>
+      You can generate a token from the Master terminal, the Web UI (<code>/workers</code>), or the External CLI:
+    </p>
+    <pre><code class="language-bash"># Option A: Directly via k0s on the master host
+sudo k0s token create --role=worker --expiry=24h > /tmp/worker-join.token
+
+# Option B: Via the ProjectCompass External CLI
+uv run python scripts/compass_cli.py --url http://&lt;MASTER_IP&gt;:5000 --token "$PC_API_TOKEN" \
+  workers token --expiry 24h
+
+# Option C: Via the REST API
+curl -X POST http://&lt;MASTER_IP&gt;:5000/workers/join-token \
+  -H "Authorization: Bearer $PC_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"expiry": "24h"}'</code></pre>
+
+    <h3 id="step-2-install-worker">Step 2: Install &amp; Join k0s on Each Worker Machine</h3>
+    <p>
+      Copy `/tmp/worker-join.token` to the external Linux worker machine (or run the one-liner printed by `/workers/join-token`):
+    </p>
+    <pre><code class="language-bash"># 1. Install the k0s binary on the worker machine
+curl -sSLf https://get.k0s.sh | sudo sh
+
+# 2. Place the join token in /etc/k0s/
+sudo mkdir -p /etc/k0s
+sudo mv /tmp/worker-join.token /etc/k0s/worker-join.token
+sudo chmod 600 /etc/k0s/worker-join.token
+
+# 3. Install and start the k0s worker systemd service
+sudo k0s install worker --token-file /etc/k0s/worker-join.token
+sudo k0s start
+
+# 4. Verify local worker service status
+sudo k0s status</code></pre>
+
+    <h3 id="step-3-verify-and-label">Step 3: Verify &amp; Label Workers on the Master</h3>
+    <pre><code class="language-bash"># List nodes from the master
+sudo k0s kubectl get nodes -o wide
+
+# Optional: Add custom node labels so Flows can target specific worker tiers via node_selector
+sudo k0s kubectl label node worker-node-01 compass.io/tier=gpu workload=ml</code></pre>
+    <p>
+      Once joined, open <code>http://&lt;MASTER_IP&gt;:5000/workers</code> in ProjectCompass. The node will automatically appear as <span class="badge badge-emerald">Ready</span> and be persisted in the <code>k8s_workers</code> table.
+    </p>
+
+    <h2 id="draining-and-removing-workers">5. Draining, Resetting &amp; Removing Workers</h2>
+    <p>
+      Before shutting down or upgrading a worker host, cordoning and draining ensures running Flow Pods are not abruptly terminated:
+    </p>
+    <pre><code class="language-bash"># 1. Drain the worker via CLI (cordons the node and evicts non-DaemonSet pods)
+uv run python scripts/compass_cli.py --url http://&lt;MASTER_IP&gt;:5000 --token "$PC_API_TOKEN" \
+  workers drain --name worker-node-01
+
+# 2. On the worker machine: stop and reset the k0s worker service
+sudo k0s stop
+sudo k0s reset
+
+# 3. Remove the node from the cluster and mark it Removed in ProjectCompass
+uv run python scripts/compass_cli.py --url http://&lt;MASTER_IP&gt;:5000 --token "$PC_API_TOKEN" \
+  workers remove --name worker-node-01</code></pre>
+
+    <h2 id="testing-and-troubleshooting">6. Running Mocked &amp; Live k0s Integration Tests</h2>
+    <p>
+      ProjectCompass includes two test suites for Kubernetes functionality:
+    </p>
+    <pre><code class="language-bash"># 1. Fast unit & mocked K8s test suite (runs anywhere without a live cluster)
+uv run pytest tests/test_k8s_integration.py -v
+
+# 2. Live k0s cluster integration tests (creates real ConfigMaps, Secrets & batch/v1 Jobs)
+KUBECONFIG="$HOME/.kube/k0s-compass.conf" uv run pytest -m k0s -v</code></pre>
+
+    <div class="callout callout-kraken">
+      <div class="callout-title">🦑 Kraken Warning — Common Cluster Troubleshooting</div>
+      <ul>
+        <li><strong>Worker stuck in <code>NotReady</code></strong>: Verify UDP port <code>4789</code> (VXLAN) and TCP ports <code>6443</code> / <code>8132</code> are open between worker and master, and inspect <code>sudo journalctl -u k0sworker -f</code>.</li>
+        <li><strong>Single-node master Pods stay <code>Pending</code></strong>: Remove the master control-plane taint via <code>sudo k0s kubectl taint nodes --all node-role.kubernetes.io/master- || true</code>.</li>
+        <li><strong>Permission denied reading <code>admin.conf</code></strong>: Never run ProjectCompass as `root` just to read `/var/lib/k0s/pki/admin.conf`; instead export a user-owned kubeconfig via <code>sudo k0s kubeconfig admin &gt; ~/.kube/k0s-compass.conf &amp;&amp; chmod 600 ~/.kube/k0s-compass.conf</code>.</li>
+      </ul>
+    </div>
+
+    <div class="page-pager">
+      <a href="templates.html" class="pager-link">
+        <span class="pager-label">&larr; Previous</span>
+        <span class="pager-title">Templates, Header Injection &amp; HTMX</span>
+      </a>
+      <a href="kubernetes_console.html" class="pager-link" style="text-align: right;">
+        <span class="pager-label">Next &rarr;</span>
+        <span class="pager-title">Kubernetes Console, Flows &amp; Chains</span>
+      </a>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc" aria-label="On this page">
+    <div class="docs-toc-title">🧭 On This Page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <strong>ProjectCompass</strong> — <em>Organization Is Everything®</em> &bull; By
+      <a href="https://giacomosaccaggi.github.io/" target="_blank" rel="noopener">Giacomo Saccaggi</a>
+    </div>
+    <div class="footer-links">
+      <a href="../index.html">Hub</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="assets/docs.js"></script>
+</body>
+</html>

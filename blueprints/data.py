@@ -3,9 +3,13 @@ import re
 
 import pandas as pd
 from flask import Blueprint, current_app, render_template, request
+from markupsafe import escape
+from werkzeug.utils import secure_filename
 
 from logging_config import logger
-from models import Execution, log_action
+from models import DbConnection, Execution, db, log_action
+from utils.db_connection_service import DbConnectionService
+from utils.db_errors import ConnectionNotFoundError, DbConnectionError
 
 data_bp = Blueprint('data', __name__)
 
@@ -15,22 +19,48 @@ def get_webapp():
 
 
 def _get_data_lineage():
-    """Get which analyses use each dataset based on execution history."""
-    lineage = {}  # dataset_name -> list of analysis names
-    executions = Execution.query.filter(Execution.inputs_json.isnot(None)).all()
-    for exe in executions:
+    """Get which analyses use each dataset based on execution history and analysis scripts."""
+    import os
+    from sqlalchemy.exc import SQLAlchemyError
+    from blueprints.catalog import _extract_lineage_from_script
+
+    lineage: dict[str, set[str]] = {}
+    try:
+        executions = Execution.query.filter(Execution.inputs_json.isnot(None)).all()
+        for exe in executions:
+            try:
+                inputs = json.loads(exe.inputs_json) if exe.inputs_json else {}
+                values = inputs.values() if isinstance(inputs, dict) else (inputs if isinstance(inputs, list) else [])
+                for val in values:
+                    if isinstance(val, str) and val.endswith('.csv'):
+                        ds_name = os.path.basename(val).replace('.csv', '')
+                        lineage.setdefault(ds_name, set()).add(exe.analysis_name)
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                pass
+    except (SQLAlchemyError, Exception) as exc:
+        logger.warning(f"Unable to read execution lineage from DB: {exc}")
         try:
-            inputs = json.loads(exe.inputs_json) if exe.inputs_json else {}
-            # Check if this execution used any datasets (from inputs_json)
-            for _key, val in inputs.items():
-                if isinstance(val, str) and val.endswith('.csv'):
-                    ds_name = val.replace('.csv', '')
-                    if ds_name not in lineage:
-                        lineage[ds_name] = set()
-                    lineage[ds_name].add(exe.analysis_name)
-        except (json.JSONDecodeError, TypeError):
+            db.session.rollback()
+        except Exception:
             pass
-    # Convert sets to sorted lists
+
+    try:
+        webapp = get_webapp()
+        analyses = webapp.read_multiple_analysis()
+        for analysis_name, info in analyses.items():
+            folder = info.get('folder', '')
+            script_path = os.path.join(folder, 'structured_analysis_main.py')
+            if folder and os.path.isfile(script_path):
+                try:
+                    with open(script_path, encoding='utf-8', errors='ignore') as sf:
+                        script_text = sf.read()
+                    for ds_name in _extract_lineage_from_script(script_text):
+                        lineage.setdefault(ds_name, set()).add(analysis_name)
+                except OSError:
+                    pass
+    except Exception:
+        pass
+
     return {k: sorted(list(v)) for k, v in lineage.items()}
 
 
@@ -48,6 +78,22 @@ def clean_query(output_query: str) -> str:
     while '\n\n' in output_query:
         output_query = output_query.replace('\n\n', '\n')
     return output_query.strip()
+
+
+def _connection_id_from_form() -> int | None:
+    """Read an optional saved connection ID from the current form."""
+    value = request.form.get('connection_id', '').strip()
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise ConnectionNotFoundError('The selected database connection is invalid.') from exc
+
+
+def _connection_options() -> list[DbConnection]:
+    """Return saved connections for the Query Runner selector."""
+    return DbConnectionService().list()
 
 
 @data_bp.route('/list_of_data/')
@@ -115,6 +161,14 @@ def all_data():
 @data_bp.route('/query_runner/')
 def query_runner():
     webapp = get_webapp()
+    raw_connection_id = request.args.get('connection_id', '').strip()
+    try:
+        connection_id = int(raw_connection_id) if raw_connection_id else None
+    except ValueError:
+        connection_id = None
+    datasets = sorted(webapp.list_data())
+    default_table = 'sales_data' if 'sales_data' in datasets else (datasets[0] if datasets else 'database.table')
+    default_query = f'SELECT * FROM {default_table} LIMIT 10'
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     return render_template('query_results.html',
                            message='',
@@ -125,9 +179,12 @@ def query_runner():
                            sidebar_menu=html_part['sidebar_menu'],
                            head=html_part['head'],
                            show_res='none', project_folder=webapp.project_folder,
-                           query='select * from database.table limit 10',
+                           query=default_query,
+                           datasets=datasets,
                            columns=[],
                            df=pd.DataFrame(),
+                           connections=_connection_options(),
+                           selected_connection_id=connection_id,
                            page=1, total_pages=1)
 
 
@@ -136,19 +193,31 @@ def query_results():
     webapp = get_webapp()
     output_query = clean_query(request.form['output_query'].encode().decode('utf-8', 'ignore'))
     logger.info(f"Executing query: {output_query[:100]}...")
-
-    df = webapp.sql(output_query)
-    columns = df.columns
     message = ''
+    connection_id = None
+    query_error = False
+    try:
+        connection_id = _connection_id_from_form()
+        df = webapp.run_sql(output_query, connection_id)
+    except DbConnectionError as exc:
+        df = pd.DataFrame()
+        query_error = True
+        message = f'<br>Remote query error: {escape(str(exc))}'
+    columns = df.columns
 
     # Pagination
-    page = int(request.form.get('page', 1))
+    try:
+        page = max(1, int(request.form.get('page', 1)))
+    except ValueError:
+        page = 1
     per_page = 100
     total = len(df)
     total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
     if total > per_page:
         df = df.iloc[(page - 1) * per_page: page * per_page]
-        message += f'<br>Showing rows {(page-1)*per_page+1}-{min(page*per_page, total)} of {total}'
+        if not message:
+            message += f'<br>Showing rows {(page-1)*per_page+1}-{min(page*per_page, total)} of {total}'
 
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     return render_template('query_results.html',
@@ -159,10 +228,13 @@ def query_results():
                            top_container=html_part['top_container'], port=webapp.constants["port"],
                            sidebar_menu=html_part['sidebar_menu'],
                            head=html_part['head'],
-                           show_res='block', project_folder=webapp.project_folder,
+                           show_res='none' if query_error else 'block', project_folder=webapp.project_folder,
                            query=output_query,
+                           datasets=sorted(webapp.list_data()),
                            columns=columns,
                            df=df,
+                           connections=_connection_options(),
+                           selected_connection_id=connection_id,
                            page=page, total_pages=total_pages)
 
 
@@ -189,19 +261,29 @@ def open_data():
                            head=html_part['head'],
                            show_res='block', project_folder=webapp.project_folder,
                            query=output_query,
+                           datasets=sorted(webapp.list_data()),
                            columns=columns,
                            df=df,
+                           connections=_connection_options(),
+                           selected_connection_id=None,
                            page=1, total_pages=1)
 
 
 @data_bp.route('/rawgraphs')
 def rawgraphs():
     webapp = get_webapp()
+    raw_connection_id = request.args.get('connection_id', '').strip()
+    try:
+        connection_id = int(raw_connection_id) if raw_connection_id else None
+    except ValueError:
+        connection_id = None
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     return render_template('RAWGraphs.html',
                            title=webapp.environments_info['title'],
                            head=html_part['head'],
                            input_data='',
+                           query_error='',
+                           connection_id=connection_id,
                            top_container=html_part['top_container'], port=webapp.constants["port"],
                            project_folder=webapp.project_folder,
                            sidebar_menu=html_part['sidebar_menu'])
@@ -210,18 +292,43 @@ def rawgraphs():
 @data_bp.route('/save_query/', methods=['POST'])
 def save_query():
     import datetime
+
     webapp = get_webapp()
     output_query = clean_query(request.form['output_query_to_save'].encode().decode('utf-8', 'ignore'))
-    title = request.form['title']
+    title = secure_filename(request.form.get('title', '').strip()).strip('.') or 'query'
+    connection_id = None
+    connection = None
+    query_error = ''
+    try:
+        connection_id = _connection_id_from_form()
+        if connection_id is not None:
+            connection = db.session.get(DbConnection, connection_id)
+            if connection is None:
+                raise ConnectionNotFoundError('The selected database connection was not found.')
+    except DbConnectionError as exc:
+        query_error = str(exc)
+
     save_path = webapp.save_queries_path
     with open(f"{save_path}/{title}.sql", 'w') as f:
-        f.write(f'-- Query saved: {datetime.datetime.now()}\n{output_query}')
+        header = f'-- Query saved: {datetime.datetime.now()}\n'
+        if connection is not None:
+            safe_connection_name = connection.name.replace('\r', ' ').replace('\n', ' ')
+            header += f'-- connection: {safe_connection_name}\n'
+        f.write(f'{header}{output_query}')
     logger.info(f"Query saved: {title}")
 
-    df = webapp.sql(output_query)
+    df = pd.DataFrame()
+    columns = df.columns
+    if not query_error:
+        try:
+            df = webapp.run_sql(output_query, connection_id)
+        except DbConnectionError as exc:
+            query_error = str(exc)
     columns = df.columns
     message = f'<br>Saved query: {title}.sql'
-    if len(df) > 100:
+    if query_error:
+        message += f'<br>Remote query error: {escape(query_error)}'
+    elif len(df) > 100:
         df = df.head(100)
         message += '<br>Showing first 100 rows'
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
@@ -233,10 +340,13 @@ def save_query():
                            top_container=html_part['top_container'], port=webapp.constants["port"],
                            sidebar_menu=html_part['sidebar_menu'],
                            head=html_part['head'],
-                           show_res='block', project_folder=webapp.project_folder,
+                           show_res='none' if query_error else 'block', project_folder=webapp.project_folder,
                            query=output_query,
+                           datasets=sorted(webapp.list_data()),
                            columns=columns,
                            df=df,
+                           connections=_connection_options(),
+                           selected_connection_id=connection_id,
                            page=1, total_pages=1)
 
 
@@ -259,17 +369,27 @@ def graph_analysis():
     webapp = get_webapp()
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     query = request.form.get('output_query_to_rawgraph', '')
+    query_error = ''
+    connection_id = None
+    try:
+        connection_id = _connection_id_from_form()
+    except ConnectionNotFoundError as exc:
+        query_error = str(exc)
     input_data = ''
-    if query:
+    if query and not query_error:
         try:
-            df = webapp.sql(query)
+            df = webapp.run_sql(query, connection_id)
             input_data = df.to_csv(index=False, sep='\t')
+        except DbConnectionError as exc:
+            query_error = str(exc)
         except Exception:
-            pass
+            query_error = 'The query could not be prepared for RAWGraphs.'
     return render_template('RAWGraphs.html',
                            title=webapp.environments_info['title'],
                            head=html_part['head'],
                            input_data=input_data,
+                           query_error=query_error,
+                           connection_id=connection_id,
                            top_container=html_part['top_container'], port=webapp.constants["port"],
                            project_folder=webapp.project_folder,
                            sidebar_menu=html_part['sidebar_menu'])

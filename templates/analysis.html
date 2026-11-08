@@ -3,50 +3,159 @@
   {{ head|safe }}
 
   <style>
-
-    input[type=text], input[type=month], input[type=date], input[type=email], input[type=file], textarea {
-      padding: 6px 12px;
-      text-decoration: none;
-      margin: 4px 2px;
-      cursor: pointer;
-      width: 90%;
-      display: inline-block;
-      border-radius: 4px;
-      background-color: white;
-      color:  #005F81 ;
-      border: 2px solid  #00889B;
-      text-align: center;
-      transition: all 0.5s;
-      cursor: pointer;
-      margin: 5px;
+    .analysis-page-wrap { padding: 0 24px 16px; max-width: 1400px; margin: 0 auto; }
+    .analysis-filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
     }
-  /* Create two equal columns that floats next to each other */
-  .column {
-    float: left;
-    width: 50%;
-  }
-
-  /* Clear floats after the columns */
-  .row:after {
-    content: "";
-    display: table;
-    clear: both;
-  }
+    .analysis-filter-grid label,
+    .analysis-search-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--mariner-text-secondary, #334155);
+      margin-bottom: 4px;
+    }
+    .analysis-filter-grid input {
+      width: 100% !important;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background-color: var(--mariner-bg-card, #ffffff);
+      color: var(--mariner-text-primary, #0f172a);
+      border: 1px solid var(--mariner-border-strong, rgba(2, 132, 199, 0.38));
+      text-align: left !important;
+      margin: 0 !important;
+    }
+    #myInput {
+      text-align: left !important;
+      padding: 11px 16px !important;
+      margin: 0 0 16px 0 !important;
+      width: 100% !important;
+    }
+    #myUL > ul {
+      padding-left: 0 !important;
+      margin: 0 0 8px 0 !important;
+      list-style: none !important;
+    }
+    .accordion {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 13px 18px !important;
+      margin-bottom: 4px !important;
+    }
+    .accordion li { list-style: none; margin: 0; padding: 0; }
+    .accordion li a {
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.98rem;
+      color: var(--mariner-navy, #0b1629) !important;
+      padding: 0 !important;
+    }
+    body.dark-mode .accordion li a { color: #f1f5f9 !important; }
+    .panel {
+      padding: 18px 22px !important;
+      margin-bottom: 10px !important;
+    }
+    .analysis-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px 18px;
+      padding: 12px 14px;
+      background: rgba(2, 132, 199, 0.05);
+      border: 1px solid var(--mariner-border-subtle);
+      border-radius: 10px;
+      margin: 12px 0;
+      font-size: 0.86rem;
+    }
+    .analysis-meta-grid h6 { margin: 0; font-size: 0.85rem; }
+    .analysis-meta-grid .start_date,
+    .analysis-meta-grid .last_mod_date { display: inline; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+    .analysis-actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--mariner-border-subtle);
+    }
+    .analysis-actions-bar a.pc-act-btn,
+    .analysis-actions-bar button.pc-act-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--mariner-border-subtle);
+      background: var(--mariner-bg-secondary, #f2ede2);
+      color: var(--mariner-text-primary) !important;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .analysis-actions-bar a.pc-act-btn:hover,
+    .analysis-actions-bar button.pc-act-btn:hover {
+      border-color: var(--mariner-cyan);
+      background: rgba(2, 132, 199, 0.12);
+      color: var(--mariner-cyan) !important;
+    }
+    .analysis-actions-bar a.pc-act-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+      color: #ffffff !important;
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+    .analysis-actions-bar a.pc-act-primary:hover {
+      color: #fbbf24 !important;
+    }
+    .analysis-actions-bar a.pc-act-danger:hover {
+      background: rgba(220, 38, 38, 0.12);
+      border-color: #dc2626;
+      color: #dc2626 !important;
+    }
   </style>
 <style>
-
-header{
+header.analysis-hero {
   position: relative;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-image: url(/static/img/background2.PNG);
-  height: 50%;
-  width:100%;
-  color: #F8F8F8;
-  text-align: left;
-  padding-top: 5%;
-  font-size:32px;
+  background-position: bottom center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: 100% 42px, cover, cover;
+  background-image:
+    var(--mariner-wave-overlay),
+    linear-gradient(135deg, rgba(6, 13, 26, 0.86) 0%, rgba(11, 25, 48, 0.76) 100%),
+    url("{{ pc.branding.backgrounds.analysis|safe }}");
+  width: 100%;
+  color: #f8fafc;
+  padding: 22px 28px 28px !important;
+  border-bottom: 2px solid rgba(251, 191, 36, 0.42);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+header.analysis-hero h1 {
+  color: #f8fafc !important;
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin: 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+header.analysis-hero h1 i {
+  color: #fbbf24;
+  margin-right: 8px;
+}
+header.analysis-hero p {
+  margin: 4px 0 0 0;
+  font-size: 0.88rem;
+  color: #cbd5e1;
 }
 </style>
 <body class="w3-light-grey">
@@ -56,52 +165,53 @@ header{
   {{ sidebar_menu|safe }}
 
     <!-- !PAGE CONTENT! -->
-  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
+  <div class="w3-main" style="margin-left:260px;margin-top:54px;">
     <!-- Header -->
-    <header class="w3-container" style="padding-top:22px">
-      <br>
-      <h1><b><i class="fa fa-dashboard"></i>    {{ title }}</b></h1>
-      <br>
-      <br>
+    <header class="w3-container analysis-hero">
+      <div>
+        <h1><b><i class="fa fa-compass"></i>{{ title }}</b></h1>
+        <p>Search, filter, execute, version, and chat with your analytical catalog</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/load_analysis/" class="w3-button w3-blue w3-small" style="border-radius:8px;"><i class="fa fa-plus"></i> New Analysis</a>
+        {% if pc.features.pipeline_builder %}<a href="/pipeline_builder" class="w3-button w3-indigo w3-small" style="border-radius:8px;"><i class="fa fa-sitemap"></i> Pipeline Builder</a>{% endif %}
+      </div>
     </header>
-    <br>
-    <div class="w3-padding w3-container w3-card-1">
-      <div class="row">
 
-      <div class="column">
-        <div class="column">
-          <label for="from_date_input">From:</label><br>
-          <input type="date" id="from_date_input" name="from_date_input" onkeyup="search_function()" onkeypress="search_function()" onclick="search_function()"><br>
+    <div class="analysis-page-wrap">
+    <div class="w3-padding-large w3-container w3-card-1 analysis-filter-card">
+      <div class="analysis-filter-grid">
+        <div>
+          <label for="from_date_input"><i class="fa fa-calendar-minus-o"></i> From Date</label>
+          <input type="date" id="from_date_input" name="from_date_input" onkeyup="search_function()" onkeypress="search_function()" onchange="search_function()" onclick="search_function()">
         </div>
-        <div class="column">
-          <label for="to_date_input">To:</label><br>
-          <input type="date" id="to_date_input" name="to_date_input" onkeyup="search_function()" onkeypress="search_function()" onclick="search_function()"><br>
+        <div>
+          <label for="to_date_input"><i class="fa fa-calendar-plus-o"></i> To Date</label>
+          <input type="date" id="to_date_input" name="to_date_input" onkeyup="search_function()" onkeypress="search_function()" onchange="search_function()" onclick="search_function()">
         </div>
-      </div>
-      <div class="column">
-        <div class="column">
-          <label for="product_input">Product:</label><br>
-          <input type="text" list="product_types" id="product_input" name="product_input"  onkeyup="search_function()"><br>
-              <datalist id="product_types">
-                              {% for val in tool_choices['product'] %}
-                                    <option value="{{ val }}">
-                               {% endfor %}
-              </datalist>
+        <div>
+          <label for="product_input"><i class="fa fa-folder-open-o"></i> Product</label>
+          <input type="text" list="product_types" id="product_input" name="product_input" placeholder="All products..." onkeyup="search_function()">
+          <datalist id="product_types">
+            {% for val in tool_choices['product'] %}
+              <option value="{{ val }}">
+            {% endfor %}
+          </datalist>
         </div>
-        <div class="column">
-        <label for="countries_input">Countries:</label><br>
-        <input type="text" list="list_countries" id="countries_input" name="countries_input"  onkeyup="search_function()"><br>
-            <datalist id="list_countries">
-                              {% for val in tool_choices['countries'] %}
-                                    <option value="{{ val }}">
-                               {% endfor %}
-            </datalist>
+        <div>
+          <label for="countries_input"><i class="fa fa-globe"></i> Countries</label>
+          <input type="text" list="list_countries" id="countries_input" name="countries_input" placeholder="All countries..." onkeyup="search_function()">
+          <datalist id="list_countries">
+            {% for val in tool_choices['countries'] %}
+              <option value="{{ val }}">
+            {% endfor %}
+          </datalist>
         </div>
       </div>
 
-        </div>
-      <label for="myInput">Search for a topic:</label><br>
-      <input type=text id="myInput" onkeyup="search_function()" placeholder= " Search for a topic "  title="Type in a name">
+      <label for="myInput" class="analysis-search-label"><i class="fa fa-search"></i> Search by Title, Scope, or Outcome</label>
+      <input type="text" id="myInput" onkeyup="search_function()" placeholder="Filter analyses by keyword..." title="Type in a name">
+
       <div id="myUL">
       {% if not analysis or analysis|length == 0 %}
         {% with icon='🧭', title='No analyses yet', message='Create your first analysis to get started. Use the Pipeline Builder for visual workflows or create one manually.', cta_url='/pipeline_builder', cta_icon='fa-plus', cta_text='Create Pipeline' %}
@@ -110,67 +220,72 @@ header{
       {% else %}
       {% for nome, values in analysis.items() %}
         <ul>
-          <button class=accordion><li><a href="#{{ nome }}">{{ nome }}</a></li></button>
-          <div class=panel>
-            <p>
-              <h5 class="product"><b><i class="fa fa-folder-open-o"></i>    {{ values['product'] }}</b></h5>
-              <h6><b><i class="fa fa-info-circle"></i>    Purpose and scope:</b></h6>
-              <ul class="description1">{{ values['description'] }}</ul>
-              <h6><b><i class="fa fa-sign-in"></i>    The inputs of the analysis:</b></h6>
-              <ul>
+          <button class="accordion" type="button">
+            <li><a href="#{{ nome }}" onclick="event.preventDefault();">{{ nome }}</a></li>
+            <span class="w3-tag w3-tiny" style="background:rgba(2,132,199,0.12);color:var(--mariner-cyan);border:1px solid rgba(2,132,199,0.3);">{{ values['product'] }}</span>
+          </button>
+          <div class="panel">
+            <h5 class="product" style="margin:4px 0 8px 0;color:var(--mariner-cyan);"><b><i class="fa fa-folder-open-o"></i> {{ values['product'] }}</b></h5>
+            <h6 style="margin:6px 0 4px 0;"><b><i class="fa fa-info-circle"></i> Purpose &amp; Scope:</b></h6>
+            <div class="description1" style="font-size:0.9rem;color:var(--mariner-text-secondary);margin-bottom:10px;">{{ values['description'] }}</div>
+
+            {% if values['inputs'] %}
+            <h6 style="margin:6px 0 4px 0;"><b><i class="fa fa-sign-in"></i> Inputs:</b></h6>
+            <div style="margin-bottom:10px;font-size:0.86rem;">
               {% for name_var, var_info in values['inputs'].items() %}
-                <b>{{ name_var }} ({{ var_info['type'] }}):</b> {{ var_info['default'] }}<br>
+                <span class="w3-tag w3-small" style="background:var(--mariner-bg-secondary);color:var(--mariner-text-primary);border:1px solid var(--mariner-border-subtle);margin:2px 4px 2px 0;">
+                  <b>{{ name_var }} ({{ var_info['type'] }}):</b> {{ var_info['default'] }}
+                </span>
               {% endfor %}
-              </ul>
-              <h6 class="outcome"><b><i class="fa fa-sign-out"></i>    Outcome:</b> {{ values['output_type'] }}</h6>
-              <ul class="description2">{{ values['output description'] }}</ul>
-              <h6 class="people"><b><i class="fa fa-group"></i>    People:</b> {{ values['owner'] }} ({{ values['collaborators'] }})</h6>
-              <h6 class="countries"><b><i class="fa fa-map-o"></i>    Countries:</b> {{ values['countries'] }}</h6>
-              <h6><b><i class="fa fa-calendar-minus-o"></i>    Start date:</b> <div class="start_date">{{ values['start_date'] }}</div></h6>
-              <h6 ><b><i class="fa fa-calendar-plus-o"></i>    Last modified date:</b> <div class="last_mod_date">{{ values['last_modified'] }}</div></h6>
-              <div style="{{ 'display:none;' if values['links'] == {} else '' }}"><h6><b><i class="fa fa-external-link"></i>    Documentations links:</b></h6>
-              <ul>
+            </div>
+            {% endif %}
+
+            <h6 class="outcome" style="margin:6px 0 4px 0;"><b><i class="fa fa-sign-out"></i> Outcome:</b> <span class="w3-tag w3-tiny w3-teal">{{ values['output_type'] }}</span></h6>
+            <div class="description2" style="font-size:0.88rem;color:var(--mariner-text-secondary);margin-bottom:10px;">{{ values['output description'] }}</div>
+
+            <div class="analysis-meta-grid">
+              <h6 class="people"><b><i class="fa fa-group"></i> Owner:</b> {{ values['owner'] }} {% if values['collaborators'] %}({{ values['collaborators'] }}){% endif %}</h6>
+              <h6 class="countries"><b><i class="fa fa-map-o"></i> Countries:</b> {{ values['countries'] }}</h6>
+              <h6><b><i class="fa fa-calendar-minus-o"></i> Start date:</b> <div class="start_date">{{ values['start_date'] }}</div></h6>
+              <h6><b><i class="fa fa-calendar-plus-o"></i> Modified:</b> <div class="last_mod_date">{{ values['last_modified'] }}</div></h6>
+            </div>
+
+            <div style="{{ 'display:none;' if values['links'] == {} else 'margin-bottom:8px;' }}">
+              <h6 style="margin:4px 0;"><b><i class="fa fa-external-link"></i> Documentation Links:</b></h6>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
               {% for name_link, link in values['links'].items() %}
-                <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
+                <a href="{{ link }}" target="_blank" class="w3-tag w3-small" style="background:rgba(2,132,199,0.1);color:var(--mariner-cyan);text-decoration:none;"><i class="fa fa-link"></i> {{ name_link }}</a>
               {% endfor %}
-              </ul>
               </div>
-              {{ values['gitlab_link_viz']|safe }}
-              {{ values['gdrive_link_viz']|safe }}
-              <br>
-              <div style="{{ 'display:none;' if values['dashboard link'] == '' else '' }}">
-              <h6><b><i class="fa fa-line-chart"></i>    <a href="{{'/iframe?name=' + nome.replace(' ','512') if values['embedded'] == 'y' else values['dashboard link']}}" target="{{'_blank' if values['embedded'] != 'y' else ''}}">Open the dashboard</a></b></h6>
-              <br>
-              </div>
-              <div style="{{ 'display:none;' if values['physical_output'] == '' else '' }}">
-              <h6><b><i class="fa fa-bar-chart"></i>    <a href="{{'/physical_output?name=' + nome.replace(' ','512')}}">Open the output of the analysis</a></b></h6>
-              <br>
-              </div>
+            </div>
+            {{ values['gitlab_link_viz']|safe }}
+            {{ values['gdrive_link_viz']|safe }}
+
+            <div class="analysis-actions-bar">
               {% if values['structured_analysis'] != 'n' %}
-              <div style="{{ 'display:none;' if values['structured_analysis'] == 'n' else '' }}">
-              <h6><b><i class="fa fa-empire"></i>    <a href="{{'/create_investigations?name=' + nome.replace(' ','512')}}">Run the analysis</a></b></h6>
-              <br>
-              </div>
+              <a href="{{'/create_investigations?name=' + nome.replace(' ','512')}}" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
               {% endif %}
-
-              <h6><b><i class="fa fa-history"></i>    <a href="/open_version?name={{ nome.replace(' ','512') }}">Open the analysis</a></b></h6>
-              <br>
-              <h6><b><i class="fa fa-edit"></i>    <a href="/load_analysis?name={{ nome.replace(' ','512') }}">Edit the analysis</a></b></h6>
-              <br>
-              <h6><b><i class="fa fa-download"></i>    <a href="/open_analysis?name={{ nome.replace(' ','512') }}">Download the analysis</a></b></h6>
-              <br>
-              <h6><b><i class="fa fa-comments"></i>    <a href="/chat/analysis?name={{ nome.replace(' ','512') }}">Chat about this analysis</a></b></h6>
-              <br>
-              <h6><b><i class="fa fa-brain"></i>    <span id="rag-status-{{ loop.index }}" style="font-weight:normal;color:#999;">Loading...</span>
-                <button onclick="buildRag('{{ nome.replace(' ','512') }}', this, {{ loop.index }})" class="w3-button w3-small w3-round" style="background:#e3f2fd;color:#1565c0;margin-left:8px;padding:2px 12px;font-size:0.8rem;">🧠 Build RAG</button></b></h6>
-              <br>
-              <h6><b><i class="fa fa-recycle"></i>    <a href="/delete_analysis?name={{ nome.replace(' ','512') }}">Delete the analysis</a></b></h6>
-
-            </p>
+              {% if values['dashboard link'] != '' %}
+              <a href="{{'/iframe?name=' + nome.replace(' ','512') if values['embedded'] == 'y' else values['dashboard link']}}" target="{{'_blank' if values['embedded'] != 'y' else ''}}" class="pc-act-btn"><i class="fa fa-line-chart"></i> Dashboard</a>
+              {% endif %}
+              {% if values['physical_output'] != '' %}
+              <a href="{{'/physical_output?name=' + nome.replace(' ','512')}}" class="pc-act-btn"><i class="fa fa-bar-chart"></i> Outputs</a>
+              {% endif %}
+              <a href="/open_version?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
+              <a href="/load_analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
+              <a href="/open_analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              <a href="/chat/analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
+                <span id="rag-status-{{ loop.index }}" style="font-size:0.78rem;color:var(--mariner-text-muted);">Loading...</span>
+                <button type="button" onclick="buildRag('{{ nome.replace(' ','512') }}', this, {{ loop.index }})" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
+              </span>
+              <a href="/delete_analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis {{ nome }}?');"><i class="fa fa-trash"></i> Delete</a>
+            </div>
           </div>
         </ul>
       {% endfor %}
       {% endif %}
+      </div>
     </div>
     </div>
 
@@ -202,7 +317,7 @@ header{
         console.log(from_date_input.toDateString());
         console.log(to_date_input.toDateString());
         ul = document.getElementById("myUL");
-        li = ul.getElementsByTagName("button");
+        li = ul.getElementsByClassName("accordion");
         description1 = ul.getElementsByClassName("description1");
         description2 = ul.getElementsByClassName("description2");
         product = ul.getElementsByClassName("product");
@@ -296,15 +411,7 @@ header{
     });
     </script>
 
-    <!-- Footer -->
-    <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
-                <hr><br>
-                <strong>About ProjectCompass</strong><br>
-                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
-                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
-                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
-                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
-    </footer>
+    {% include 'components/branding_footer.html' %}
 
     <!-- End page content -->
     </div>

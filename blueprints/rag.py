@@ -1,7 +1,7 @@
 """RAG blueprint — build, query, and manage per-analysis RAG indices."""
 import threading
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
 
 from logging_config import logger
 
@@ -23,6 +23,7 @@ def build_rag(analysis_name):
     Set RAG_EMBED_BACKEND=mithril in config to use cloud embeddings instead.
     """
     import os
+
     from utils.chunker import chunk_analysis, chunk_comments
 
     analysis_name = analysis_name.replace('512', ' ')
@@ -104,6 +105,7 @@ def trigger_rag_rebuild(app, analysis_name: str):
         with app.app_context():
             try:
                 import os
+
                 from utils.chunker import chunk_analysis, chunk_comments
 
                 webapp = app.config['WEBAPP']

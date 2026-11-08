@@ -5,42 +5,48 @@
 {{ top_container|safe }}
 {{ sidebar_menu|safe }}
 
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
-  <header class="w3-container" style="padding-top:22px">
-    <h5><b><i class="fa fa-history"></i> Execution History</b></h5>
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);">
+    <h2 style="margin:0;font-size:1.65rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-history" style="color:#fbbf24;margin-right:8px;"></i>Execution History</h2>
+    <p style="margin:4px 0 0;font-size:0.9rem;color:#cbd5e1;">Track structured analysis runs, k0s Job pods, exit codes, and real-time logs.</p>
   </header>
-  <br>
+  <div style="padding:18px 24px 32px;max-width:1400px;margin:0 auto;">
 
   <!-- Filter buttons -->
-  <div class="w3-padding w3-container">
-    <a href="/executions" class="w3-button {{ 'w3-blue' if not status_filter else 'w3-light-grey' }}">All</a>
-    <a href="/executions?status=running" class="w3-button {{ 'w3-amber' if status_filter == 'running' else 'w3-light-grey' }}">
+  <div class="w3-padding w3-container" style="display:flex;gap:8px;flex-wrap:wrap;padding-left:0 !important;">
+    <a href="/executions" class="w3-button w3-round {{ 'w3-blue' if not status_filter else 'w3-light-grey' }}">All</a>
+    <a href="/executions?status=running" class="w3-button w3-round {{ 'w3-amber' if status_filter == 'running' else 'w3-light-grey' }}">
       <i class="fa fa-spinner fa-spin"></i> Running
     </a>
-    <a href="/executions?status=success" class="w3-button {{ 'w3-green' if status_filter == 'success' else 'w3-light-grey' }}">
+    <a href="/executions?status=success" class="w3-button w3-round {{ 'w3-green' if status_filter == 'success' else 'w3-light-grey' }}">
       <i class="fa fa-check"></i> Success
     </a>
-    <a href="/executions?status=failed" class="w3-button {{ 'w3-red' if status_filter == 'failed' else 'w3-light-grey' }}">
+    <a href="/executions?status=failed" class="w3-button w3-round {{ 'w3-red' if status_filter == 'failed' else 'w3-light-grey' }}">
       <i class="fa fa-times"></i> Failed
     </a>
   </div>
 
-  <div class="w3-padding w3-container" id="exec-wrapper"
+  <div class="w3-padding w3-container" id="exec-wrapper" style="padding-left:0 !important;padding-right:0 !important;"
        {% if has_running %}hx-get="/executions?status={{ status_filter }}" hx-trigger="every 5s" hx-select="#exec-table" hx-target="#exec-table"{% endif %}>
     {% if executions.items %}
     <div id="exec-table">
       <table class="w3-table w3-bordered w3-hoverable w3-white">
         <tr class="w3-light-grey">
-          <th>Analysis</th>
+          <th>Run ID</th>
+          <th>Flow / Analysis</th>
           <th>Status</th>
+          <th>Trigger</th>
+          <th>Worker Node</th>
           <th>Started</th>
           <th>Duration</th>
-          <th>User</th>
+          <th>Error</th>
+          <th>Logs</th>
         </tr>
         {% for exe in executions.items %}
         <tr>
+          <td><a href="/runs/{{ exe.id }}"><b>#{{ exe.id }}</b></a></td>
           <td>
-            <a href="/outputs/?name={{ exe.analysis_name|replace(' ', '512') }}">
+            <a href="/flows/{{ exe.analysis_name }}">
               <b>{{ exe.analysis_name }}</b>
             </a>
           </td>
@@ -49,11 +55,15 @@
             <span class="w3-badge w3-amber"><i class="fa fa-spinner fa-spin"></i> running</span>
             {% elif exe.status == 'success' %}
             <span class="w3-badge w3-green">success</span>
+            {% elif exe.status == 'aborted' %}
+            <span class="w3-badge w3-grey">aborted</span>
             {% else %}
             <span class="w3-badge w3-red">failed</span>
             {% endif %}
           </td>
-          <td>{{ exe.started_at.strftime('%Y-%m-%d %H:%M') if exe.started_at else '-' }}</td>
+          <td><span class="w3-tag w3-tiny w3-light-grey">{{ exe.trigger_type or 'manual' }}</span></td>
+          <td><code>{{ exe.node_name or '-' }}</code></td>
+          <td>{{ exe.started_at.strftime('%Y-%m-%d %H:%M:%S') if exe.started_at else '-' }}</td>
           <td>
             {% if exe.finished_at and exe.started_at %}
               {% set delta = exe.finished_at - exe.started_at %}
@@ -64,7 +74,18 @@
               -
             {% endif %}
           </td>
-          <td>{{ exe.user_id or '-' }}</td>
+          <td>
+            {% if exe.error_message %}
+              <span class="w3-small w3-text-red">{{ exe.error_message[:60] }}</span>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            <a href="/runs/{{ exe.id }}" class="w3-button w3-tiny w3-blue">
+              <i class="fa fa-terminal"></i> Logs
+            </a>
+          </td>
         </tr>
         {% endfor %}
       </table>
@@ -83,10 +104,11 @@
     </div>
     {% endif %}
     {% else %}
-    {% with icon='⚡', title='No executions yet', message='Run a structured analysis to see execution history here. Results include status, duration, and live logs.', cta_url='/analysis', cta_icon='fa-play', cta_text='Go to Analyses' %}
+    {% with icon='⚡', title='No executions yet', message='Run a Python Flow or Structured Analysis to see execution history, worker node assignment, and live logs here.', cta_url='/flows', cta_icon='fa-play', cta_text='Go to Flows' %}
       {% include 'components/empty_state.html' %}
     {% endwith %}
     {% endif %}
+  </div>
   </div>
 </div>
 </body>

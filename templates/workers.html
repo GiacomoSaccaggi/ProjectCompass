@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;font-size:1.65rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-server" style="color:#fbbf24;margin-right:8px;"></i>k0s Cluster Workers (Read-Only)</h2>
+      <p style="margin:4px 0 0;font-size:0.88rem;color:#cbd5e1;">
+        Live view of worker nodes connected to the k0s control plane. Nodes that become unreachable show as
+        <b>NotReady</b>; nodes deleted from the cluster show as <b>Removed</b>. Worker join and removal are managed
+        externally via standard <code>k0s</code> CLI tools.
+      </p>
+    </div>
+    <span class="w3-small" style="color:#38bdf8;">
+      <span id="workers-poll-indicator" class="htmx-indicator"><i class="fa fa-spinner fa-spin"></i> Syncing...</span>
+    </span>
+  </header>
+
+  <div class="w3-container w3-padding" style="padding:20px 24px 32px !important;max-width:1400px;margin:0 auto;"
+       hx-get="/workers/table"
+       hx-trigger="every 5s"
+       hx-target="#workers-live-region"
+       hx-swap="outerHTML"
+       hx-indicator="#workers-poll-indicator">
+    {% include 'components/workers_table.html' %}
+  </div>
+</div>
+</body>
+</html>

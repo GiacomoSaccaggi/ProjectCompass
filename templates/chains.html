@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+    <div>
+      <h2 style="margin:0;font-size:1.65rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-link" style="color:#fbbf24;margin-right:8px;"></i>Consecutive Flow Chains (Linear Execution)</h2>
+      <p style="margin:4px 0 0;font-size:0.88rem;color:#cbd5e1;">
+        Define linear sequences of Flows (<code>A -&gt; B -&gt; C</code>) that execute sequentially as isolated Kubernetes Jobs.
+        If any step finishes with a non-success status, the chain halts immediately.
+      </p>
+    </div>
+    <a href="/chains?new=1" class="w3-button w3-blue w3-small" style="border-radius:8px;">
+      <i class="fa fa-plus"></i> New Chain
+    </a>
+  </header>
+
+  {% if message %}
+  <div class="w3-container">
+    <div class="w3-panel w3-pale-green w3-leftbar w3-border-green w3-padding">
+      <i class="fa fa-check-circle"></i> {{ message }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div class="w3-container">
+    <div class="w3-panel w3-pale-red w3-leftbar w3-border-red w3-padding">
+      <i class="fa fa-exclamation-circle"></i> {{ error }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if chain_run %}
+  <div class="w3-container w3-margin-bottom">
+    <div class="w3-card w3-white w3-padding-large">
+      <h6>
+        <b>
+          <i class="fa fa-sitemap"></i> Chain Execution #{{ chain_run.id }}:
+          <code>{{ chain_run.chain_name }}</code>
+        </b>
+        <span class="w3-right">
+          {% if chain_run.status == 'running' %}
+            <span class="w3-badge w3-amber">running</span>
+          {% elif chain_run.status == 'success' %}
+            <span class="w3-badge w3-green">success</span>
+          {% else %}
+            <span class="w3-badge w3-red">{{ chain_run.status }}</span>
+          {% endif %}
+        </span>
+      </h6>
+      {% if chain_run.error_message %}
+      <div class="w3-panel w3-pale-red w3-leftbar w3-border-red w3-padding w3-small">
+        <b>Chain Stopped:</b> {{ chain_run.error_message }}
+      </div>
+      {% endif %}
+      <div class="w3-responsive">
+        <table class="w3-table w3-bordered w3-striped w3-small">
+          <thead>
+            <tr class="w3-light-grey">
+              <th>Step</th>
+              <th>Flow Name</th>
+              <th>Status</th>
+              <th>Kubernetes Job Run</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for step in chain_run_steps %}
+            <tr>
+              <td><b>Step {{ step.step_num }}</b></td>
+              <td><a href="/flows/{{ step.flow_name }}"><code>{{ step.flow_name }}</code></a></td>
+              <td>
+                {% if step.status == 'success' %}
+                  <span class="w3-badge w3-green">success</span>
+                {% elif step.status == 'running' %}
+                  <span class="w3-badge w3-amber">running</span>
+                {% elif step.status == 'failed' %}
+                  <span class="w3-badge w3-red">failed</span>
+                {% else %}
+                  <span class="w3-badge w3-grey">{{ step.status }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if step.execution %}
+                  <a href="/runs/{{ step.execution.id }}" class="w3-button w3-tiny w3-indigo">
+                    <i class="fa fa-terminal"></i> Run #{{ step.execution.id }} Logs
+                  </a>
+                {% else %}
+                  <span class="w3-text-grey">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="w3-row-padding">
+    <!-- Left column: Saved Chains & Recent Chain Runs -->
+    <div class="w3-col l4 m12 w3-margin-bottom">
+      <div class="w3-card w3-white w3-padding">
+        <h6><b><i class="fa fa-link"></i> Saved Chains ({{ chains|length }})</b></h6>
+        <ul class="w3-ul w3-hoverable">
+          {% for ch in chains %}
+          <li class="{{ 'w3-pale-blue' if selected_chain and selected_chain.name == ch.name else '' }}">
+            <a href="/chains?name={{ ch.name }}" style="text-decoration:none;display:block;">
+              <b>{{ ch.name }}</b>
+              <br>
+              <span class="w3-tiny w3-text-indigo"><code>{{ ch.flow_names_arrow }}</code></span>
+              {% if ch.description %}
+              <br><span class="w3-small w3-text-grey">{{ ch.description }}</span>
+              {% endif %}
+            </a>
+          </li>
+          {% else %}
+          <li class="w3-text-grey w3-small">No flow chains created yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      {% if recent_chain_runs %}
+      <div class="w3-card w3-white w3-padding w3-margin-top">
+        <h6><b><i class="fa fa-history"></i> Recent Chain Runs</b></h6>
+        <ul class="w3-ul w3-small">
+          {% for cr in recent_chain_runs %}
+          <li>
+            <a href="/chains/runs/{{ cr.id }}"><b>#{{ cr.id }}</b> {{ cr.chain_name }}</a>
+            <span class="w3-right">
+              {% if cr.status == 'running' %}
+                <span class="w3-badge w3-amber">running</span>
+              {% elif cr.status == 'success' %}
+                <span class="w3-badge w3-green">success</span>
+              {% else %}
+                <span class="w3-badge w3-red">{{ cr.status }}</span>
+              {% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right column: Create / Edit / Run Chain -->
+    <div class="w3-col l8 m12">
+      <div class="w3-card w3-white w3-padding-large">
+        <h6>
+          <b>
+            {% if selected_chain %}
+              <i class="fa fa-edit"></i> Edit Chain: <code>{{ selected_chain.name }}</code>
+            {% else %}
+              <i class="fa fa-plus-circle"></i> Create Flow Chain
+            {% endif %}
+          </b>
+        </h6>
+
+        <form method="POST" action="/chains/save">
+          <div class="w3-row-padding" style="margin:0 -16px;">
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Chain Name</b></label>
+              <input class="w3-input w3-border" type="text" name="name"
+                     value="{{ selected_chain.name if selected_chain else '' }}"
+                     placeholder="e.g. DailyETLPipeline" required>
+            </div>
+            <div class="w3-half w3-margin-bottom">
+              <label class="w3-small"><b>Description</b></label>
+              <input class="w3-input w3-border" type="text" name="description"
+                     value="{{ selected_chain.description if selected_chain else '' }}"
+                     placeholder="Sequential execution of ingestion, transform, and validation flows">
+            </div>
+          </div>
+
+          <div class="w3-margin-bottom">
+            <label class="w3-small">
+              <b>Ordered Flow Sequence (comma or <code>-&gt;</code> separated flow names in execution order)</b>
+            </label>
+            <input class="w3-input w3-border" type="text" name="flow_names_text"
+                   value="{{ selected_chain.flow_names_text if selected_chain else '' }}"
+                   placeholder="e.g. StepOneFlow, StepTwoFlow, StepThreeFlow">
+          </div>
+
+          <div class="w3-margin-bottom">
+            <label class="w3-small"><b>Or Select Flows from Catalog (Multi-Select)</b></label>
+            <select class="w3-select w3-border" name="flow_names" multiple size="5">
+              {% for fl in flows %}
+              <option value="{{ fl.name }}"
+                      {% if selected_chain and fl.name in selected_chain.flow_names %}selected{% endif %}>
+                {{ fl.name }} — {{ fl.description or 'Python flow' }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <button type="submit" class="w3-button w3-green">
+            <i class="fa fa-save"></i> Save Chain
+          </button>
+        </form>
+
+        {% if selected_chain %}
+        <hr>
+        <div class="w3-bar">
+          <h6>
+            <b><i class="fa fa-play-circle"></i> Run Chain: <code>{{ selected_chain.flow_names_arrow }}</code></b>
+          </h6>
+          <form method="POST" action="/chains/{{ selected_chain.name }}/run" class="w3-margin-bottom">
+            <div class="w3-margin-bottom">
+              <label class="w3-small"><b>Shared Run Parameters Override (JSON or <code>KEY=VALUE</code>)</b></label>
+              <textarea class="w3-input w3-border" name="parameters" rows="2"
+                        style="font-family:monospace;font-size:12px;">{}</textarea>
+            </div>
+            <button type="submit" class="w3-button w3-indigo">
+              <i class="fa fa-rocket"></i> Launch Chain Execution
+            </button>
+          </form>
+
+          <form method="POST" action="/chains/{{ selected_chain.name }}/delete"
+                onsubmit="return confirm('Delete chain {{ selected_chain.name }}?');">
+            <button type="submit" class="w3-button w3-small w3-red">
+              <i class="fa fa-trash"></i> Delete Chain
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0;font-size:1.6rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-terminal" style="color:#fbbf24;margin-right:8px;"></i>Run #{{ execution.id }} — <code>{{ execution.analysis_name }}</code></h2>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/flows/{{ execution.analysis_name }}" class="w3-button w3-small w3-blue" style="border-radius:8px;">
+        <i class="fa fa-code"></i> Edit Flow
+      </a>
+      <a href="/executions" class="w3-button w3-small w3-teal" style="border-radius:8px;">
+        <i class="fa fa-history"></i> All Runs
+      </a>
+    </div>
+  </header>
+
+  <div class="w3-container w3-padding">
+    <!-- Metadata summary card -->
+    <div class="w3-card w3-white w3-padding w3-margin-bottom">
+      <div class="w3-row">
+        <div class="w3-col m3 s6">
+          <span class="w3-small w3-text-grey">Status</span><br>
+          <span id="run-status-badge">
+            {% if execution.status == 'running' %}
+              <span class="w3-badge w3-amber"><i class="fa fa-spinner fa-spin"></i> running</span>
+            {% elif execution.status == 'success' %}
+              <span class="w3-badge w3-green">success</span>
+            {% elif execution.status == 'aborted' %}
+              <span class="w3-badge w3-grey">aborted</span>
+            {% else %}
+              <span class="w3-badge w3-red">{{ execution.status }}</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="w3-col m3 s6">
+          <span class="w3-small w3-text-grey">Kubernetes Job / Node</span><br>
+          <code>{{ execution.job_name or '-' }}</code>
+          <span class="w3-small w3-text-grey">on</span>
+          <code>{{ execution.node_name or 'pending' }}</code>
+        </div>
+        <div class="w3-col m3 s6">
+          <span class="w3-small w3-text-grey">Started / Trigger</span><br>
+          <span>{{ execution.started_at.strftime('%Y-%m-%d %H:%M:%S') if execution.started_at else '-' }}</span>
+          <span class="w3-tag w3-tiny w3-light-grey">{{ execution.trigger_type or 'manual' }}</span>
+        </div>
+        <div class="w3-col m3 s6">
+          <span class="w3-small w3-text-grey">Duration / Exit Code</span><br>
+          {% if execution.finished_at and execution.started_at %}
+            {% set delta = execution.finished_at - execution.started_at %}
+            <span>{{ delta.seconds // 60 }}m {{ delta.seconds % 60 }}s</span>
+          {% elif execution.status == 'running' %}
+            <span>In progress...</span>
+          {% else %}
+            <span>-</span>
+          {% endif %}
+          {% if execution.exit_code is not none %}
+            <span class="w3-small w3-text-grey">(exit={{ execution.exit_code }})</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if execution.error_message %}
+      <div class="w3-panel w3-pale-red w3-leftbar w3-border-red w3-padding-small w3-margin-top">
+        <b>Error:</b> <code>{{ execution.error_message }}</code>
+      </div>
+      {% endif %}
+
+      {% if inputs_meta %}
+      <div class="w3-small w3-text-grey w3-margin-top">
+        <b>Image:</b> <code>{{ inputs_meta.get('image', 'python:3.11-slim') }}</code> |
+        <b>Parameters:</b> <code>{{ inputs_meta.get('parameters', {})|tojson }}</code> |
+        <b>Pip Packages:</b> <code>{{ inputs_meta.get('pip_requirements', [])|join(', ') or 'none' }}</code> |
+        <b>Injected Secret Keys:</b> <code>{{ inputs_meta.get('secret_keys', [])|join(', ') or 'none' }}</code>
+      </div>
+      {% endif %}
+
+      {% if execution.status == 'running' %}
+      <div class="w3-margin-top">
+        <form method="POST" action="/runs/{{ execution.id }}/abort" style="display:inline;">
+          <button type="submit" class="w3-button w3-red w3-small">
+            <i class="fa fa-stop-circle"></i> Abort Kubernetes Job
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Live / Historical stdout & stderr log console -->
+    <div class="w3-card w3-white w3-padding">
+      <h6>
+        <b><i class="fa fa-file-text-o"></i> Standard Output / Error Logs (Run #{{ execution.id }})</b>
+        <span class="w3-small w3-text-grey w3-right">
+          Refreshing or reconnecting to this page never re-triggers the run.
+        </span>
+      </h6>
+      <pre id="run-log-console"
+           style="background:#0f172a;color:#e2e8f0;padding:16px;border-radius:6px;min-height:280px;max-height:600px;overflow-y:auto;font-family:monospace;font-size:13px;white-space:pre-wrap;">{{ execution.log_text or '' }}</pre>
+    </div>
+  </div>
+</div>
+
+{% if execution.status == 'running' %}
+<script>
+(function() {
+  var logEl = document.getElementById('run-log-console');
+  logEl.textContent = '';
+  var evtSource = new EventSource('/runs/{{ execution.id }}/stream');
+  evtSource.onmessage = function(event) {
+    logEl.textContent += event.data + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+  evtSource.addEventListener('done', function() {
+    evtSource.close();
+    window.location.reload();
+  });
+  evtSource.onerror = function() {
+    evtSource.close();
+  };
+})();
+</script>
+{% endif %}
+</body>
+</html>

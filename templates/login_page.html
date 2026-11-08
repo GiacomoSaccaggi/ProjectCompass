@@ -3,45 +3,86 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body {font-family: Arial, Helvetica, sans-serif;}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #060d1a;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 80% 18%, rgba(251, 191, 36, 0.12) 0%, transparent 40%),
+    linear-gradient(to right, rgba(56, 189, 248, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 64px 64px, 64px 64px;
+  color: #f1f5f9;
+  padding: 20px;
+  box-sizing: border-box;
+}
 
 /* Full-width input fields */
 input[type=text], input[type=password] {
   width: 100%;
-  padding: 12px 20px;
-  margin: 8px 0;
+  padding: 13px 16px;
+  margin: 8px 0 18px 0;
   display: inline-block;
-  border: 1px solid #ccc;
+  background-color: rgba(6, 13, 26, 0.85);
+  color: #f1f5f9;
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  border-radius: 10px;
   box-sizing: border-box;
+  font-size: 0.98rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type=text]:focus, input[type=password]:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22);
 }
 
 /* Set a style for all buttons */
 button {
-  background-color: #04AA6D;
-  color: white;
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+  color: #ffffff;
   padding: 14px 20px;
-  margin: 8px 0;
-  border: none;
+  margin: 10px 0 4px 0;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: 10px;
   cursor: pointer;
   width: 100%;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 26px rgba(2, 132, 199, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 button:hover {
-  opacity: 0.8;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(56, 189, 248, 0.45);
 }
 
 /* Extra styles for the cancel button */
 .cancelbtn {
   width: auto;
   padding: 10px 18px;
-  background-color: #f44336;
+  background-color: #dc2626;
 }
 
 /* Center the image and position the close button */
 .imgcontainer {
   text-align: center;
-  margin: 24px 0 12px 0;
+  margin: 28px 0 12px 0;
   position: relative;
+}
+
+.imgcontainer svg {
+  filter: drop-shadow(0 8px 24px rgba(56, 189, 248, 0.35));
 }
 
 img.avatar {
@@ -50,7 +91,14 @@ img.avatar {
 }
 
 .container {
-  padding: 16px;
+  padding: 20px 28px 28px;
+}
+
+.container label {
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #cbd5e1;
 }
 
 span.psw {
@@ -60,25 +108,29 @@ span.psw {
 
 /* The Modal (background) */
 .modal {
-  display: none; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
+  display: none;
+  position: fixed;
+  z-index: 1;
   left: 0;
   top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(6, 13, 26, 0.75);
   padding-top: 60px;
 }
 
 /* Modal Content/Box */
 .modal-content {
-  background-color: #fefefe;
-  margin: 5% auto 15% auto; /* 5% from the top, 15% from the bottom and centered */
-  border: 1px solid #888;
-  width: 80%; /* Could be more or less, depending on screen size */
+  background-color: rgba(14, 25, 47, 0.90);
+  margin: 2% auto;
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  border-top: 4px solid #fbbf24;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 420px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
 }
 
 /* The Close Button (x) */
@@ -86,31 +138,31 @@ span.psw {
   position: absolute;
   right: 25px;
   top: 0;
-  color: #000;
+  color: #cbd5e1;
   font-size: 35px;
   font-weight: bold;
 }
 
 .close:hover,
 .close:focus {
-  color: red;
+  color: #fbbf24;
   cursor: pointer;
 }
 
 /* Add Zoom Animation */
 .animate {
-  -webkit-animation: animatezoom 0.6s;
-  animation: animatezoom 0.6s
+  -webkit-animation: animatezoom 0.5s ease-out;
+  animation: animatezoom 0.5s ease-out;
 }
 
 @-webkit-keyframes animatezoom {
-  from {-webkit-transform: scale(0)}
-  to {-webkit-transform: scale(1)}
+  from {-webkit-transform: scale(0.92); opacity: 0;}
+  to {-webkit-transform: scale(1); opacity: 1;}
 }
 
 @keyframes animatezoom {
-  from {transform: scale(0)}
-  to {transform: scale(1)}
+  from {transform: scale(0.92); opacity: 0;}
+  to {transform: scale(1); opacity: 1;}
 }
 
 /* Change styles for span and cancel button on extra small screens */

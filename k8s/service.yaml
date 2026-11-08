@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: projectcompass
+  namespace: projectcompass
+  labels:
+    app.kubernetes.io/name: projectcompass
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: projectcompass
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP

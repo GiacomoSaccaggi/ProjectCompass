@@ -1,139 +1,388 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Architecture – ProjectCompass Docs</title>
-  <style>
-    *{box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
-    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
-    header h1{margin:0;font-size:1.8rem}
-    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
-    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
-    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
-    nav a:hover{text-decoration:underline}
-    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
-    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5}
-    h3{color:#2d323a;margin-top:1.8rem}
-    p,li{line-height:1.7;font-size:.95rem}
-    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.88rem}
-    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.85rem;line-height:1.6}
-    .layer{background:#fff;border-radius:8px;padding:1.2rem 1.5rem;margin:.8rem 0;box-shadow:0 2px 6px rgba(0,0,0,.07);border-left:4px solid #3F51B5}
-    .layer h4{margin:0 0 .4rem;color:#3F51B5}
-    .layer p{margin:0;font-size:.9rem;color:#555}
-    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
-  </style>
+  <title>System Architecture &amp; Storage — ProjectCompass Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="assets/docs.css">
 </head>
 <body>
-<header>
-  <h1>System Architecture</h1>
-  <p>How the components of ProjectCompass fit together</p>
+
+<header class="top-nav">
+  <div class="top-nav-inner">
+    <a href="../index.html" class="brand-link">
+      <svg class="compass-mini" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="18" r="15.5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6"/>
+        <circle cx="18" cy="18" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M18 7 L18 24" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18 8 L26 22 L18 22 Z" fill="currentColor" fill-opacity="0.32" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M16.5 10.5 L11 22 L16.5 22 Z" fill="#fbbf24" fill-opacity="0.45" stroke="#fbbf24" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M10 24.5 L26 24.5 L23.5 27.5 L12.5 27.5 Z" fill="currentColor" fill-opacity="0.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+      <span>ProjectCompass</span>
+      <span class="brand-tag">⛵ Regatta Docs</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary Documentation Navigation">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="user_guide.html">User Guide</a>
+      <a href="architecture.html" class="active">Architecture</a>
+      <a href="core_classes.html">Core Classes</a>
+      <a href="templates.html">Templates</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle-btn">
+        <span aria-hidden="true">⛵</span> <span>Day Sail</span>
+      </button>
+    </div>
+  </div>
 </header>
-<nav>
-  <a href="../index.html">Home</a>
-  <a href="overview.html">Overview</a>
-  <a href="architecture.html">Architecture</a>
-  <a href="routes.html">API Routes</a>
-  <a href="core_classes.html">Core Classes</a>
-  <a href="templates.html">Templates</a>
-  <a href="configuration.html">Configuration</a>
-  <a href="docker.html">Docker</a>
-</nav>
-<main>
 
-  <h2>High-Level Structure</h2>
-  <p>ProjectCompass uses a <strong>Flask Blueprint</strong> architecture with an application factory pattern.</p>
-
-  <div class="layer">
-    <h4>Application Factory – <code>app.py</code></h4>
-    <p><code>create_app()</code> initialises Flask, loads configuration from environment, and registers 5 blueprints: auth, catalog, data, agent, and api.</p>
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb">
+      <a href="../index.html">⛵ Command Deck</a>
+      <span>/</span>
+      <span>Pillar II: Shipwright's Hull &amp; Rigging</span>
+      <span>/</span>
+      <span>System Architecture &amp; Storage</span>
+    </div>
+    <h1>System Architecture &amp; Hybrid Storage</h1>
+    <p class="lead">
+      How ProjectCompass is engineered below deck: the Flask application factory, 8 modular Blueprints, cooperative multiple-inheritance MRO keel, hybrid SQLite + FTS5 + ChromaDB + file-system persistence, and the RAG retrieval pipeline.
+    </p>
+    <div class="page-meta-badges">
+      <span class="badge badge-purple">03 • Hull &amp; Keel Design</span>
+      <span class="badge badge-cyan">SQLite + FTS5 + ChromaDB</span>
+      <span class="badge badge-gold">Cooperative MRO + K8s</span>
+    </div>
   </div>
-  <div class="layer">
-    <h4>Blueprints – <code>blueprints/</code></h4>
-    <p><code>auth.py</code> (login/logout with werkzeug hashing), <code>catalog.py</code> (analysis CRUD, search, pagination), <code>data.py</code> (query runner, uploads), <code>agent.py</code> (LLM chat with sandboxed execution), <code>api.py</code> (REST JSON endpoints).</p>
+</section>
+
+<div class="docs-layout">
+  <main class="docs-content">
+
+    <h2 id="architectural-overview">1. High-Level Architectural Layers</h2>
+    <p>
+      ProjectCompass combines a clean <strong>Flask Application Factory</strong> (<code>app.py:create_app</code>) with an inheritance-first domain engine (<code>ProjectCompass</code> in <code>basefun.py</code>) and a four-tier hybrid storage layer rooted at <code>DATA_DIR</code>.
+    </p>
+
+    <div class="mermaid-card">
+      <pre class="mermaid">
+flowchart TB
+  subgraph Factory["Application Bootstrap (app.py: create_app)"]
+    SL["SettingsLoader (projectcompass.yaml + PC_ env)"]
+    FG["FeatureGate Middleware"]
+    DBInit["init_db() + init_fts() (SQLite + FTS5 Triggers)"]
+    Lock["acquire_scheduler_lock() (fcntl.flock Leader Election)"]
+  end
+
+  subgraph Blueprints["Modular Flask Blueprints (blueprints/)"]
+    BP_Auth["auth.py (RBAC, Sessions, Bearer Tokens)"]
+    BP_Cat["catalog.py (Analyses, Pipelines, Schedules)"]
+    BP_Data["data.py (DuckDB SQL, Uploads, RAWGraphs)"]
+    BP_Conn["connections.py (ConnectorX Remote DBs)"]
+    BP_Agent["agent.py (Sandboxed Pandas AI Chat)"]
+    BP_RAG["rag.py (Per-Analysis Hybrid RAG)"]
+    BP_K8s["k8s.py (Workers, Flows, Jobs, Chains)"]
+    BP_API["api.py (JSON REST API v1)"]
+  end
+
+  subgraph Engine["Cooperative MRO Core (app.config WEBAPP)"]
+    PC["ProjectCompass -> DataUtils -> AnalysisUtils -> GitSyncUtils -> HTMLUtils -> K8sChainRunnerUtils -> K8sFlowRunnerUtils -> K8sClusterUtils -> BaseK8sClient"]
+  end
+
+  subgraph Persistence["Hybrid Storage Layer (DATA_DIR)"]
+    RelDB[("projectcompass.db (11 SQLAlchemy Models + FTS5)")]
+    VecDB[("rag_data/ (ChromaDB Collections)")]
+    FS[("Analyses/, Saved_data/, Saved_queries/")]
+    K0S[("k0s Kubernetes API (kube-compass)")]
+  end
+
+  Factory --> Blueprints
+  Blueprints --> Engine
+  Engine --> RelDB
+  Engine --> VecDB
+  Engine --> FS
+  Engine --> K0S
+      </pre>
+      <div class="mermaid-caption">
+        Figure 1 — Layered architecture of ProjectCompass from `create_app()` down to hybrid storage and the k0s cluster.
+      </div>
+    </div>
+
+    <h2 id="bootstrap-and-blueprints">2. Application Factory &amp; Blueprint Registry</h2>
+    <p>
+      When <code>create_app()</code> executes in <code>app.py</code>, it performs a deterministic 8-step initialization sequence:
+    </p>
+    <ol>
+      <li><strong>Resolves <code>DATA_DIR</code></strong> — Ensures writable directories exist for <code>DATA_DIR</code>, <code>DATA_DIR/tmp</code>, <code>DATA_DIR/rag_data</code>, <code>Analyses/</code>, <code>Saved_data/</code>, and <code>Saved_queries/</code>.</li>
+      <li><strong>Initializes SQLite &amp; FTS5</strong> — Calls <code>models.init_db(app)</code> and <code>models.init_fts(app)</code> to create all 11 relational tables and the <code>analyses_fts</code> virtual full-text search table with SQLite triggers.</li>
+      <li><strong>Loads Validated Settings &amp; Feature Gates</strong> — Runs <code>SettingsLoader.from_environment()</code> (parsing <code>projectcompass.yaml</code> and <code>PC_&lt;SECTION&gt;__&lt;KEY&gt;</code> overrides) and installs <code>FeatureGate(settings.features)</code> to disable turned-off modules with clean 404 responses.</li>
+      <li><strong>Instantiates <code>ProjectCompass</code></strong> — Creates the singleton <code>webapp = ProjectCompass(dir_path=path, data_dir=data_path)</code> stored in <code>app.config['WEBAPP']</code>.</li>
+      <li><strong>Bootstraps Optional Git Sync</strong> — If <code>USE_GIT_SYNC=true</code> and <code>GIT_REPO_URL</code> is configured, clones or pulls the remote Git repository into <code>Analyses/</code>.</li>
+      <li><strong>Registers Blueprints</strong> — Mounts all 8 blueprints (7 primary functional domains plus the dedicated remote database connections blueprint):</li>
+    </ol>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Blueprint Module</th>
+            <th>Blueprint Name</th>
+            <th>Responsibility &amp; Key Routes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>blueprints/auth.py</code></td>
+            <td><code>auth_bp</code></td>
+            <td>Session login/logout, initial <code>/setup</code> wizard, user management (<code>/admin/users</code>), API token generation, and <code>@login_required</code> / <code>@role_required</code> enforcement.</td>
+          </tr>
+          <tr>
+            <td><code>blueprints/catalog.py</code></td>
+            <td><code>catalog_bp</code></td>
+            <td>Dashboard (<code>/</code>), catalog search (<code>/analysis/</code>), create/edit/import, Structured Analysis runner (<code>/investigations/</code>), <code>scomp-link</code> Pipeline Builder (<code>/pipeline_builder/</code>), executions, and schedules.</td>
+          </tr>
+          <tr>
+            <td><code>blueprints/data.py</code></td>
+            <td><code>data_bp</code></td>
+            <td>SQL query workbench (<code>/query_results/</code>), CSV/TSV file uploader (<code>/data_upload/</code>), dataset listing (<code>/data_list/</code>), and RAWGraphs visualization bridge (<code>/graph_analysis/</code>).</td>
+          </tr>
+          <tr>
+            <td><code>blueprints/connections.py</code></td>
+            <td><code>connections_bp</code></td>
+            <td>Encrypted CRUD and live latency testing for remote ConnectorX databases (<code>/connections</code>, <code>/connections/new</code>, <code>/connections/&lt;id&gt;/test</code>).</td>
+          </tr>
+          <tr>
+            <td><code>blueprints/agent.py</code></td>
+            <td><code>agent_bp</code></td>
+            <td>Natural-language dataset chat (<code>/chat</code>, <code>/chat/ask</code>) using Mithril LLM generation and AST-validated <code>safe_execute_pandas()</code>.</td>
+          </tr>
+          <tr>
+            <td><code>blueprints/rag.py</code></td>
+            <td><code>rag_bp</code></td>
+            <td>Per-analysis hybrid RAG indexing and grounded Q&amp;A (<code>/rag/index/&lt;name&gt;</code>, <code>/rag/ask/&lt;name&gt;</code>, <code>/chat/&lt;name&gt;</code>) with prompt-injection guardrails.</td>
+          </tr>
+          <tr>
+            <td><code>blueprints/k8s.py</code></td>
+            <td><code>k8s_bp</code></td>
+            <td>Kubernetes console for k0s worker nodes (<code>/workers</code>), reusable Python flows (<code>/flows</code>), isolated <code>batch/v1</code> job runs (<code>/runs</code>), and linear chains (<code>/chains</code>).</td>
+          </tr>
+          <tr>
+            <td><code>blueprints/api.py</code></td>
+            <td><code>api_bp</code></td>
+            <td>Programmatic JSON REST endpoints under <code>/api/*</code> for analyses, SQL queries, pipelines, executions, comments, ratings, favorites, schedules, and admin metrics.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="cooperative-mro-chain">3. Cooperative Multiple-Inheritance MRO Chain</h2>
+    <p>
+      ProjectCompass follows an inheritance-first OOP architecture where every capability is encapsulated in a dedicated Mixin/Base class and composed via Python's C3 Method Resolution Order (MRO). Every constructor accepts <code>(dir_path, data_dir=None, **kwargs)</code> and forwards cooperative calls via <code>super().__init__(...)</code>:
+    </p>
+
+    <pre><code class="language-python"># Effective Method Resolution Order (ProjectCompass.__mro__)
+ProjectCompass          # basefun.py          — Top-level facade, apply_settings(), create_job_request()
+  ├── DataUtils         # utils/data_utils.py — DuckDB in-memory SQL + ConnectorX routing (run_sql)
+  └── AnalysisUtils     # utils/analysis_utils.py — Catalog CRUD, FTS sync, Structured Analysis & Flow bridges
+        └── GitSyncUtils        # utils/git_utils.py  — Automated git init/clone/pull/commit/push for Analyses/
+              └── HTMLUtils     # utils/html_utils.py — header.html parser, substitute_html(), YAML env loader
+                    └── K8sChainRunnerUtils   # utils/k8s_utils.py — Linear multi-flow chain orchestration
+                          └── K8sFlowRunnerUtils  # utils/k8s_utils.py — ConfigMap, Secret, batch/v1 Job & log watcher
+                                └── K8sClusterUtils   # utils/k8s_utils.py — Node join/sync/drain/delete & token gen
+                                      └── BaseK8sClient     # utils/k8s_utils.py — Kubeconfig/in-cluster API clients
+                                            └── object</code></pre>
+
+    <h2 id="hybrid-storage-layer">4. Hybrid Storage Layer (SQLite + FTS5 + ChromaDB + Files)</h2>
+    <p>
+      Unlike early prototypes that relied solely on flat files, ProjectCompass uses a <strong>four-part hybrid storage architecture</strong> so that code artifacts remain Git-friendly on disk while metadata, search indexes, execution logs, and vector embeddings enjoy transactional speed.
+    </p>
+
+    <h3 id="sqlalchemy-models">4.1 Relational Database (<code>models.py</code> — 11 SQLAlchemy Models)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Model Class</th>
+            <th>Table Name</th>
+            <th>Primary Purpose &amp; Key Columns</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>User</code></td>
+            <td><code>users</code></td>
+            <td>Accounts with PBKDF2/scrypt <code>password_hash</code>, RBAC <code>role</code> (<code>admin</code>, <code>editor</code>, <code>viewer</code>), and Bearer <code>api_token</code>.</td>
+          </tr>
+          <tr>
+            <td><code>AuditLog</code></td>
+            <td><code>audit_log</code></td>
+            <td>Immutable security &amp; operational trail recording <code>user_id</code>, <code>action</code>, <code>target</code>, <code>details</code>, and <code>ip_address</code>.</td>
+          </tr>
+          <tr>
+            <td><code>AnalysisRecord</code></td>
+            <td><code>analyses</code></td>
+            <td>Relational mirror of catalog metadata (<code>folder_name</code>, <code>title</code>, <code>product</code>, <code>owner</code>, <code>description</code>, <code>countries</code>, <code>is_structured</code>, <code>is_Flow</code>, <code>k8s_config</code>).</td>
+          </tr>
+          <tr>
+            <td><code>ExecutionRun</code></td>
+            <td><code>execution_runs</code></td>
+            <td>Unified run ledger for both local structured analyses and k0s flows (<code>analysis_name</code>, <code>status</code>, <code>inputs_json</code>, <code>log_text</code>, <code>output_path</code>, <code>k8s_job_name</code>, <code>chain_id</code>).</td>
+          </tr>
+          <tr>
+            <td><code>FlowChain</code></td>
+            <td><code>flow_chains</code></td>
+            <td>Ordered multi-step Kubernetes flow sequences (<code>name</code>, <code>steps_json</code>, <code>stop_on_failure</code>, <code>last_status</code>).</td>
+          </tr>
+          <tr>
+            <td><code>Schedule</code></td>
+            <td><code>schedules</code></td>
+            <td>Cron automation definitions targeting <code>analysis</code>, <code>flow</code>, or <code>chain</code> with <code>cron_expr</code>, <code>inputs_json</code>, and <code>webhook_url</code>.</td>
+          </tr>
+          <tr>
+            <td><code>PipelineVersion</code></td>
+            <td><code>pipeline_versions</code></td>
+            <td>Versioned snapshots of visual <code>scomp-link</code> pipelines (<code>analysis_name</code>, <code>version_num</code>, <code>config_json</code>, <code>generated_code</code>).</td>
+          </tr>
+          <tr>
+            <td><code>DbConnection</code></td>
+            <td><code>db_connections</code></td>
+            <td>Saved remote ConnectorX database endpoints with Fernet-encrypted credentials (<code>encrypted_credentials</code>, <code>db_type</code>, <code>read_only</code>, <code>managed</code>).</td>
+          </tr>
+          <tr>
+            <td><code>Comment</code></td>
+            <td><code>comments</code></td>
+            <td>User discussion threads attached to each <code>analysis_name</code> (also indexed into RAG).</td>
+          </tr>
+          <tr>
+            <td><code>Rating</code></td>
+            <td><code>ratings</code></td>
+            <td>1–5 star quality ratings per user and analysis (unique constraint on <code>analysis_name + user_id</code>).</td>
+          </tr>
+          <tr>
+            <td><code>Favorite</code></td>
+            <td><code>favorites</code></td>
+            <td>Per-user bookmarked analyses surfaced at the top of the catalog.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="fts5-search-engine">4.2 SQLite FTS5 Full-Text Index (<code>analyses_fts</code>)</h3>
+    <p>
+      <code>models.init_fts(app)</code> provisions a virtual table <code>analyses_fts USING fts5(folder_name, title, description, product, owner, countries)</code> coupled with three database triggers (<code>analyses_ai</code>, <code>analyses_ad</code>, <code>analyses_au</code>) that keep full-text search automatically synchronized on every insert, update, or delete.
+    </p>
+
+    <h3 id="filesystem-layout">4.3 File-System &amp; Git Repository Layout</h3>
+    <pre><code class="language-text">DATA_DIR/
+├── projectcompass.db                 # Primary SQLite database (11 models + analyses_fts)
+├── scheduler_jobs.db                 # APScheduler persistent jobstore SQLite DB
+├── rag_data/                         # ChromaDB persistent vector collections (per analysis)
+├── tmp/
+│   ├── scheduler.lock                # OS fcntl.flock leader-election lockfile
+│   └── .db_connections.key           # Auto-generated Fernet key if DB_CONNECTIONS_KEY is unset
+├── Saved_data/                       # Uploaded CSVs & SQLite files queried by DuckDB
+├── Saved_queries/                    # Saved .sql query files
+└── Analyses/                         # Git-synchronizable analysis & flow repository
+    ├── readme.md                     # Auto-generated catalog index table
+    └── &lt;Analysis Name&gt;/
+        ├── metadata.yaml             # Title, product, owner, links, K8s flow attributes
+        ├── output_versions.yaml      # Versioned HTML outputs & dashboard URLs
+        ├── pipeline_config.json      # Optional Scomp-Link visual pipeline specification
+        ├── analysis/
+        │   ├── structured_analysis_main.py
+        │   ├── metadata_automatic_report.yaml
+        │   └── requirements.txt
+        ├── physical_output/main/     # Generated HTML/CSV deliverables
+        └── sql_extractions/          # Auto-extracted docstring SQL queries</code></pre>
+
+    <h2 id="rag-pipeline-architecture">5. Per-Analysis Hybrid RAG Pipeline</h2>
+    <p>
+      When a user indexes an analysis and asks a question at <code>/chat/&lt;analysis_name&gt;</code> or <code>POST /rag/ask/&lt;analysis_name&gt;</code>, the request flows through a 5-stage retrieval and guardrail pipeline:
+    </p>
+
+    <div class="mermaid-card">
+      <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant User as Operator / API
+  participant Guard as RAGGuardrails
+  participant Chunker as CodeAwareChunker
+  participant Store as RAGStore (ChromaDB + BM25)
+  participant Mithril as Mithril Server (:16180)
+
+  Note over User,Store: Indexing Phase (POST /rag/index/{name})
+  User->>Chunker: chunk_analysis(folder) + chunk_comments(name)
+  Chunker-->>Store: Semantic Chunks (AST Python, SQL, YAML, MD, Comments)
+  Store->>Store: Embed batches and Upsert ChromaDB
+
+  Note over User,Mithril: Retrieval and Synthesis Phase (POST /rag/ask/{name})
+  User->>Guard: Validate question (block prompt injection)
+  Guard->>Store: hybrid_query(analysis_name, question, top_k=10)
+  Store-->>Guard: Vector + BM25 Reciprocal Rank Fusion candidates
+  Guard->>Mithril: POST /api/rerank (top_n=3)
+  Mithril-->>Guard: Reranked high-precision chunks
+  Guard->>Mithril: Generate grounded answer with source citations
+  Mithril-->>User: Answer + cited files and lines
+      </pre>
+      <div class="mermaid-caption">
+        Figure 2 — Per-analysis hybrid RAG indexing, Reciprocal Rank Fusion (Vector + BM25), cross-encoder reranking, and synthesis.
+      </div>
+    </div>
+
+    <div class="page-pager">
+      <a href="user_guide.html" class="pager-link">
+        <span class="pager-label">&larr; Previous</span>
+        <span class="pager-title">End-to-End User Guide</span>
+      </a>
+      <a href="core_classes.html" class="pager-link" style="text-align: right;">
+        <span class="pager-label">Next &rarr;</span>
+        <span class="pager-title">Core Classes &amp; Cooperative MRO</span>
+      </a>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc" aria-label="On this page">
+    <div class="docs-toc-title">🧭 On This Page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <strong>ProjectCompass</strong> — <em>Organization Is Everything®</em> &bull; By
+      <a href="https://giacomosaccaggi.github.io/" target="_blank" rel="noopener">Giacomo Saccaggi</a>
+    </div>
+    <div class="footer-links">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="core_classes.html">Core Classes</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+    </div>
   </div>
-  <div class="layer">
-    <h4>Business Logic – <code>basefun.py</code> + <code>utils/</code></h4>
-    <p>The <code>ProjectCompass</code> class aggregates three utility classes via multiple inheritance: <code>DataUtils</code>, <code>AnalysisUtils</code>, and <code>HTMLUtils</code>. Business logic (reading/writing analyses, executing SQL, generating HTML partials) lives here.</p>
-  </div>
-  <div class="layer">
-    <h4>View – <code>templates/</code></h4>
-    <p>Jinja2 HTML templates. A shared <code>header.html</code> partial is parsed at startup and injected into every page via <code>substitute_html()</code>, providing the top bar, sidebar, and CSS/JS includes.</p>
-  </div>
-  <div class="layer">
-    <h4>Storage – File System</h4>
-    <p>No relational database. Analyses are stored as folders under <code>Analyses/</code>, each containing <code>metadata.yaml</code>, <code>output_versions.yaml</code>, and subdirectories for code, outputs, and SQL extractions. Data files live in <code>Saved_data/</code> and queries in <code>Saved_queries/</code>.</p>
-  </div>
+</footer>
 
-  <h2>Class Inheritance Chain</h2>
-  <pre>
-object
-  └── HTMLUtils          (reads header.html, constants.yaml, loads env info)
-        └── DataUtils    (DuckDB SQL engine, file upload, data listing)
-              └── AnalysisUtils  (read/write analyses, metadata, archive)
-                    └── ProjectCompass  (project_folder, create_job_request)
-  </pre>
-  <p>Each class calls <code>super().__init__(dir_path=dir_path, **kwargs)</code>, so the chain initialises cleanly from a single <code>dir_path</code> argument.</p>
-
-  <h2>Request Lifecycle</h2>
-  <pre>
-Browser Request
-  → @app.before_request   (session auth check, optional git pull)
-  → Flask route function  (app.py)
-      → webapp.substitute_html()   (inject header partials)
-      → webapp.read_multiple_analysis() / webapp.sql() / etc.
-  → render_template()     (Jinja2 fills variables into HTML template)
-  → @app.after_request    (optional git add/commit/push for POST)
-  → HTTP Response
-  </pre>
-
-  <h2>Directory Layout</h2>
-  <pre>
-ProjectCompass/
-├── app.py                  # Application factory
-├── basefun.py              # ProjectCompass class + crypto helpers
-├── config.py               # Config from environment (.env)
-├── logging_config.py       # Unified structured logging
-├── blueprints/
-│   ├── auth.py             # Authentication (hashed passwords, sessions)
-│   ├── catalog.py          # Analysis CRUD, search, filter, pagination
-│   ├── data.py             # Query runner, data upload, RAWGraphs
-│   ├── agent.py            # LLM chat with sandboxed execution
-│   └── api.py              # REST API (JSON endpoints)
-├── utils/
-│   ├── html_utils.py       # HTMLUtils – header injection, YAML loading
-│   ├── data_utils.py       # DataUtils – DuckDB, file upload
-│   ├── analysis_utils.py   # AnalysisUtils – catalog CRUD
-│   └── mithril_client.py      # Mithril LLM client (httpx)
-├── templates/
-│   ├── header.html         # Shared layout partial (top bar + sidebar)
-│   ├── chat.html           # AI data assistant
-│   ├── index.html          # Dashboard
-│   ├── analysis.html       # Analysis catalog
-│   ├── query_results.html  # SQL runner
-│   └── environment_variables/
-│       ├── constants.yaml  # Port, logo SVG
-│       ├── links.yaml      # Sidebar useful links
-│       ├── tool_choices.yaml # Dropdown options
-│       ├── intro.txt       # Dashboard intro text
-│       └── title.txt       # Application title
-├── tests/                  # pytest test suite
-├── static/                 # CSS, JS, images, fonts
-├── Analyses/               # Analysis repository (file-based)
-├── Saved_data/             # Uploaded CSV / SQLite files
-└── Saved_queries/          # Saved .sql files
-  </pre>
-
-  <h2>LLM Chat Layer</h2>
-  <p>
-    The <code>blueprints/agent.py</code> blueprint provides an AI chat interface at <code>/chat</code>.
-    Mithril is <strong>lazy-loaded</strong> — the application starts and works fully without it.
-    User questions are converted to pandas expressions by the LLM, then executed via <code>safe_execute_pandas()</code>
-    which uses AST validation to block <code>import</code>, <code>open()</code>, <code>exec()</code>, and <code>eval()</code>.
-  </p>
-
-</main>
-<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="assets/docs.js"></script>
 </body>
 </html>

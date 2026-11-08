@@ -2,6 +2,10 @@
 
 **Analysis catalog, execution engine, and data exploration platform.**
 
+> **Before deployment:** the current implementation has important authentication, container packaging and recovery limitations. Read [Security and current limitations](docs/kubernetes_console.html#security-and-current-limitations) before exposing the application or running workloads.
+>
+> **Full Documentation Portal:** Open [`index.html`](index.html) for the complete interactive **Nautical Command Deck** documentation suite (covering [Platform Overview](docs/overview.html), [User Guide](docs/user_guide.html), [Architecture](docs/architecture.html), [Core Classes](docs/core_classes.html), [Templates](docs/templates.html), [k0s Setup](docs/k0s_setup.html), [Kubernetes Console](docs/kubernetes_console.html), [Custom Worker Library](docs/worker_library.html), [API & CLI Reference](docs/routes.html), [Configuration](docs/configuration.html), and [Docker](docs/docker.html)).
+
 ![Overview](static/img/overview_page.png)
 
 ProjectCompass is a Python-based tool for teams that produce data analyses. It solves three problems that emerge after the analytical work is done:
@@ -28,6 +32,8 @@ ProjectCompass is a Python-based tool for teams that produce data analyses. It s
 | 🤖 **AI Chat** | Ask questions about your data in natural language (Mithril — multi-model: Gemini, OpenAI, Anthropic, Groq, local GGUF) |
 | 🧠 **RAG per Analysis** | Per-project retrieval-augmented generation with code-aware chunking, hybrid search (dense + BM25), LLM reranking, guardrails, and source provenance |
 | 🔗 **REST API** | JSON endpoints with Bearer token authentication for external integrations |
+| ☸️ **Kubernetes Console** | Read-only workers, Python flows, sequential chains, Job runs and logs |
+| 💻 **External CLI** | Control flows, chains, runs and schedules using HTTP Basic or Bearer authentication |
 | 👥 **Multi-User RBAC** | Admin, editor, viewer roles with user management |
 | 💬 **Comments** | Real-time HTMX comments on analyses for team collaboration |
 | 🔔 **Webhooks** | HMAC-SHA256 signed payloads for external system integration |
@@ -40,7 +46,7 @@ ProjectCompass is a Python-based tool for teams that produce data analyses. It s
 
 ## Quick Start with Docker
 
-The fastest way to run ProjectCompass — no cloning or building required:
+The public image can be started with the Compose file below. Review the [deployment limitations](docs/kubernetes_console.html#security-and-current-limitations), configure credentials, and mount `/app/data` for persistent state before relying on it:
 
 ```bash
 # Download the compose file
@@ -69,6 +75,8 @@ docker compose -f docker-compose.public.yml up -d
 
 ## Local Development
 
+The current dependency specification includes a machine-local package path; it must be changed to an approved portable package source before `uv sync` can work on another machine. Review `.env` and configure credentials before starting the application.
+
 ```bash
 git clone https://github.com/GiacomoSaccaggi/ProjectCompass.git
 cd ProjectCompass
@@ -88,7 +96,7 @@ The app is available at `http://127.0.0.1:5000`
 uv run pytest -v
 ```
 
-276 tests with 83% coverage.
+The default suite excludes live-cluster tests. See [testing and troubleshooting](docs/k0s_setup.html#testing-and-troubleshooting) for the optional live marker and its scope.
 
 ### Linting
 
@@ -101,13 +109,13 @@ uv run ruff check --fix .  # auto-fix
 
 ## Docker (Development)
 
-To build and run from source:
+The default Compose file references a published image; a local build can be enabled in the file after the packaging issue described in the [deployment limitations](docs/kubernetes_console.html#security-and-current-limitations) is addressed:
 
 ```bash
 docker compose up -d
 ```
 
-This uses `docker-compose.yml` which builds the image locally. Services: ProjectCompass on `:8080`, Mithril on `:16180`.
+This uses `docker-compose.yml` and may also load its development override. Review port mappings, the fixed container entrypoint and `/app/data` persistence as described in the operations guide.
 
 See [DOCKER.md](DOCKER.md) for volumes, environment variables, health checks, and production settings.
 
@@ -128,9 +136,13 @@ ProjectCompass/
 │   ├── data.py             # Query runner, data upload, RAWGraphs, lineage
 │   ├── agent.py            # LLM chat with sandboxed execution (Mithril backend)
 │   ├── rag.py              # RAG index build, status, and management
-│   └── api.py              # REST API (JSON endpoints, Bearer auth)
+│   ├── k8s.py              # Worker, flow, Job and chain endpoints
+│   └── api.py              # REST API (JSON endpoints)
 ├── utils/
-│   ├── analysis_utils.py   # Analysis metadata management
+│   ├── analysis_utils.py   # Analysis, flow and version management
+│   ├── k8s_utils.py        # Kubernetes client, workers, Jobs and chains
+│   ├── git_utils.py        # Optional analyses synchronization
+│   ├── cli_utils.py        # External HTTP client and CLI commands
 │   ├── data_utils.py       # DuckDB SQL, file operations
 │   ├── html_utils.py       # Template utilities
 │   ├── mithril_client.py   # Mithril LLM client (httpx, Ollama-compatible API)
@@ -147,7 +159,9 @@ ProjectCompass/
 │   │   └── dark.css        # Dark mode theme
 │   ├── js/                 # JavaScript (command palette, SSE, toasts)
 │   └── pipeline_templates/ # Pre-built ML pipeline templates (JSON)
-├── tests/                  # pytest test suite (276 tests)
+├── tests/                  # pytest test suite
+├── k8s/                    # Kubernetes deployment and RBAC manifests
+├── scripts/                # External CLI and k0s setup
 ├── Analyses/               # Analysis storage (file-based)
 ├── Saved_data/             # Uploaded datasets
 ├── Saved_queries/          # Saved SQL queries
@@ -180,12 +194,14 @@ All configuration is via environment variables (`.env` file):
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SECRET_KEY` | random | Flask session encryption key |
-| `DATABASE_URL` | `sqlite:///projectcompass.db` | SQLAlchemy database URI |
+| `DATABASE_URL` | SQLite under `DATA_DIR` | SQLAlchemy database URI |
+| `DATA_DIR` | Project root locally; `/app/data` in the image | Persistent state root |
 | `ADMIN_USERNAME` | `admin` | Default admin username |
 | `ADMIN_PASSWORD_HASH` | *(empty)* | Werkzeug-hashed password |
 | `PORT` | `5000` | Server port |
 | `FLASK_DEBUG` | `False` | Debug mode |
-| `USE_GITLAB_REPO` | `False` | GitLab integration |
+| `API_AUTH_TOKEN` | *(empty)* | Optional static Bearer token |
+| `USE_GIT_SYNC` | `False` | Optional Git synchronization; see credential warning in the operations guide |
 | `MITHRIL_HOST` | `http://localhost:16180` | Mithril LLM endpoint |
 | `MITHRIL_EMBED_MODEL` | `gemini-embedding-exp-03-07` | Embedding model for RAG |
 | `MITHRIL_RERANK_MODEL` | `gemini-2.5-flash` | Reranking model for RAG |
@@ -202,7 +218,7 @@ uv run python -c "from werkzeug.security import generate_password_hash; print(ge
 
 ## REST API
 
-All endpoints return JSON. Supports session-based auth (web UI) or Bearer token auth (API).
+The application supports session, HTTP Basic and Bearer authentication. Some legacy `/api/*` endpoints are accessible without credentials; protect the whole application behind an authenticated gateway. See the [external API and CLI reference](docs/routes.html#external-cli-reference) for authentication, JSON negotiation, operational endpoints and limitations.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -214,8 +230,7 @@ All endpoints return JSON. Supports session-based auth (web UI) or Bearer token 
 | POST | `/api/query` | Execute SQL query (`{"sql": "SELECT ..."}`) |
 | GET | `/api/search?q=<term>` | Full-text search across analyses |
 | GET | `/api/activity` | Recent activity feed (audit log) |
-| GET | `/api/metrics` | System metrics (admin only) |
-| GET | `/api/tokens` | List API tokens for current user |
+| GET | `/api/metrics` | System metrics; protect externally |
 | POST | `/api/tokens` | Create new API token |
 | DELETE | `/api/tokens/<id>` | Revoke API token |
 | GET | `/health` | Application health check |
@@ -228,11 +243,11 @@ All endpoints return JSON. Supports session-based auth (web UI) or Bearer token 
 ### Example
 
 ```bash
-# List all analyses (session auth)
+# List all analyses; protect this endpoint externally
 curl http://localhost:8080/api/analyses
 
 # Search analyses
-curl http://localhost:8080/api/analyses?q=marketing&product=Research
+curl 'http://localhost:8080/api/analyses?q=example&product=Research'
 
 # Query data with Bearer token
 curl -X POST http://localhost:8080/api/query \
@@ -300,6 +315,19 @@ Analyses/My Analysis/
 Schedule options: `Every day at HH:MM`, `Every hour`, `Every Monday`, `Every Friday`, `Custom cron expression`.
 
 Jobs persist across restarts via SQLite.
+
+---
+
+## k0s Cluster Console: Workers, Flows, Runs & Schedules
+
+The console monitors workers without managing machines, runs generic Python flows as Kubernetes Jobs, records runs and collected logs, executes linear flow chains and schedules flows or chains. It also supports flow versions, resource defaults, existing Secret references, PVC-backed state and optional Git synchronization.
+
+- [Kubernetes console operations and deployment](docs/kubernetes_console.html): workflows, security, persistence, configuration, limitations and troubleshooting.
+- [Building the custom Python worker library (`compass_worker_kit`)](docs/worker_library.html): Dual-Layer `BaseCompassTask` Pod runtime + `CompassMasterClient` REST SDK.
+- [External API and CLI reference](docs/routes.html#external-cli-reference): authentication, endpoint contracts, examples and command syntax.
+- [k0s setup and worker connection](docs/k0s_setup.html): controller preparation, networking and standard worker commands.
+
+Existing logs persist when the database is stored durably, but in-process watchers and chains do not automatically resume after a process restart. The scheduler lock is not a distributed failover mechanism. Review the linked guides before production deployment.
 
 ---
 

@@ -197,3 +197,4 @@ tmp/
 .DS_Store
 *.db
 rag_data/
+/.junie/

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+{{ head|safe }}
+<body class="w3-light-grey">
+
+{{ top_container|safe }}
+{{ sidebar_menu|safe }}
+
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <div class="w3-container" style="padding:24px;max-width:960px;margin:0 auto;">
+    <p style="margin-top:0;"><a href="/connections/" class="w3-button w3-small w3-light-grey w3-round" style="text-decoration:none;"><i class="fa fa-arrow-left"></i> Back to connections</a></p>
+    <h1 style="margin:8px 0 4px;font-size:1.65rem;font-weight:800;"><i class="fa fa-plug" style="color:var(--mariner-cyan);margin-right:8px;"></i>{% if conn_id %}Edit{% else %}New{% endif %} database connection</h1>
+    <p class="w3-text-grey" style="margin-top:0;margin-bottom:18px;">Choose a database type and fill in its connection details. Passwords are stored encrypted with Fernet.</p>
+
+    {% if error %}
+    <div class="w3-panel w3-pale-red w3-leftbar w3-border-red"><p>{{ error }}</p></div>
+    {% endif %}
+
+    <form id="connection-form" class="w3-card w3-white w3-round-large w3-padding-large" method="post" action="/connections/save">
+      {% if conn_id %}<input type="hidden" name="conn_id" value="{{ conn_id }}">{% endif %}
+      <label for="connection-name"><b>Connection name</b></label>
+      <input id="connection-name" class="w3-input w3-border w3-round w3-margin-bottom" type="text" name="name"
+             maxlength="100" required value="{{ form_values.get('name', '') }}" placeholder="Production database">
+
+      <label for="db-type"><b>Database type</b></label>
+      <select id="db-type" class="w3-select w3-border w3-round w3-margin-bottom" name="db_type">
+        {% for dialect in dialect_specs %}
+        <option value="{{ dialect.type_key }}" {% if form_values.get('db_type') == dialect.type_key %}selected{% endif %}>
+          {{ dialect.label }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <div id="dialect-fields"></div>
+
+      <label for="extra-params"><b>Extra parameters</b></label>
+      <textarea id="extra-params" class="w3-input w3-border w3-round" name="extra_params" rows="3"
+                placeholder="sslmode=require">{{ form_values.get('extra_params', '') }}</textarea>
+      <p class="w3-small w3-text-grey">Enter one <code>key=value</code> option per line. Do not put passwords here.</p>
+
+      <div class="w3-panel w3-pale-blue w3-leftbar w3-border-blue">
+        <b>URI preview (credentials masked)</b>
+        <code id="uri-preview" style="display:block;overflow-wrap:anywhere;margin-top:8px;">Fill in the required fields to preview the URI.</code>
+      </div>
+
+      <div id="test-result" class="w3-panel" style="display:none;"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" id="test-connection" class="w3-button w3-blue w3-round">
+          <i class="fa fa-plug"></i> Test connection
+        </button>
+        <button type="submit" class="w3-button w3-indigo w3-round">
+          <i class="fa fa-save"></i> Save connection
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const DIALECT_SPECS = {{ dialect_specs|tojson }};
+const INITIAL_VALUES = {{ form_values|tojson }};
+const CONNECTION_ID = {{ conn_id|tojson }};
+const typeSelect = document.getElementById('db-type');
+const fieldContainer = document.getElementById('dialect-fields');
+let activeType = typeSelect.value;
+
+function readDialectValues() {
+  const values = {};
+  fieldContainer.querySelectorAll('[data-dialect-field]').forEach(function(input) {
+    values[input.name] = input.value;
+  });
+  return values;
+}
+
+function renderDialectFields(preserveValues) {
+  const selected = DIALECT_SPECS.find(function(spec) { return spec.type_key === typeSelect.value; });
+  if (!selected) return;
+  const values = preserveValues ? readDialectValues() : INITIAL_VALUES;
+  const sameType = activeType === selected.type_key;
+  fieldContainer.replaceChildren();
+  selected.fields.forEach(function(spec) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'w3-margin-bottom';
+    const label = document.createElement('label');
+    const inputId = 'dialect-' + spec.key;
+    label.htmlFor = inputId;
+    label.innerHTML = '<b>' + spec.label + (spec.required ? ' <span style="color:#c00">*</span>' : '') + '</b>';
+    const input = document.createElement('input');
+    input.id = inputId;
+    input.name = spec.key;
+    input.type = spec.input_type;
+    input.className = 'w3-input w3-border w3-round';
+    input.placeholder = spec.placeholder || '';
+    input.required = Boolean(spec.required);
+    input.setAttribute('data-dialect-field', 'true');
+    if (spec.key === 'password') {
+      input.value = '';
+      input.autocomplete = 'new-password';
+      input.placeholder = CONNECTION_ID ? 'Leave blank to keep the current password' : 'Password';
+    } else if (spec.key === 'custom_uri') {
+      input.value = values.custom_uri || '';
+      input.autocomplete = 'off';
+    } else if (spec.key === 'port' && !sameType) {
+      input.value = selected.default_port || '';
+    } else {
+      input.value = values[spec.key] !== undefined ? values[spec.key] : (INITIAL_VALUES[spec.key] || '');
+      if (spec.key === 'port' && !input.value) input.value = selected.default_port || '';
+    }
+    wrapper.appendChild(label);
+    wrapper.appendChild(input);
+    if (spec.help) {
+      const help = document.createElement('small');
+      help.className = 'w3-text-grey';
+      help.textContent = spec.help;
+      wrapper.appendChild(help);
+    }
+    if (spec.key === 'password' && CONNECTION_ID) {
+      const help = document.createElement('small');
+      help.className = 'w3-text-grey';
+      help.textContent = 'The saved password is never shown.';
+      wrapper.appendChild(help);
+    }
+    if (spec.key === 'custom_uri' && CONNECTION_ID) {
+      const help = document.createElement('small');
+      help.className = 'w3-text-grey';
+      help.textContent = 'The saved URI is encrypted and not shown. Leave blank to keep it.';
+      wrapper.appendChild(help);
+    }
+    fieldContainer.appendChild(wrapper);
+  });
+  activeType = selected.type_key;
+  updateUriPreview();
+}
+
+function quotePlus(value) {
+  return encodeURIComponent(value || '').replace(/%20/g, '+');
+}
+
+function maskUri(uri) {
+  return uri
+    .replace(/\/\/([^:/@?#]+):([^@/?#]*)@/, '//$1:****@')
+    .replace(/([?&][^=&#]*(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key)[^=]*=)[^&#]*/gi, '$1****');
+}
+
+function extraQuery() {
+  const values = new URLSearchParams();
+  document.getElementById('extra-params').value.split(/[&\n]/).forEach(function(item) {
+    const separator = item.indexOf('=');
+    if (separator > 0) values.append(item.slice(0, separator).trim(), item.slice(separator + 1).trim());
+  });
+  return values.toString();
+}
+
+function updateUriPreview() {
+  const selected = DIALECT_SPECS.find(function(spec) { return spec.type_key === typeSelect.value; });
+  const values = readDialectValues();
+  const preview = document.getElementById('uri-preview');
+  if (!selected) return;
+  if (selected.type_key === 'custom') {
+    preview.textContent = values.custom_uri ? maskUri(values.custom_uri) :
+      (CONNECTION_ID ? 'Saved URI retained while this field is blank.' : 'Enter a custom URI to preview it.');
+    return;
+  }
+  const missing = selected.fields.some(function(spec) {
+    if (!spec.required) return false;
+    return spec.key === 'port' ? !(values.port || selected.default_port) : !values[spec.key];
+  });
+  if (missing) {
+    preview.textContent = 'Fill in the required fields to preview the URI.';
+    return;
+  }
+
+  let uri;
+  if (selected.type_key === 'sqlite' || selected.type_key === 'bigquery') {
+    const scheme = selected.type_key === 'sqlite' ? 'sqlite://' : 'bigquery://';
+    const encodedPath = encodeURIComponent(values.file_path || '').replace(/%2F/gi, '/');
+    uri = scheme + encodedPath;
+  } else {
+    const schemes = {
+      postgres: 'postgresql', redshift: 'redshift', mysql: 'mysql', mariadb: 'mysql',
+      mssql: 'mssql', oracle: 'oracle', clickhouse: 'clickhouse', trino: 'trino'
+    };
+    let host = values.host || '';
+    if (host.includes(':') && !host.startsWith('[')) host = '[' + host + ']';
+    const port = values.port || selected.default_port || '';
+    const username = quotePlus(values.username || '');
+    const password = quotePlus(values.password || '');
+    const auth = username ? username + ':' + password + '@' : '';
+    uri = schemes[selected.type_key] + '://' + auth + host + (port ? ':' + port : '') + '/' +
+      encodeURIComponent(values.database || '');
+  }
+  const query = extraQuery();
+  if (query) uri += '?' + query;
+  preview.textContent = maskUri(uri);
+}
+
+typeSelect.addEventListener('change', function() { renderDialectFields(true); });
+fieldContainer.addEventListener('input', updateUriPreview);
+fieldContainer.addEventListener('change', updateUriPreview);
+document.getElementById('extra-params').addEventListener('input', updateUriPreview);
+renderDialectFields(false);
+
+document.getElementById('test-connection').addEventListener('click', async function() {
+  const button = this;
+  const resultElement = document.getElementById('test-result');
+  const formData = new FormData(document.getElementById('connection-form'));
+  button.disabled = true;
+  resultElement.style.display = 'block';
+  resultElement.className = 'w3-panel w3-pale-blue';
+  resultElement.textContent = 'Testing connection…';
+  try {
+    const response = await fetch('/connections/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(Object.fromEntries(formData.entries()))
+    });
+    const result = await response.json();
+    resultElement.className = result.ok ? 'w3-panel w3-pale-green' : 'w3-panel w3-pale-red';
+    resultElement.textContent = result.message + (result.elapsed_ms ? ' (' + result.elapsed_ms + ' ms)' : '');
+  } catch (error) {
+    resultElement.className = 'w3-panel w3-pale-red';
+    resultElement.textContent = 'Connection test could not be completed.';
+  } finally {
+    button.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

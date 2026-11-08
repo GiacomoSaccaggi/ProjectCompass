@@ -14,10 +14,18 @@ services:
       - PORT=8080
       - MITHRIL_HOST=http://mithril:16180
       - ALLOWED_ORIGINS=*
+      - DB_CONNECTIONS_KEY=${DB_CONNECTIONS_KEY:-}
+      - DB_CONNECTIONS_MAX_ROWS=${DB_CONNECTIONS_MAX_ROWS:-100000}
+      # Uncomment to mount your external settings file (defaults to /app/data/projectcompass.yaml).
+      # - PC_CONFIG_FILE=/app/data/projectcompass.yaml
+      # - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      # - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
     volumes:
       - ./data/Analyses:/app/Analyses
       - ./data/Saved_data:/app/Saved_data
       - ./data/Saved_queries:/app/Saved_queries
+      - ./data/tmp:/app/tmp
+      # - ./projectcompass.yaml:/app/data/projectcompass.yaml:ro
     restart: unless-stopped
     depends_on:
       - mithril

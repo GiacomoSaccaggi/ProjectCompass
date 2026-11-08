@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building the Custom Worker Library (compass_worker_kit) — ProjectCompass Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body>
+
+<header class="top-nav">
+  <div class="top-nav-inner">
+    <a href="../index.html" class="brand-link">
+      <svg class="compass-mini" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="18" r="15.5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6"/>
+        <circle cx="18" cy="18" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M18 7 L18 24" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18 8 L26 22 L18 22 Z" fill="currentColor" fill-opacity="0.32" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M16.5 10.5 L11 22 L16.5 22 Z" fill="#fbbf24" fill-opacity="0.45" stroke="#fbbf24" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M10 24.5 L26 24.5 L23.5 27.5 L12.5 27.5 Z" fill="currentColor" fill-opacity="0.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+      <span>ProjectCompass</span>
+      <span class="brand-tag">⛵ Regatta Docs</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary Documentation Navigation">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="user_guide.html">User Guide</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="core_classes.html">Core Classes</a>
+      <a href="templates.html">Templates</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="worker_library.html" class="active">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+      <a href="docker.html">Docker</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle-btn">
+        <span aria-hidden="true">⛵</span> <span>Day Sail</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb">
+      <a href="../index.html">⛵ Command Deck</a>
+      <span>/</span>
+      <span>Pillar III: The k0s Flotilla &amp; Regatta Fleet</span>
+      <span>/</span>
+      <span>Building the Custom Worker Library</span>
+    </div>
+    <h1>Building the Custom Worker Library (<code>compass_worker_kit</code>)</h1>
+    <p class="lead">
+      Complete architectural blueprint and copy-pasteable Python SDK for building the custom library that every crew or developer creates to connect worker Pods, domain tasks, and external worker vessels to the ProjectCompass Flagship Master.
+    </p>
+    <div class="page-meta-badges">
+      <span class="badge badge-gold">08 • Worker Kit Blueprint</span>
+      <span class="badge badge-cyan">Dual-Layer Pod + REST SDK</span>
+      <span class="badge badge-emerald">Strict OOP Python 3.10+</span>
+    </div>
+  </div>
+</section>
+
+<div class="docs-layout">
+  <main class="docs-content">
+
+    <h2 id="why-custom-worker-library">1. Why Build a Custom Worker Library?</h2>
+    <p>
+      When ProjectCompass schedules a Flow onto a <strong>k0s worker node</strong>, the master mounts your entrypoint script at <code>/workspace/flow.py</code>, injects parameters via ConfigMap/environment variables, attaches Kubernetes Secrets, and streams `stdout`/`stderr` back to the Master's SQLite database (`ExecutionRun`).
+    </p>
+    <p>
+      Rather than writing monolithic, hard-to-test scripts inside the Web UI code editor, best practice is to create a <strong>shared, installable Python package</strong> (referred to here as <code>compass_worker_kit</code>) that your worker Pods and external nodes import. This library serves two critical purposes:
+    </p>
+    <ol>
+      <li><strong>Layer 1 — Pod Execution Runtime (<code>BaseCompassTask</code>)</strong>: Standardizes how every task running on a k0s worker Pod parses master-injected parameters (`FLOW_PARAMS_JSON`, `/workspace/params.json`, `PC_PARAM_*`), reads injected Kubernetes Secrets, emits structured telemetry, and stays 100% compatible with both Kubernetes Flows (`flow.py`) and local Structured Analyses (`structured_analysis_main.py`).</li>
+      <li><strong>Layer 2 — Master REST API Bridge (<code>CompassMasterClient</code>)</strong>: Allows worker tasks (or standalone worker daemons) to authenticate back to the ProjectCompass Master via Bearer Token (`Authorization: Bearer &lt;token&gt;`) to pull datasets via DuckDB/ConnectorX (`POST /api/query`), trigger downstream Flows or Chains, or register/heartbeat worker nodes.</li>
+    </ol>
+
+    <div class="mermaid-card">
+      <pre class="mermaid">
+flowchart LR
+  subgraph Master["ProjectCompass Master (:5000)"]
+    K8sRunner["K8sFlowRunnerUtils"]
+    RestAPI["REST API (/api/query, /flows, /workers)"]
+    Watcher["Background Log Watcher"]
+  end
+
+  subgraph K0sPod["k0s Worker Node — Job Pod (pc-flow-job-id)"]
+    Entry["/workspace/entrypoint.sh + flow.py"]
+    subgraph Lib["Custom Library: compass_worker_kit"]
+      Task["Layer 1: BaseCompassTask (ABC)"]
+      SDK["Layer 2: CompassMasterClient"]
+    end
+    Domain["Concrete Task (ChurnScoringTask)"]
+  end
+
+  K8sRunner -->|Mounts ConfigMap + Secret| Entry
+  Entry -->|Instantiates| Domain
+  Domain -->|Inherits| Task
+  Task -->|Uses| SDK
+  SDK -->|Bearer Token HTTP| RestAPI
+  Domain -->|stdout / JSON Telemetry| Watcher
+      </pre>
+      <div class="mermaid-caption">
+        Figure 1 — Dual-Layer architecture of `compass_worker_kit`: `BaseCompassTask` handles the in-Pod runtime contract while `CompassMasterClient` bridges back to the Master REST API.
+      </div>
+    </div>
+
+    <h2 id="master-worker-contract">2. Exact Master-to-Worker Pod Contract</h2>
+    <p>
+      To build a library that works seamlessly with `utils/k8s_utils.py` (`K8sFlowRunnerUtils`), your code must adhere to the exact filesystem and environment contract injected into every k0s Job Pod:
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Artifact / Variable</th>
+            <th>Location / Format</th>
+            <th>How the Master Populates It</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/workspace/entrypoint.sh</code></td>
+            <td>Read-only file (`ConfigMap` `pc-flow-cfg-&lt;id&gt;`)</td>
+            <td>Sets `HOME=/tmp` and `PYTHONPATH=/tmp/.local/lib/python/site-packages`, runs `pip install --user --no-cache-dir -r /workspace/requirements.txt` if non-empty, then runs `exec python -u /workspace/flow.py`.</td>
+          </tr>
+          <tr>
+            <td><code>/workspace/flow.py</code></td>
+            <td>Read-only file (`ConfigMap` `pc-flow-cfg-&lt;id&gt;`)</td>
+            <td>The Python entrypoint script stored in `Analyses/&lt;flow_name&gt;/flow.py`.</td>
+          </tr>
+          <tr>
+            <td><code>/workspace/params.json</code></td>
+            <td>Read-only JSON file</td>
+            <td>Merged dictionary of the Flow's default `parameters` overlaid with run-time `parameters` passed to `POST /flows/&lt;name&gt;/run`.</td>
+          </tr>
+          <tr>
+            <td><code>/workspace/requirements.txt</code></td>
+            <td>Read-only pip spec file</td>
+            <td>Populated from the Flow's `pip_requirements` list (e.g., `compass-worker-kit&gt;=0.1.0`).</td>
+          </tr>
+          <tr>
+            <td><code>FLOW_NAME</code> &amp; <code>FLOW_RUN_ID</code></td>
+            <td>Environment variables (`str`)</td>
+            <td>Flow identifier and the integer primary key of `ExecutionRun` in SQLite.</td>
+          </tr>
+          <tr>
+            <td><code>FLOW_PARAMS_JSON</code> &amp; <code>FLOW_PARAMS_FILE</code></td>
+            <td>Environment variables (`str`)</td>
+            <td>Raw JSON string of merged parameters and the path `/workspace/params.json`.</td>
+          </tr>
+          <tr>
+            <td><code>PC_PARAM_&lt;UPPER_KEY&gt;</code></td>
+            <td>Environment variables (`str`)</td>
+            <td>Individual environment variable for every parameter key (e.g. `region="EU"` &rarr; `PC_PARAM_REGION="EU"`).</td>
+          </tr>
+          <tr>
+            <td>Injected Secrets (`envFrom`)</td>
+            <td>Environment variables (`str`)</td>
+            <td>Merged keys from `K8S_SECRET_REFS` &rarr; Flow `secret_refs` &rarr; ephemeral `pc-flow-sec-&lt;run_id&gt;` (e.g. `PC_MASTER_URL`, `PC_API_TOKEN`, `WAREHOUSE_DSN`).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="library-project-layout">3. Recommended Package Structure &amp; <code>pyproject.toml</code></h2>
+    <p>
+      Structure your custom worker library as a clean, installable Python 3.10+ package so it can be installed in k0s worker images or via `pip_requirements`:
+    </p>
+
+    <pre><code class="language-text">compass-worker-kit/
+├── pyproject.toml
+├── Dockerfile.worker                 # Optional pre-baked worker image for k0s nodes
+└── src/
+    └── compass_worker_kit/
+        ├── __init__.py
+        ├── exceptions.py             # Custom exception hierarchy
+        ├── client.py                 # Layer 2: CompassMasterClient (Master REST SDK)
+        ├── runtime.py                # Layer 1: BaseCompassTask (Pod & Structured Analysis ABC)
+        └── tasks/
+            └── churn_scoring.py      # Concrete domain task subclasses</code></pre>
+
+    <pre><code class="language-toml"># pyproject.toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "compass-worker-kit"
+version = "0.1.0"
+description = "Custom k0s Worker Pod Runtime and Master REST SDK for ProjectCompass"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27.0",
+    "pandas>=2.1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/compass_worker_kit"]</code></pre>
+
+    <h2 id="reference-implementation">4. Complete OOP Reference Implementation</h2>
+    <p>
+      Below is the complete, copy-pasteable implementation of <code>compass_worker_kit</code> following ProjectCompass coding standards (inheritance-first `ABC` hierarchy, strict type annotations, guard clauses, and zero global state).
+    </p>
+
+    <h3 id="code-exceptions">4.1 Custom Exception Hierarchy (<code>exceptions.py</code>)</h3>
+    <pre><code class="language-python"># +------------------------------------------------------------------+
+# | COMPASS WORKER KIT — EXCEPTION HIERARCHY                         |
+# +------------------------------------------------------------------+
+"""Domain exception hierarchy for ProjectCompass worker tasks and master SDK."""
+
+from __future__ import annotations
+
+
+class WorkerKitError(Exception):
+    """Base exception for all compass_worker_kit errors."""
+
+
+class ParameterContractError(WorkerKitError):
+    """Raised when required Flow parameters or secrets are missing or malformed."""
+
+
+class MasterBridgeError(WorkerKitError):
+    """Raised when HTTP communication with the ProjectCompass Master API fails."""</code></pre>
+
+    <h3 id="code-master-client">4.2 Layer 2: Master REST API Bridge (<code>client.py</code>)</h3>
+    <p>
+      <code>CompassMasterClient</code> enables any worker Pod or external Linux node daemon to query datasets managed by the Master (local DuckDB CSVs or remote ConnectorX databases), trigger downstream flows, or register worker nodes:
+    </p>
+    <pre><code class="language-python"># +------------------------------------------------------------------+
+# | COMPASS WORKER KIT — LAYER 2: MASTER REST API SDK                |
+# +------------------------------------------------------------------+
+"""Authenticated HTTP bridge from k0s worker nodes/Pods to ProjectCompass Master."""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+import os
+from typing import Any
+
+import httpx
+import pandas as pd
+
+from compass_worker_kit.exceptions import MasterBridgeError, ParameterContractError
+
+
+class BaseMasterClient(ABC):
+    """Abstract contract for communicating with the ProjectCompass Master server."""
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        bearer_token: str | None = None,
+        timeout: float = 30.0,
+    ) -> None:
+        """Initialize master endpoint URL and Bearer token from args or injected Secrets."""
+        resolved_url = (base_url or os.environ.get("PC_MASTER_URL", "")).strip().rstrip("/")
+        resolved_token = (bearer_token or os.environ.get("PC_API_TOKEN", "")).strip()
+        if not resolved_url:
+            raise ParameterContractError("PC_MASTER_URL is required to connect to the Master.")
+        self._base_url: str = resolved_url
+        self._bearer_token: str = resolved_token
+        self._timeout: float = timeout
+
+    def _headers(self) -> dict[str, str]:
+        """Build HTTP headers including Bearer token authentication."""
+        headers: dict[str, str] = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        if self._bearer_token:
+            headers["Authorization"] = f"Bearer {self._bearer_token}"
+        return headers
+
+    @abstractmethod
+    def query_dataframe(self, sql: str, connection: str | int | None = None) -> pd.DataFrame:
+        """Execute a read-only SQL query via the Master (DuckDB or ConnectorX) and return a DataFrame."""
+
+
+class CompassMasterClient(BaseMasterClient):
+    """Concrete HTTPX client interacting with ProjectCompass Master REST endpoints."""
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Perform an authenticated HTTP request against the ProjectCompass Master."""
+        url = f"{self._base_url}/{path.lstrip('/')}"
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                response = client.request(
+                    method=method.upper(),
+                    url=url,
+                    headers=self._headers(),
+                    json=payload,
+                )
+        except httpx.HTTPError as exc:
+            raise MasterBridgeError(f"Network error contacting Master at {url}: {exc}") from exc
+
+        if response.status_code >= 400:
+            raise MasterBridgeError(
+                f"Master API {method} {path} failed ({response.status_code}): {response.text}"
+            )
+        return response.json()
+
+    def query_dataframe(self, sql: str, connection: str | int | None = None) -> pd.DataFrame:
+        """Fetch tabular data from Master's DuckDB or saved ConnectorX connection via POST /api/query."""
+        if not sql.strip():
+            raise ParameterContractError("SQL query string cannot be empty.")
+        body: dict[str, Any] = {"sql": sql}
+        if connection is not None:
+            body["connection"] = connection
+        data = self._request("POST", "/api/query", payload=body)
+        return pd.DataFrame(data.get("rows", []), columns=data.get("columns"))
+
+    def trigger_flow(
+        self,
+        flow_name: str,
+        parameters: dict[str, Any] | None = None,
+        secrets: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Dispatch a downstream Kubernetes Flow on the Master via POST /flows/&lt;name&gt;/run."""
+        payload: dict[str, Any] = {
+            "parameters": parameters or {},
+            "secrets": secrets or {},
+        }
+        return self._request("POST", f"/flows/{flow_name}/run", payload=payload)
+
+    def register_worker_node(
+        self,
+        node_name: str,
+        role: str = "worker",
+        labels: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Pre-register or heartbeat a worker node record on the Master via POST /workers/register."""
+        return self._request(
+            "POST",
+            "/workers/register",
+            payload={"name": node_name, "role": role, "labels": labels or {}},
+        )</code></pre>
+
+    <h3 id="code-pod-runtime">4.3 Layer 1: In-Pod Task Runtime Contract (<code>runtime.py</code>)</h3>
+    <p>
+      <code>BaseCompassTask</code> automatically resolves parameters from `/workspace/params.json`, `FLOW_PARAMS_JSON`, and `PC_PARAM_*`, provides validated secret lookup, emits structured progress lines captured by the Master's `_watch_flow_job` thread, and exposes both `run_as_flow()` (for k0s Pods) and `run_as_structured_analysis()` (for local catalog execution):
+    </p>
+    <pre><code class="language-python"># +------------------------------------------------------------------+
+# | COMPASS WORKER KIT — LAYER 1: POD EXECUTION RUNTIME              |
+# +------------------------------------------------------------------+
+"""Abstract base task encapsulating the ProjectCompass k0s Pod execution contract."""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+import json
+import os
+from pathlib import Path
+import sys
+import time
+from typing import Any
+
+from compass_worker_kit.client import CompassMasterClient
+from compass_worker_kit.exceptions import ParameterContractError
+
+
+class BaseCompassTask(ABC):
+    """Abstract base class for all workloads scheduled onto k0s workers by ProjectCompass."""
+
+    def __init__(self, master_client: CompassMasterClient | None = None) -> None:
+        """Load master-injected run metadata and parameters from the Pod environment."""
+        self._flow_name: str = os.environ.get("FLOW_NAME", self.__class__.__name__)
+        self._run_id: int = int(os.environ.get("FLOW_RUN_ID", "0") or 0)
+        self._params: dict[str, Any] = self._load_parameters()
+        self._master: CompassMasterClient | None = master_client
+
+    @staticmethod
+    def _load_parameters() -> dict[str, Any]:
+        """Load merged parameters from /workspace/params.json, FLOW_PARAMS_JSON, and PC_PARAM_*."""
+        merged: dict[str, Any] = {}
+
+        # 1. Read mounted /workspace/params.json if present
+        params_file = Path(os.environ.get("FLOW_PARAMS_FILE", "/workspace/params.json"))
+        if params_file.is_file():
+            try:
+                loaded = json.loads(params_file.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    merged.update(loaded)
+            except json.JSONDecodeError as exc:
+                raise ParameterContractError(f"Invalid JSON in {params_file}: {exc}") from exc
+
+        # 2. Overlay FLOW_PARAMS_JSON environment variable if set
+        raw_json = os.environ.get("FLOW_PARAMS_JSON", "").strip()
+        if raw_json:
+            try:
+                loaded_env = json.loads(raw_json)
+                if isinstance(loaded_env, dict):
+                    merged.update(loaded_env)
+            except json.JSONDecodeError as exc:
+                raise ParameterContractError(f"Invalid FLOW_PARAMS_JSON: {exc}") from exc
+
+        # 3. Overlay individual PC_PARAM_&lt;KEY&gt; environment variables
+        for env_key, env_val in os.environ.items():
+            if env_key.startswith("PC_PARAM_"):
+                param_key = env_key.removeprefix("PC_PARAM_").lower()
+                if param_key not in merged:
+                    merged[param_key] = env_val
+
+        return merged
+
+    def require_param(self, key: str, default: Any = None) -> Any:
+        """Retrieve a required parameter or raise ParameterContractError when missing."""
+        if key in self._params and self._params[key] is not None:
+            return self._params[key]
+        if default is not None:
+            return default
+        raise ParameterContractError(f"Required flow parameter '{key}' was not provided.")
+
+    @staticmethod
+    def require_secret(env_name: str) -> str:
+        """Retrieve a secret injected via Kubernetes envFrom (secret_refs or inline secrets)."""
+        value = os.environ.get(env_name, "").strip()
+        if not value:
+            raise ParameterContractError(
+                f"Required Kubernetes Secret environment variable '{env_name}' is not set."
+            )
+        return value
+
+    def log_progress(self, stage: str, message: str, **metrics: Any) -> None:
+        """Emit structured log lines immediately flushed to the Master Kubelet log watcher."""
+        payload = {
+            "flow": self._flow_name,
+            "run_id": self._run_id,
+            "stage": stage,
+            "message": message,
+            "metrics": metrics,
+        }
+        print(f"[COMPASS_TASK] {json.dumps(payload)}", flush=True)
+
+    @property
+    def master(self) -> CompassMasterClient:
+        """Lazily initialize the CompassMasterClient using injected PC_MASTER_URL and PC_API_TOKEN."""
+        if self._master is None:
+            self._master = CompassMasterClient()
+        return self._master
+
+    @abstractmethod
+    def execute(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Execute domain workload on the worker node and return a JSON-serializable summary."""
+
+    def run_as_flow(self) -> int:
+        """Primary entrypoint invoked by /workspace/flow.py inside a k0s batch/v1 Job Pod."""
+        start_ts = time.monotonic()
+        self.log_progress("START", f"Starting flow '{self._flow_name}' (run_id={self._run_id})")
+        try:
+            summary = self.execute(dict(self._params))
+            elapsed = round(time.monotonic() - start_ts, 3)
+            self.log_progress("COMPLETED", "Flow finished successfully", elapsed_s=elapsed, result=summary)
+            return 0
+        except Exception as exc:
+            elapsed = round(time.monotonic() - start_ts, 3)
+            self.log_progress("FAILED", str(exc), elapsed_s=elapsed)
+            print(f"ERROR: {exc}", file=sys.stderr, flush=True)
+            return 1
+
+    def run_as_structured_analysis(self, inputs: dict[str, Any], output_path: str) -> str:
+        """Backwards-compatible adapter for local structured_analysis_main.py run(inputs, output_path)."""
+        merged_inputs = {**self._params, **(inputs or {})}
+        self._params = merged_inputs
+        summary = self.execute(merged_inputs)
+
+        out_dir = Path(output_path)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        report_file = out_dir / "report.html"
+        report_file.write_text(
+            f"&lt;h2&gt;{self._flow_name} — Execution Summary&lt;/h2&gt;"
+            f"&lt;pre&gt;{json.dumps(summary, indent=2)}&lt;/pre&gt;",
+            encoding="utf-8",
+        )
+        return str(report_file)</code></pre>
+
+    <h2 id="concrete-task-and-entrypoints">5. Writing a Concrete Worker Task &amp; 6-Line Entrypoints</h2>
+    <p>
+      Once `compass_worker_kit` is created, implementing a new workload for your k0s cluster takes just one subclass and a 6-line `flow.py`:
+    </p>
+
+    <pre><code class="language-python"># src/compass_worker_kit/tasks/churn_scoring.py
+from __future__ import annotations
+from typing import Any
+from compass_worker_kit.runtime import BaseCompassTask
+
+
+class CustomerChurnScoringTask(BaseCompassTask):
+    """Score customer churn on a k0s worker node using data fetched from the Master."""
+
+    def execute(self, params: dict[str, Any]) -> dict[str, Any]:
+        region = str(self.require_param("region", default="EMEA"))
+        threshold = float(self.require_param("score_threshold", default=0.65))
+
+        self.log_progress("EXTRACT", f"Querying active customers for region={region}")
+        df = self.master.query_dataframe(
+            f"SELECT customer_id, tenure_months, monthly_spend FROM customers WHERE region = '{region}'"
+        )
+
+        # Deterministic scoring logic on the worker node
+        high_risk_count = int((df["monthly_spend"] > (threshold * 100)).sum()) if not df.empty else 0
+        self.log_progress("SCORE", "Completed worker scoring", rows=len(df), high_risk=high_risk_count)
+
+        return {
+            "region": region,
+            "evaluated_customers": len(df),
+            "high_risk_customers": high_risk_count,
+        }</code></pre>
+
+    <h3 id="flow-py-entrypoint">Using Your Library Inside a k0s Flow (<code>/workspace/flow.py</code>)</h3>
+    <pre><code class="language-python"># Analyses/churn-scoring-flow/flow.py
+import sys
+from compass_worker_kit.tasks.churn_scoring import CustomerChurnScoringTask
+
+if __name__ == "__main__":
+    sys.exit(CustomerChurnScoringTask().run_as_flow())</code></pre>
+
+    <h3 id="structured-analysis-entrypoint">Using the Exact Same Class in a Local Structured Analysis (<code>structured_analysis_main.py</code>)</h3>
+    <pre><code class="language-python"># Analyses/churn-scoring-flow/analysis/structured_analysis_main.py
+from typing import Any
+from compass_worker_kit.tasks.churn_scoring import CustomerChurnScoringTask
+
+
+def run(inputs: dict[str, Any], output_path: str) -> str:
+    """Adapter called by ProjectCompass local Structured Analysis engine."""
+    return CustomerChurnScoringTask().run_as_structured_analysis(inputs, output_path)</code></pre>
+
+    <h2 id="packaging-and-distribution">6. Distributing the Library to k0s Worker Nodes</h2>
+    <p>
+      You have two ways to make <code>compass_worker_kit</code> available inside worker Pods scheduled by ProjectCompass:
+    </p>
+
+    <h3 id="strategy-a-pip-requirements">Strategy A: Runtime Installation via <code>pip_requirements</code> (Fastest Iteration)</h3>
+    <p>
+      When creating or updating a Flow in ProjectCompass, add your package (from PyPI, an internal package index, or a Git repository URL) to <code>pip_requirements</code>. The Pod's `/workspace/entrypoint.sh` installs it into `/tmp/.local` before running `/workspace/flow.py`:
+    </p>
+    <pre><code class="language-bash">uv run python scripts/compass_cli.py --url http://&lt;MASTER_IP&gt;:5000 --token "$PC_API_TOKEN" \
+  flows create \
+  --name churn-scoring-flow \
+  --code-file ./flow.py \
+  --params '{"region": "EMEA", "score_threshold": 0.7}' \
+  --requirements "compass-worker-kit @ git+https://github.com/your-org/compass-worker-kit.git@main" \
+  --secret-refs "compass-master-Auth"</code></pre>
+
+    <h3 id="strategy-b-custom-worker-image">Strategy B: Pre-Baked Worker Docker Image (Production Zero-Startup Latency)</h3>
+    <p>
+      For production clusters or air-gapped k0s workers, bake <code>compass_worker_kit</code> and heavy scientific libraries (`pandas`, `scikit-learn`, `lightgbm`, `scomp-link`) into a custom worker image and set <code>K8S_DEFAULT_IMAGE</code> (or the per-flow <code>image</code> field):
+    </p>
+    <pre><code class="language-docker"># Dockerfile.worker
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/worker-kit
+
+COPY pyproject.toml ./
+COPY src/ ./src/
+RUN pip install --no-cache-dir . scomp-link duckdb connectorx
+
+USER 1000:1000</code></pre>
+
+    <pre><code class="language-bash"># Build and import the image directly into k0s containerd on each worker node
+docker build -f Dockerfile.worker -t ghcr.io/your-org/compass-worker:0.1.0 .
+docker save ghcr.io/your-org/compass-worker:0.1.0 | sudo k0s ctr images import -</code></pre>
+
+    <h3 id="creating-master-secret">Provisioning the Master API Secret in Kubernetes</h3>
+    <p>
+      So worker Pods can authenticate back to the Master via `CompassMasterClient` without hardcoding tokens, create a Kubernetes Secret in the <code>kube-compass</code> namespace and reference it in `K8S_SECRET_REFS` or the Flow's `secret_refs`:
+    </p>
+    <pre><code class="language-bash">sudo k0s kubectl -n kube-compass create secret generic compass-master-auth \
+  --from-literal=PC_MASTER_URL="http://&lt;MASTER_IP&gt;:5000" \
+  --from-literal=PC_API_TOKEN="&lt;YOUR_BEARER_TOKEN&gt;"</code></pre>
+
+    <div class="page-pager">
+      <a href="kubernetes_console.html" class="pager-link">
+        <span class="pager-label">&larr; Previous</span>
+        <span class="pager-title">Kubernetes Console, Flows &amp; Chains</span>
+      </a>
+      <a href="routes.html" class="pager-link" style="text-align: right;">
+        <span class="pager-label">Next &rarr;</span>
+        <span class="pager-title">Web Routes, REST API &amp; External CLI</span>
+      </a>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc" aria-label="On this page">
+    <div class="docs-toc-title">🧭 On This Page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <strong>ProjectCompass</strong> — <em>Organization Is Everything®</em> &bull; By
+      <a href="https://giacomosaccaggi.github.io/" target="_blank" rel="noopener">Giacomo Saccaggi</a>
+    </div>
+    <div class="footer-links">
+      <a href="../index.html">Hub</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="assets/docs.js"></script>
+</body>
+</html>

@@ -58,6 +58,35 @@ docker compose build --no-cache
 
 ---
 
+## Customization
+
+Copy `projectcompass.example.yaml` to `projectcompass.yaml`, edit the values you need, and mount it read-only in the container. The loader defaults to `${DATA_DIR}/projectcompass.yaml`; set `PC_CONFIG_FILE` to use another path. The Compose files contain commented mount and environment examples:
+
+```yaml
+environment:
+  - PC_CONFIG_FILE=/app/data/projectcompass.yaml
+  - PC_DEMO__ENABLED=false
+  - PC_THEME__PRIMARY_COLOR=#1f2937
+volumes:
+  - ./projectcompass.yaml:/app/data/projectcompass.yaml:ro
+```
+
+Precedence is built-in defaults, then YAML values, then `PC_<SECTION>__<KEY>` environment overrides. YAML strings support `${VARIABLE}` and `${VARIABLE:-fallback}` interpolation. Invalid colors, unsafe image URLs, unknown feature names, and malformed YAML stop startup with a setting-specific message.
+
+`branding` configures the app name, logos, favicon, page title, footer and background images. `theme` configures colors, font and the initial dark-mode state. Set `demo.enabled: false` to start without bundled analyses or datasets; `demo.analyses_dir` and `demo.data_dir` can point to alternate seed folders.
+
+Module flags under `features` hide disabled modules and return 404 for their routes. For example, `features.ai_chat: false` disables AI chat, and `features.db_connections: false` keeps local DuckDB queries available while disabling saved remote connections.
+
+Preset connections can be declared under `connections` in YAML only. They are reconciled by name at startup and marked read-only in the Connections page. Passwords and custom URIs can reference environment variables; pass each referenced variable into the container (for example, `WAREHOUSE_PASSWORD`) and do not put clear-text credentials in Compose files. Preset credentials are encrypted with the same stable `DB_CONNECTIONS_KEY` used by UI-created connections.
+
+`GUNICORN_WORKERS` and `GUNICORN_TIMEOUT` configure the server process; their defaults remain `4` and `120` seconds.
+
+### Kubernetes ConfigMap
+
+`k8s/configmap.yaml` contains a `compass-settings` ConfigMap with a `projectcompass.yaml` key. The deployment mounts that key read-only at `/app/config/projectcompass.yaml` and sets `PC_CONFIG_FILE` accordingly. Store connection passwords in Kubernetes Secrets and expose them as container environment variables before referencing them from the YAML file.
+
+---
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -68,8 +97,16 @@ docker compose build --no-cache
 | `DATABASE_URL` | `sqlite:///projectcompass.db` | Database connection string |
 | `PORT` | `8080` | Internal port |
 | `FLASK_DEBUG` | `False` | Debug mode |
+| `DB_CONNECTIONS_KEY` | generated key file | Fernet key for saved database credentials; keep it stable across deployments |
+| `DB_CONNECTIONS_MAX_ROWS` | `100000` | Maximum rows returned by a remote query |
+| `PC_CONFIG_FILE` | `${DATA_DIR}/projectcompass.yaml` | Optional external application settings YAML path |
+| `PC_<SECTION>__<KEY>` | built-in value | Override an individual scalar setting, for example `PC_DEMO__ENABLED=false` |
+| `GUNICORN_WORKERS` | `4` | Gunicorn worker count |
+| `GUNICORN_TIMEOUT` | `120` | Gunicorn request timeout in seconds |
 | `MITHRIL_HOST` | `mithril:16180` | Ollama endpoint |
 | `ALLOWED_ORIGINS` | `*` | CORS origins |
+
+If `DB_CONNECTIONS_KEY` is not set, the app creates `DATA_DIR/tmp/.db_connections.key` with owner-only permissions. Keep the `DATA_DIR` volume persistent across container recreation, or set and securely preserve `DB_CONNECTIONS_KEY`; losing or changing the key makes saved passwords unreadable.
 
 ---
 
@@ -80,6 +117,7 @@ docker compose build --no-cache
 | `./data/Analyses` | `/app/Analyses` | Analysis storage |
 | `./data/Saved_data` | `/app/Saved_data` | Uploaded datasets |
 | `./data/Saved_queries` | `/app/Saved_queries` | Saved SQL queries |
+| `./data/tmp` | `/app/tmp` | Persistent Fernet key for saved database connections |
 | `./data/projectcompass.db` | `/app/projectcompass.db` | SQLite database (users, audit log, etc.) |
 | `.mithril | /root/.mithril | Fellowship config and credentials |
 
@@ -101,8 +139,8 @@ ProjectCompass supports multiple users with role-based access control (RBAC).
 | Role | Permissions |
 |------|-------------|
 | `admin` | Full access, user management, system settings |
-| `editor` | Create/edit/execute analyses, upload data |
-| `viewer` | Read-only access to analyses and data |
+| `editor` | Create/edit/execute analyses, upload data, manage database connections |
+| `viewer` | Read-only access to analyses and data; may use saved connections in the Query Runner |
 
 ---
 
@@ -149,6 +187,8 @@ Recommended environment:
 environment:
   - SECRET_KEY=<random-64-char-string>
   - ADMIN_PASSWORD_HASH=<werkzeug-hash>
+  - DB_CONNECTIONS_KEY=<stable-fernet-key>
+  - DB_CONNECTIONS_MAX_ROWS=100000
   - DATABASE_URL=sqlite:////app/data/projectcompass.db
   - ALLOWED_ORIGINS=https://yourdomain.com
   - FLASK_DEBUG=False

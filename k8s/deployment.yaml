@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: projectcompass
+  namespace: projectcompass
+  labels:
+    app.kubernetes.io/name: projectcompass
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: projectcompass
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: projectcompass
+    spec:
+      serviceAccountName: projectcompass-console
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: projectcompass
+          image: projectcompass:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: compass-config
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: compass-data
+              mountPath: /app/data
+            - name: compass-config-file
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: compass-data
+          persistentVolumeClaim:
+            claimName: projectcompass-data
+        - name: compass-config-file
+          configMap:
+            name: compass-config
+            items:
+              - key: projectcompass.yaml
+                path: projectcompass.yaml

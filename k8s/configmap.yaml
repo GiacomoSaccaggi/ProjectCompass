@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compass-config
+  namespace: projectcompass
+  labels:
+    app.kubernetes.io/name: projectcompass
+data:
+  PORT: "8080"
+  FLASK_ENV: "production"
+  FLASK_DEBUG: "False"
+  DATA_DIR: "/app/data"
+  PC_CONFIG_FILE: "/app/config/projectcompass.yaml"
+  K8S_NAMESPACE: "projectcompass"
+  K8S_IN_CLUSTER: "true"
+  K8S_DEFAULT_IMAGE: "python:3.11-slim"
+  K8S_JOB_TTL_SECONDS: "300"
+  K8S_DEFAULT_CPU_REQUEST: "500m"
+  K8S_DEFAULT_CPU_LIMIT: "1"
+  K8S_DEFAULT_MEMORY_REQUEST: "512Mi"
+  K8S_DEFAULT_MEMORY_LIMIT: "1Gi"
+  # Optional comma-separated pre-existing cluster Secret names mounted on every Flow Job
+  K8S_SECRET_REFS: ""
+  USE_GIT_SYNC: "False"
+  GIT_BRANCH: "main"
+  GIT_SYNC_ON_SAVE: "True"
+  projectcompass.yaml: |
+    branding:
+      app_name: ProjectCompass
+      page_title: null
+      sidebar_title: Analysis
+    theme:
+      primary_color: "#222831"
+      accent_color: "#3F51B5"
+    demo:
+      enabled: true
+    features:
+      ai_chat: true
+      rag: true
+      k8s: true
+      pipeline_builder: true
+      schedules: true
+      executions: true
+      rawgraphs: true
+      query_runner: true
+      db_connections: true
+      todo: true
+    connections: []

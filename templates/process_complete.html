@@ -1,414 +1,90 @@
 
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-    <style>
-      @font-face {
-          font-family: Starjedi;
-          src: url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/718469/Starjedi.ttf);
-          font-weight: normal;
-        }
-
-        @import url('https://fonts.googleapis.com/css?family=Luckiest+Guy');
-
-        body {
-            background-color: white;
-            margin: 0;
-        }
-
-        .star-wars-saber {
-            height: 65px;
-            width: 880px;
-            position: relative;
-
-            .handle {
-                width: 220px;
-                height: 40px;
-                background-color: #BABABA;
-                border-radius: 12px;
-                position: absolute;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                margin: auto;
-
-                .shadow {
-                    width: 220px;
-                    height: 20px;
-                    background-color: rgba(255, 255, 255, 0.2);
-                    position: absolute;
-                    left: 0;
-                    bottom: 0;
-                    border-bottom-left-radius: 8px;
-                }
-
-                .tip {
-                    width: 8px;
-                    height: 40px;
-                    background-color: #363636;
-                    border-top-left-radius: 12px;
-                    border-bottom-left-radius: 12px;
-                }
-
-                .grip {
-                    width: 80px;
-                    height: 10px;
-                    background-color: #212121;
-                    position: absolute;
-                }
-
-                .grip1 {
-                    left: 8px;
-                    top: 0px;
-                }
-
-                .grip2 {
-                    left: 8px;
-                    top: 0;
-                    bottom: 0;
-                    margin: auto;
-                }
-
-                .grip3 {
-                    left: 8px;
-                    bottom: 0px;
-                }
-
-                .center {
-                    width: 50px;
-                    height: 40px;
-                    position: absolute;
-                    background-color: #212121;
-                    left: 110px;
-                    top: 0;
-                }
-
-                .center-bottom {
-                    width: 40px;
-                    height: 12px;
-                    position: absolute;
-                    background-color: #363636;
-                    left: 115px;
-                    bottom: -12px;
-
-                    .screw {
-                        width: 5px;
-                        height: 5Px;
-                        border-radius: 50%;
-                        background-color: #BABABA;
-                        position: absolute;
-                        top: 0;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        margin: auto;
-                    }
-                }
-
-                .cables {
-                    .hole {
-                        width: 4px;
-                        height: 12px;
-                        background-color: #444444;
-                        position: absolute;
-                        top: 20px;
-                        margin: auto;
-                        border-radius: 30px;
-                    }
-
-                    .hole1 {
-                        left: 175px;
-                    }
-
-                    .hole2 {
-                        left: 185px;
-                    }
-
-                    .cable {
-                        height: 2px;
-                        width: 11px;
-                        background-color: green;
-                        position: absolute;
-                        top: 23px;
-                        margin: auto;
-                        left: 175px;
-                    }
-
-                    .cable1 {
-                        top: 24px;
-                        left: 177px;
-                    }
-
-                    .cable2 {
-                        top: 26px;
-                        left: 177px;
-                        background-color: orange;
-                    }
-                }
-
-                .guard-tip {
-                    width: 40px;
-                    height: 15px;
-                    background-color: #212121;
-                    position: absolute;
-                    top: -5px;
-                    left: 180px;
-                }
-
-                .guard-rectangle {
-                    width: 20px;
-                    height: 45px;
-                    background-color: #212121;
-                    position: absolute;
-                    top: 0;
-                    bottom: 0;
-                    margin: auto;
-                    left: 210px;
-
-                    .shadow {
-                        width: 20px;
-                        height: 22.5px;
-                        background-color: rgba(255, 255, 255, 0.2);
-                        position: absolute;
-                        bottom: 0;
-                        left: 0;
-                    }
-                }
-
-                .guard-triangle {
-                    width: 0;
-                    height: 0;
-                    border-style: solid;
-                    border-width: 45px 35px 0 0;
-                    border-color: #212121 transparent transparent transparent;
-                    position: absolute;
-                    top: 0;
-                    bottom: 0;
-                    margin: auto;
-                    left: 230px;
-
-
-                }
-
-                .guard-triangle-shadow {
-                    width: 0;
-                    height: 0;
-                    border-style: solid;
-                    border-width: 22.5px 17px 0 0;
-                    border-color: rgba(255, 255, 255, 0.2) transparent transparent transparent;
-                    position: absolute;
-                    bottom: -2px;
-                    left: 230px;
-                }
-            }
-
-            .laser-active {
-                box-shadow: 30px 0 30px #00ff44;
-                animation: glowNeon 80ms linear infinite;
-                animation-direction: alternate-reverse;
-            }
-
-            .laser {
-                height: 35px;
-                background-color: green;
-                position: absolute;
-                left: 220px;
-                top: 0;
-                bottom: 0;
-                margin: auto;
-
-                .laser-glow {
-                    width: 100%;
-                    height: 20px;
-                    background-color: rgba(255, 255, 255, 0.96);
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    bottom: 0;
-                    margin: auto;
-                }
-
-                .laser-glow-active {
-                    animation: glow 80ms linear infinite;
-                    animation-direction: alternate-reverse;
-                }
-
-                .laser-tip {
-                    height: 35px;
-                    width: 30px;
-                    background-color: green;
-                    position: absolute;
-                    right: -30px;
-                    top: 0;
-                    bottom: 0;
-                    margin: auto;
-                    border-top-right-radius: 50%;
-                    border-bottom-right-radius: 50%;
-
-                    .laser-glow {
-                        width: 80%;
-                        border-top-right-radius: 50%;
-                        border-bottom-right-radius: 50%;
-                    }
-                }
-
-                @keyframes glowNeon {
-                    from {
-                        box-shadow: 30px 0 30px #00ff44;
-                    }
-                    to {
-                        box-shadow: 30px 0 26px #00ff44;
-                    }
-                }
-
-                @keyframes glow {
-                    from {
-                        background-color: rgba(255, 255, 255, 0.96);
-                    }
-                    to {
-                        background-color: rgba(255, 255, 255, 0.92);
-                    }
-                }
-            }
-        }
-
-        .saber-demo {
-            width: 100%;
-            height: 180px;
-            position: absolute;
-            text-align: center;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            margin: auto;
-
-            h1 {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                margin: auto;
-                font-family: 'Starjedi';
-                color: #212121;
-            }
-
-            .saber, {
-                position: absolute;
-                top: 100px;
-                left: 0;
-                right: 0;
-                margin: auto;
-            }
-
-            .percent {
-                color: #D2D5D6;
-                position: absolute;
-                top: 60px;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                margin: auto;
-                font-family: 'Luckiest Guy';
-                font-size: 30px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Operation Completed — ProjectCompass</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #060d1a;
+      background-image:
+        radial-gradient(circle at 50% 35%, rgba(56, 189, 248, 0.16) 0%, transparent 55%),
+        linear-gradient(to right, rgba(56, 189, 248, 0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.045) 1px, transparent 1px);
+      background-size: 100% 100%, 64px 64px, 64px 64px;
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .status-card {
+      max-width: 480px;
+      width: 100%;
+      background: rgba(14, 25, 47, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.38);
+      border-top: 3px solid #fbbf24;
+      border-radius: 18px;
+      padding: 36px 32px;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    }
+    .status-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(45, 212, 191, 0.16);
+      border: 2px solid #2dd4bf;
+      color: #2dd4bf;
+      font-size: 1.9rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+    h1 { font-size: 1.45rem; font-weight: 800; margin-bottom: 8px; color: #f8fafc; }
+    p { font-size: 0.92rem; color: #cbd5e1; line-height: 1.55; margin-bottom: 24px; }
+    .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.18s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+      color: #ffffff;
+      border: 1px solid rgba(251, 191, 36, 0.45);
+    }
+    .btn-primary:hover { transform: translateY(-2px); color: #fbbf24; }
+    .btn-secondary {
+      background: rgba(6, 13, 26, 0.8);
+      color: #cbd5e1;
+      border: 1px solid rgba(56, 189, 248, 0.32);
+    }
+    .btn-secondary:hover { border-color: #fbbf24; color: #ffffff; }
+  </style>
+  <script>
+    setTimeout(function() { window.location.href = '/analysis'; }, 1800);
+  </script>
 </head>
 <body>
-
-
-    <div id="root"></div>
-
-
-<script type="text/babel">
-
-          class DarthVaderSaber extends React.Component {
-            render() {
-                const laserMax = 630
-                const percent = this.props.percent >= 1 ? 1 : this.props.percent
-                const glowStyle = percent >= 1 ? 'laser-glow laser-glow-active' : 'laser-glow'
-                const width = percent * laserMax
-                const laserStyle = { width: width + 'px' }
-                const laserClass = percent >= 1 ? 'laser laser-active' : 'laser'
-                return (
-                    <div className="saber star-wars-saber">
-                        <div className="handle">
-                            <div className="tip"></div>
-                            <div className="grip grip1"></div>
-                            <div className="grip grip2"></div>
-                            <div className="grip grip3"></div>
-                            <div className="center"></div>
-                            <div className="laser"></div>
-                            <div className="center-bottom">
-                                <div className="screw"></div>
-                            </div>
-                            <div className="cables">
-                                <div className="hole hole1"></div>
-                                <div className="hole hole2"></div>
-                                <div className="cable cable1"></div>
-                                <div className="cable cable2"></div>
-                            </div>
-                            <div className="shadow"></div>
-                            <div className={laserClass} style={laserStyle}>
-                                <div className={glowStyle}></div>
-                                <div className="laser-tip">
-                                    <div className={glowStyle}></div>
-                                </div>
-                            </div>
-                            <div className="guard-tip"></div>
-                            <div className="guard-rectangle">
-                                <div className="shadow"></div>
-                            </div>
-                            <div className="guard-triangle">
-                            </div>
-                            <div className="guard-triangle-shadow"></div>
-                        </div>
-                    </div>
-                )
-            }
-        }
-
-        class Demo extends React.Component {
-            state = { percent: 0 }
-
-            componentDidMount() {
-                this.interval = setInterval(
-                  () => {
-                      if (this.state.percent >= 1) {
-                          clearInterval(this.interval)
-                      } else {
-                          this.setState({ percent: this.state.percent + 0.001 })
-                      }
-                  },
-                  5
-                )
-            }
-
-            render() {
-                const { percent } = this.state
-                return (
-                    <div className="saber-demo">
-                        <h1>Loading</h1>
-                        <div className="percent">{(percent * 100).toFixed(0)}%</div>
-                        <DarthVaderSaber percent={percent} />
-                    </div>
-                )
-            }
-        }
-
-        ReactDOM.render(<Demo />, document.getElementById('root'))
-
-</script>
-
-
-
+  <div class="status-card">
+    <div class="status-icon">✓</div>
+    <h1>Operation Completed</h1>
+    <p>Your changes have been saved to the ProjectCompass catalog. Redirecting you back to the Catalog Explorer...</p>
+    <div class="actions">
+      <a href="/analysis" class="btn btn-primary">Go to Analysis Catalog</a>
+      <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+  </div>
 </body>
 </html>

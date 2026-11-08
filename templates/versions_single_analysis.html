@@ -3,35 +3,33 @@
   {{ head|safe }}
 
   <style>
-
-    input[type=text], input[type=month], input[type=date], input[type=email], input[type=file], textarea {
-      padding: 6px 12px;
-      text-decoration: none;
-      margin: 4px 2px;
-      cursor: pointer;
-      width: 90%;
-      display: inline-block;
-      border-radius: 4px;
-      background-color: white;
-      color:  #005F81 ;
-      border: 2px solid  #00889B;
-      text-align: center;
-      transition: all 0.5s;
-      cursor: pointer;
-      margin: 5px;
+    .version-page-wrap { padding: 16px 24px 24px; max-width: 1140px; margin: 0 auto; }
+    .version-page-wrap input[type=text],
+    .version-page-wrap input[type=file],
+    .version-page-wrap textarea {
+      padding: 9px 14px;
+      margin: 4px 0 10px 0;
+      width: 100%;
+      display: block;
+      border-radius: 8px;
+      background-color: var(--mariner-bg-card, #ffffff);
+      color: var(--mariner-text-primary, #0f172a);
+      border: 1px solid var(--mariner-border-strong, rgba(2, 132, 199, 0.38));
+      text-align: left !important;
     }
-  /* Create two equal columns that floats next to each other */
-  .column {
-    float: left;
-    width: 50%;
-  }
-
-  /* Clear floats after the columns */
-  .row:after {
-    content: "";
-    display: table;
-    clear: both;
-  }
+    .version-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px 18px;
+      padding: 12px 16px;
+      background: rgba(2, 132, 199, 0.05);
+      border: 1px solid var(--mariner-border-subtle);
+      border-radius: 10px;
+      margin: 12px 0;
+    }
+    .version-meta-grid h6 { margin: 0; font-size: 0.86rem; }
+    .version-meta-grid .start_date,
+    .version-meta-grid .last_mod_date { display: inline; font-family: 'JetBrains Mono', monospace; }
   </style>
 <body class="w3-light-grey">
 
@@ -40,169 +38,150 @@
   {{ sidebar_menu|safe }}
 
     <!-- !PAGE CONTENT! -->
-  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
-    <!-- Header -->
-    <header class="w3-container" style="padding-top:22px">
-      <h5><b><i class="fa fa-dashboard"></i>    {{ nome }}</b></h5>
+  <div class="w3-main" style="margin-left:260px;margin-top:54px;">
+    <header class="w3-container" style="padding:20px 28px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h4 style="margin:0;font-weight:800;"><i class="fa fa-compass" style="color:var(--mariner-cyan);margin-right:8px;"></i>{{ nome }}</h4>
+        <p class="w3-small w3-text-grey" style="margin:4px 0 0 0;">Analysis metadata, versions, team comments, and execution webhooks</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/analysis" class="w3-button w3-small w3-light-grey"><i class="fa fa-arrow-left"></i> Catalog</a>
+        <a href="/load_analysis?name={{ nome.replace(' ','512') }}" class="w3-button w3-small w3-blue"><i class="fa fa-edit"></i> Edit</a>
+        <a href="/chat/analysis?name={{ nome.replace(' ','512') }}" class="w3-button w3-small w3-teal"><i class="fa fa-comments"></i> AI Chat</a>
+      </div>
     </header>
-    <br>
-    <div class="w3-padding w3-container w3-card-1">
-      <ul>
-              <h5 class="product"><b><i class="fa fa-folder-open-o"></i>    {{ values['product'] }}</b></h5>
-              <h6><b><i class="fa fa-info-circle"></i>    Purpose and scope:</b></h6>
-              <ul class="description1">{{ values['description'] }}</ul>
-              <h6><b><i class="fa fa-sign-in"></i>    The inputs of the analysis:</b></h6>
-              <ul>
-              {% for name_var, var_info in values['inputs'].items() %}
-                <b>{{ name_var }} ({{ var_info['type'] }}):</b> {{ var_info['default'] }}<br>
-              {% endfor %}
-              </ul>
-              <h6 class="outcome"><b><i class="fa fa-sign-out"></i>    Outcome:</b> {{ values['output_type'] }}</h6>
-              <ul class="description2">{{ values['output description'] }}</ul>
-              <h6 class="people"><b><i class="fa fa-group"></i>    People:</b> {{ values['owner'] }} ({{ values['collaborators'] }})</h6>
-              <h6 class="countries"><b><i class="fa fa-map-o"></i>    Countries:</b> {{ values['countries'] }}</h6>
-              <h6><b><i class="fa fa-calendar-minus-o"></i>    Start date:</b> <div class="start_date">{{ values['start_date'] }}</div></h6>
-              <h6 ><b><i class="fa fa-calendar-plus-o"></i>    Last modified date:</b> <div class="last_mod_date">{{ values['last_modified'] }}</div></h6>
-              <div style="{{ 'display:none;' if values['links'] == {} else '' }}"><h6><b><i class="fa fa-external-link"></i>    Documentations links:</b></h6>
-              <ul>
-              {% for name_link, link in values['links'].items() %}
-                <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
-              {% endfor %}
-              </ul>
-              </div>
-              <div style="{{ 'display:none;' if values['slides'] == {} else '' }}"><h6><b><i class="fa fa-external-link"></i>    Google Slides presentations:</b></h6>
-              <ul>
-              {% for name_link, link in values['slides'].items() %}
-                <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
-              {% endfor %}
-              </ul>
-              </div>
-              {{ values['gitlab_link_viz']|safe }}
-              {{ values['gdrive_link_viz']|safe }}
-              {{ values['confluence_link_viz']|safe }}
-              <br>
+
+    <div class="version-page-wrap">
+    <div class="w3-padding-large w3-container w3-card-1" style="margin-bottom:20px;">
+      <h5 class="product" style="margin-top:0;color:var(--mariner-cyan);font-weight:700;"><i class="fa fa-folder-open-o"></i> {{ values['product'] }}</h5>
+      <h6><b><i class="fa fa-info-circle"></i> Purpose &amp; Scope:</b></h6>
+      <p class="description1" style="color:var(--mariner-text-secondary);">{{ values['description'] }}</p>
+
+      {% if values['inputs'] %}
+      <h6><b><i class="fa fa-sign-in"></i> Inputs:</b></h6>
+      <div style="margin-bottom:10px;">
+      {% for name_var, var_info in values['inputs'].items() %}
+        <span class="w3-tag w3-small" style="background:var(--mariner-bg-secondary);color:var(--mariner-text-primary);border:1px solid var(--mariner-border-subtle);margin:2px 4px 2px 0;">
+          <b>{{ name_var }} ({{ var_info['type'] }}):</b> {{ var_info['default'] }}
+        </span>
+      {% endfor %}
+      </div>
+      {% endif %}
+
+      <h6 class="outcome"><b><i class="fa fa-sign-out"></i> Outcome:</b> <span class="w3-tag w3-tiny w3-teal">{{ values['output_type'] }}</span></h6>
+      <p class="description2" style="color:var(--mariner-text-secondary);">{{ values['output description'] }}</p>
+
+      <div class="version-meta-grid">
+        <h6 class="people"><b><i class="fa fa-group"></i> People:</b> {{ values['owner'] }} ({{ values['collaborators'] }})</h6>
+        <h6 class="countries"><b><i class="fa fa-map-o"></i> Countries:</b> {{ values['countries'] }}</h6>
+        <h6><b><i class="fa fa-calendar-minus-o"></i> Start date:</b> <div class="start_date">{{ values['start_date'] }}</div></h6>
+        <h6><b><i class="fa fa-calendar-plus-o"></i> Last modified:</b> <div class="last_mod_date">{{ values['last_modified'] }}</div></h6>
+      </div>
+
+      <div style="{{ 'display:none;' if values['links'] == {} else '' }}">
+        <h6><b><i class="fa fa-external-link"></i> Documentation links:</b></h6>
+        <ul>
+        {% for name_link, link in values['links'].items() %}
+          <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
+        {% endfor %}
         </ul>
+      </div>
+      <div style="{{ 'display:none;' if values['slides'] == {} else '' }}">
+        <h6><b><i class="fa fa-external-link"></i> Presentations:</b></h6>
+        <ul>
+        {% for name_link, link in values['slides'].items() %}
+          <a href="{{ link }}" target="_blank">{{ name_link }}</a><br>
+        {% endfor %}
+        </ul>
+      </div>
+      {{ values['gitlab_link_viz']|safe }}
+      {{ values['gdrive_link_viz']|safe }}
+      {{ values['confluence_link_viz']|safe }}
     </div>
-    <header class="w3-container" style="padding-top:22px">
-      <h5><b><i class="fa fa-history"></i>    Versions</b></h5>
-    </header>
-    <br>
 
     <!-- Pipeline Version History -->
-    <div class="w3-padding w3-container w3-card-1" style="margin-bottom:20px;">
-      <h6><b><i class="fa fa-code-fork"></i> Pipeline History</b></h6>
-      <p>Track changes to the pipeline code over time.</p>
-      <a href="/analysis/{{ nome.replace(' ', '512') }}/versions" class="w3-button w3-small w3-blue">
-        <i class="fa fa-history"></i> View Pipeline History
-      </a>
-    </div>
+    <div class="w3-padding-large w3-container w3-card-1" style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h5 style="margin:0;font-weight:700;"><i class="fa fa-code-fork" style="color:var(--mariner-cyan);"></i> Pipeline &amp; Version History</h5>
+          <p class="w3-small w3-text-grey" style="margin:4px 0 0 0;">Track changes to the pipeline code and artifacts over time.</p>
+        </div>
+        <a href="/analysis/{{ nome.replace(' ', '512') }}/versions" class="w3-button w3-small w3-blue">
+          <i class="fa fa-history"></i> View Pipeline History
+        </a>
+      </div>
 
-    <div class="w3-padding w3-container w3-card-1">
-      <ul>
+      <div style="{{ 'display:none;' if values['dashboard link'] == '' else 'margin-top:14px;' }}">
+        {% for name_link, link in values['versions_dashboard'].items() %}
+        <h6><b>{{ name_link }}</b></h6>
+        <p>
+          <i class="fa fa-line-chart"></i> <a href="{{'/iframe?name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512') if values['embedded'] == 'y' else link}}" target="{{'_blank' if values['embedded'] != 'y' else ''}}">Open the version</a>
+          &nbsp;|&nbsp;
+          <i class="fa fa-remove"></i> <a href="{{'/delete_version?category=dashboard&name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Delete the version</a>
+        </p>
+        {% endfor %}
+        <form action="/add_version/" method="post" style="width: 100%; margin-top: 10px;">
+          <input type="text" id="name_dashboard" name="name" value="{{ nome.replace(' ','512') }}" style="display:none;" readonly required>
+          <input type="text" id="category_dashboard" name="category" value="dashboard" style="display:none;" readonly required>
+          <label for="new_name_link"><b>Version Name:</b></label>
+          <input type="text" id="new_name_link" name="new_name_link" onkeypress="return blockSpecialChar(event)" required>
+          <label for="new_link_dashboard"><b>Dashboard Link:</b></label>
+          <input type="text" id="new_link_dashboard" name="new_link_dashboard" required>
+          <input type="submit" value="Upload" class="w3-button w3-blue w3-small">
+        </form>
+      </div>
 
+      <div style="{{ 'display:none;' if values['physical_output'] == '' else 'margin-top:14px;' }}">
+        {% for name_link, link in values['versions_output'].items() %}
+        <h6><b>{{ name_link }}</b></h6>
+        <p>
+          <i class="fa fa-bar-chart"></i> <a href="{{'/physical_output?name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Open the version</a>
+          &nbsp;|&nbsp;
+          <i class="fa fa-remove"></i> <a href="{{'/delete_version?category=output&name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Delete the version</a>
+        </p>
+        {% endfor %}
+        <form action="/add_version/" method="post" style="width: 100%; margin-top: 10px;">
+          <input type="text" id="name_output" name="name" value="{{ nome.replace(' ','512') }}" style="display:none;" readonly required>
+          <input type="text" id="category_output" name="category" value="dashboard" style="display:none;" readonly required>
+          <label><b>Upload New Physical Output (.jpg, .png, .csv, .xlsx, .html, .pdf):</b></label>
+          <input type="file" name="output_file" size="40" accept=".jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf" required>
+          <input type="submit" value="Upload" class="w3-button w3-blue w3-small">
+        </form>
+      </div>
 
-              <div style="{{ 'display:none;' if values['dashboard link'] == '' else '' }}">
-              {% for name_link, link in values['versions_dashboard'].items() %}
-              <h6><b>{{ name_link }}</b></h6><br>
-                  <ul>
-                  <i class="fa fa-line-chart"></i>    <a href="{{'/iframe?name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512') if values['embedded'] == 'y' else link}}" target="{{'_blank' if values['embedded'] != 'y' else ''}}">Open the version</a>
-                  <br>
-                  <i class="fa fa-remove"></i>    <a href="{{'/delete_version?category=dashboard&name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Delete the version</a>
-                    </ul>
-              <br>
-              {% endfor %}
-
-
-                      <p><big>Upload new version:</big></p>
-                        <form action="/add_version/" method="post" style="width: 100%;left:25%;top:10%;">
-                          <p>
-                              <input type="text" id="name_dashboard" name="name" value="{{ nome.replace(' ','512') }}"  style="display:none;width: 40%;" readonly required>
-                              <input type="text" id="category_dashboard" name="category" value="dashboard"  style="display:none;width: 40%;" readonly required>
-                              <label for="new_name_link">Name of the version:</label><br>
-                              <input type="text" id="new_name_link" name="new_name_link" onkeypress="return blockSpecialChar(event)" required><br>
-                              <label for="new_link_dashboard">Tableau embedded link or dashboard link:</label><br>
-                              <input type="text" id="new_link_dashboard" name="new_link_dashboard" required><br>
-                              <input type="submit" value="Upload">
-                          </p>
-                        </form>
-
-              </div>
-
-
-              <div style="{{ 'display:none;' if values['physical_output'] == '' else '' }}">
-              {% for name_link, link in values['versions_output'].items() %}
-                  <h6><b>{{ name_link }}</b></h6><br>
-                  <ul>
-                   <i class="fa fa-bar-chart"></i>    <a href="{{'/physical_output?name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Open the version</a>
-                  <br>
-                  <i class="fa fa-remove"></i>    <a href="{{'/delete_version?category=output&name=' + nome.replace(' ','512')+'&version='+name_link.replace(' ','512')}}">Delete the version</a>
-                </ul>
-              <br>
-              {% endfor %}
-
-
-                      <p><big>Upload new version:</big></p>
-                        <form action="/add_version/" method="post" style="width: 100%;left:25%;top:10%;">
-                          <p>
-                              <input type="text" id="name_output" name="name" value="{{ nome.replace(' ','512') }}"  style="display:none;width: 40%;" readonly required>
-                              <input type="text" id="category_output" name="category" value="dashboard"  style="display:none;width: 40%;" readonly required>
-                              <p><big>physical output (.jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf):</big></p>
-                              <input type="file" name="output_file" size="40" accept=".jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf" required><br>
-                              <input type="submit" value="Upload">
-                          </p>
-                        </form>
-
-
-              </div>
-      </ul>
-                     <script type="text/javascript">
-                    function blockSpecialChar(e){
-                        var k;
-                        document.all ? k = e.keyCode : k = e.which;
-                        return ((k > 64 && k < 91) || (k > 96 && k < 123) || k == 8 || k == 32 || (k >= 48 && k <= 57));
-                      }
-                      </script>
-
+      <script type="text/javascript">
+      function blockSpecialChar(e){
+          var k;
+          document.all ? k = e.keyCode : k = e.which;
+          return ((k > 64 && k < 91) || (k > 96 && k < 123) || k == 8 || k == 32 || (k >= 48 && k <= 57));
+        }
+      </script>
     </div>
 
     <!-- Comments Section -->
-    <header class="w3-container" style="padding-top:22px">
-      <h5><b><i class="fa fa-comments"></i> Comments</b></h5>
-    </header>
-    <br>
-    <div class="w3-padding w3-container w3-card-1">
+    <div class="w3-padding-large w3-container w3-card-1" style="margin-bottom:20px;">
+      <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-comments" style="color:var(--mariner-cyan);"></i> Team Comments</h5>
       <div id="comments-list" hx-get="/analysis/{{ nome.replace(' ','512') }}/comments" hx-trigger="load" hx-swap="innerHTML"></div>
-      <form hx-post="/analysis/{{ nome.replace(' ','512') }}/comment" hx-target="#comments-list" hx-swap="afterbegin" style="margin-top:.5rem;">
+      <form hx-post="/analysis/{{ nome.replace(' ','512') }}/comment" hx-target="#comments-list" hx-swap="afterbegin" style="margin-top:.75rem;">
         <textarea name="text" placeholder="Add a comment..." class="w3-input w3-border" rows="2" style="resize:vertical;width:100%;"></textarea>
-        <button type="submit" class="w3-button w3-blue w3-small w3-margin-top"><i class="fa fa-send"></i> Comment</button>
+        <button type="submit" class="w3-button w3-blue w3-small w3-margin-top"><i class="fa fa-send"></i> Post Comment</button>
       </form>
     </div>
 
     <!-- Webhooks Section -->
-    <header class="w3-container" style="padding-top:22px">
-      <h5><b><i class="fa fa-link"></i> Webhooks</b></h5>
-    </header>
-    <br>
-    <div class="w3-padding w3-container w3-card-1">
-      <p class="w3-text-grey" style="font-size:.85rem;">Configure webhooks to receive notifications when this analysis runs.</p>
+    <div class="w3-padding-large w3-container w3-card-1">
+      <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-link" style="color:var(--mariner-gold);"></i> Execution Webhooks</h5>
+      <p class="w3-text-grey" style="font-size:.85rem;margin-top:0;">Configure HTTP webhooks to receive notifications when this analysis runs.</p>
       <div id="webhooks-list" hx-get="/analysis/{{ nome.replace(' ','512') }}/webhooks" hx-trigger="load" hx-swap="innerHTML"></div>
-      <form hx-post="/analysis/{{ nome.replace(' ','512') }}/webhooks" hx-target="#webhooks-list" hx-swap="innerHTML" style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;">
-        <input type="text" name="url" placeholder="https://example.com/webhook" class="w3-input w3-border" style="flex:1;min-width:200px;">
-        <input type="text" name="secret" placeholder="Secret (optional)" class="w3-input w3-border" style="width:150px;">
-        <button type="submit" class="w3-button w3-blue w3-small"><i class="fa fa-plus"></i> Add</button>
+      <form hx-post="/analysis/{{ nome.replace(' ','512') }}/webhooks" hx-target="#webhooks-list" hx-swap="innerHTML" style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        <input type="text" name="url" placeholder="https://example.com/webhook" class="w3-input w3-border" style="flex:1;min-width:220px;margin:0;">
+        <input type="text" name="secret" placeholder="Secret (optional)" class="w3-input w3-border" style="width:180px;margin:0;">
+        <button type="submit" class="w3-button w3-blue w3-small"><i class="fa fa-plus"></i> Add Webhook</button>
       </form>
     </div>
+    </div>
 
-    <!-- Footer -->
-    <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
-                <hr><br>
-
-                <strong>About ProjectCompass</strong><br>
-                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
-                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
-                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
-                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
-    </footer>
+    {% include 'components/branding_footer.html' %}
 
     <!-- End page content -->
   </div>

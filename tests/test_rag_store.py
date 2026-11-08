@@ -1,7 +1,5 @@
 """Tests for utils/rag_store.py"""
-import os
 import tempfile
-from unittest.mock import MagicMock, patch
 
 import pytest
 

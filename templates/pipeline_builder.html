@@ -3,66 +3,71 @@
 {{ head|safe }}
 <link rel="stylesheet" href="/static/css/drawflow.min.css">
 <style>
-.pb-wrap{display:flex;height:calc(100vh - 43px)}
-.pb-palette{width:240px;background:#f5f5f5;border-right:1px solid #ddd;padding:.8rem;overflow-y:auto;flex-shrink:0}
-.pb-palette h6{margin:0 0 .6rem;color:#3F51B5;font-size:.85rem;font-weight:700}
-.pb-block{padding:8px 10px;margin-bottom:6px;background:#fff;border:1px solid #ddd;border-radius:6px;cursor:grab;font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:6px}
-.pb-block:hover{border-color:#3F51B5;background:#f3f4ff}
-.pb-block i{width:18px;text-align:center;color:#3F51B5}
-#drawflow{flex:1;background:#fafafa}
-.pb-toolbar{position:absolute;top:52px;right:12px;z-index:10;display:flex;gap:6px}
-.pb-toolbar button{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:.8rem;font-weight:600;color:#fff}
-.pb-btn-save{background:#4CAF50}.pb-btn-save:hover{background:#388E3C}
-.pb-btn-clear{background:#f44336}.pb-btn-clear:hover{background:#d32f2f}
-.pb-btn-run{background:#3F51B5}.pb-btn-run:hover{background:#303F9F}
+.pb-wrap{display:flex;height:calc(100vh - 54px)}
+.pb-palette{width:248px;background:var(--mariner-bg-secondary, #f2ede2);border-right:1px solid var(--mariner-border-subtle, #ddd);padding:.9rem;overflow-y:auto;flex-shrink:0}
+.pb-palette h6{margin:0 0 .6rem;color:var(--mariner-navy, #0b1629);font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em}
+.pb-palette h6 i{color:var(--mariner-gold, #b45309);margin-right:4px}
+.pb-block{padding:9px 11px;margin-bottom:7px;background:var(--mariner-bg-card, #fff);border:1px solid var(--mariner-border-subtle, #ddd);border-left:3px solid var(--mariner-cyan, #0284c7);border-radius:8px;cursor:grab;font-size:.79rem;font-weight:600;display:flex;align-items:center;gap:7px;transition:all 0.16s ease}
+.pb-block:hover{border-color:var(--mariner-border-strong);border-left-color:var(--mariner-gold, #b45309);background:rgba(2, 132, 199, 0.08);transform:translateX(2px)}
+.pb-block i{width:18px;text-align:center;color:var(--mariner-cyan, #0284c7)}
+#drawflow{flex:1;background-color:var(--mariner-bg-primary, #fbf9f4);background-image:var(--mariner-chart-graticule);background-size:64px 64px,64px 64px,32px 32px}
+.pb-toolbar{position:absolute;top:14px;right:16px;z-index:10;display:flex;gap:8px}
+.pb-toolbar button{padding:7px 15px;border:1px solid rgba(251, 191, 36, 0.35);border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;color:#fff;box-shadow:0 4px 12px rgba(6, 13, 26, 0.18)}
+.pb-btn-save{background:linear-gradient(135deg, #0d9488 0%, #059669 100%)}.pb-btn-save:hover{background:#0f766e}
+.pb-btn-clear{background:linear-gradient(135deg, #dc2626 0%, #991b1b 100%)}.pb-btn-clear:hover{background:#b91c1c}
+.pb-btn-run{background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%)}.pb-btn-run:hover{background:#0b1629;color:#fbbf24}
 
 /* Node styling */
-.drawflow-node{border-radius:8px!important;border:2px solid #90a4ae!important;min-width:180px}
-.drawflow-node .drawflow_content_node{padding:8px 12px;font-size:.8rem}
-.drawflow-node.load_data{border-color:#FF9800!important;background:#fff3e0!important}
-.drawflow-node.feature_eng{border-color:#9C27B0!important;background:#f3e5f5!important}
-.drawflow-node.train_model{border-color:#2196F3!important;background:#e3f2fd!important}
-.drawflow-node.predict{border-color:#00BCD4!important;background:#e0f7fa!important}
-.drawflow-node.anomaly{border-color:#F44336!important;background:#ffebee!important}
-.drawflow-node.forecast{border-color:#4CAF50!important;background:#e8f5e9!important}
-.drawflow-node.quality{border-color:#607D8B!important;background:#eceff1!important}
-.drawflow-node.save_artifact{border-color:#FFC107!important;background:#fffde7!important}
+.drawflow-node{border-radius:10px!important;border:2px solid #64748b!important;min-width:185px;box-shadow:0 6px 18px rgba(11, 22, 41, 0.12)!important}
+.drawflow-node .drawflow_content_node{padding:9px 12px;font-size:.8rem;color:#0f172a}
+.drawflow-node.load_data{border-color:#d97706!important;background:#fffbeb!important}
+.drawflow-node.feature_eng{border-color:#7c3aed!important;background:#f5f3ff!important}
+.drawflow-node.train_model{border-color:#0284c7!important;background:#f0f9ff!important}
+.drawflow-node.predict{border-color:#0891b2!important;background:#ecfeff!important}
+.drawflow-node.anomaly{border-color:#dc2626!important;background:#fef2f2!important}
+.drawflow-node.forecast{border-color:#059669!important;background:#ecfdf5!important}
+.drawflow-node.quality{border-color:#475569!important;background:#f8fafc!important}
+.drawflow-node.save_artifact{border-color:#b45309!important;background:#fefce8!important}
 /* New ML blocks */
-.drawflow-node.drift{border-color:#E91E63!important;background:#fce4ec!important}
-.drawflow-node.explainability{border-color:#673AB7!important;background:#ede7f6!important}
-.drawflow-node.fairness{border-color:#009688!important;background:#e0f2f1!important}
-.drawflow-node.tuning{border-color:#FF5722!important;background:#fbe9e7!important}
-.drawflow-node.validation{border-color:#3F51B5!important;background:#e8eaf6!important}
-.drawflow-node.text_nlp{border-color:#00897B!important;background:#e0f2f1!important}
+.drawflow-node.drift{border-color:#e11d48!important;background:#fff1f2!important}
+.drawflow-node.explainability{border-color:#6d28d9!important;background:#ede9fe!important}
+.drawflow-node.fairness{border-color:#0d9488!important;background:#f0fdfa!important}
+.drawflow-node.tuning{border-color:#ea580c!important;background:#fff7ed!important}
+.drawflow-node.validation{border-color:#0369a1!important;background:#e0f2fe!important}
+.drawflow-node.text_nlp{border-color:#0f766e!important;background:#ccfbf1!important}
 /* Report blocks */
-.drawflow-node.report{border-color:#795548!important;background:#efebe9!important}
-.drawflow-node.report_kpi{border-color:#8D6E63!important;background:#efebe9!important}
-.drawflow-node.report_plotly_grid{border-color:#8D6E63!important;background:#efebe9!important}
-.drawflow-node.report_tabs{border-color:#8D6E63!important;background:#efebe9!important}
-.drawflow-node.report_comparison{border-color:#8D6E63!important;background:#efebe9!important}
-.drawflow-node.report_summary{border-color:#8D6E63!important;background:#efebe9!important}
-.drawflow-node.report_dark_mode{border-color:#8D6E63!important;background:#efebe9!important}
-.node-title{font-weight:700;margin-bottom:4px;font-size:.82rem}
-.node-config{font-size:.7rem;color:#666;font-style:italic}
-.pb-sep{border:none;border-top:1px solid #ccc;margin:.8rem 0}
+.drawflow-node.report{border-color:#92400e!important;background:#fef3c7!important}
+.drawflow-node.report_kpi{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_plotly_grid{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_tabs{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_comparison{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_summary{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_dark_mode{border-color:#b45309!important;background:#fef3c7!important}
+.node-title{font-weight:700;margin-bottom:4px;font-size:.82rem;color:#0b1629}
+.node-config{font-size:.7rem;color:#475569;font-style:italic}
+.pb-sep{border:none;border-top:1px solid var(--mariner-border-subtle, #ccc);margin:.8rem 0}
 
 /* Modal */
-.pb-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:1000;justify-content:center;align-items:center}
+.pb-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(6, 13, 26, 0.65);z-index:1000;justify-content:center;align-items:center;backdrop-filter:blur(4px)}
 .pb-modal.active{display:flex}
-.pb-modal-content{background:#fff;border-radius:10px;padding:1.5rem;min-width:400px;max-width:500px;max-height:80vh;overflow-y:auto}
-.pb-modal-content h5{margin:0 0 1rem;color:#3F51B5}
+.pb-modal-content{background:var(--mariner-bg-card, #fff);border:1px solid var(--mariner-border-strong);border-top:3px solid var(--mariner-gold, #b45309);border-radius:14px;padding:1.5rem;min-width:400px;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.4)}
+.pb-modal-content h5{margin:0 0 1rem;color:var(--mariner-navy, #0b1629);font-weight:700}
 .pb-modal-content label{font-size:.8rem;font-weight:600;display:block;margin-top:.5rem}
-.pb-modal-content input,.pb-modal-content select{width:100%;padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:.82rem;margin-top:3px}
-.pb-modal-content button{margin-top:1rem;padding:8px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:600}
+.pb-modal-content input,.pb-modal-content select{width:100%;padding:7px 10px;border:1px solid var(--mariner-border-strong);border-radius:8px;font-size:.82rem;margin-top:3px}
+.pb-modal-content button{margin-top:1rem;padding:8px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600}
+body.dark-mode .pb-palette{background:#0b1629;border-right-color:rgba(56,189,248,0.2)}
+body.dark-mode .pb-palette h6{color:#fbbf24}
+body.dark-mode .pb-block{background:#0e192f;color:#f1f5f9;border-color:rgba(148,163,184,0.2)}
+body.dark-mode #drawflow{background-color:#060d1a}
 </style>
 <body class="w3-light-grey">
 {{ top_container|safe }}
 {{ sidebar_menu|safe }}
 
-<div class="w3-main" style="margin-left:300px;margin-top:43px;position:relative;">
+<div class="w3-main" style="margin-left:260px;margin-top:54px;position:relative;">
 <div class="pb-toolbar">
   <div style="position:relative;display:inline-block;">
-    <button class="pb-btn-save" style="background:#9C27B0;" onclick="document.getElementById('tpl-dropdown').style.display=document.getElementById('tpl-dropdown').style.display==='block'?'none':'block'"><i class="fa fa-folder-open"></i> Templates</button>
+    <button class="pb-btn-save" style="background:linear-gradient(135deg, #b45309 0%, #d97706 100%);" onclick="document.getElementById('tpl-dropdown').style.display=document.getElementById('tpl-dropdown').style.display==='block'?'none':'block'"><i class="fa fa-folder-open"></i> Templates</button>
     <div id="tpl-dropdown" style="display:none;position:absolute;top:100%;left:0;background:#fff;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;min-width:220px;">
       <a onclick="loadTemplate('classification_explainability')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Classification + Explainability</a>
       <a onclick="loadTemplate('anomaly_detection')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Anomaly Detection</a>
@@ -174,8 +179,8 @@
   <div class="pb-modal-content">
     <h5 id="modalTitle">Configure Node</h5>
     <div id="modalBody"></div>
-    <button onclick="saveNodeConfig()" style="background:#3F51B5;color:#fff">Save</button>
-    <button onclick="closeModal()" style="background:#eee;color:#333;margin-left:6px">Cancel</button>
+    <button onclick="saveNodeConfig()" style="background:linear-gradient(135deg, #0284c7 0%, #0d9488 100%);color:#fff">Save</button>
+    <button onclick="closeModal()" style="background:#64748b;color:#fff;margin-left:6px">Cancel</button>
   </div>
 </div>
 
@@ -191,9 +196,9 @@
     <input type="text" id="pipeline_product" value="Machine Learning">
     <label>Owner</label>
     <input type="text" id="pipeline_owner" value="{{ owner }}">
-    <button onclick="submitPipeline(false)" style="background:#4CAF50;color:#fff">Save</button>
-    <button onclick="submitPipeline(true)" style="background:#3F51B5;color:#fff;margin-left:6px">Save & Run</button>
-    <button onclick="document.getElementById('saveModal').classList.remove('active')" style="background:#eee;color:#333;margin-left:6px">Cancel</button>
+    <button onclick="submitPipeline(false)" style="background:linear-gradient(135deg, #0d9488 0%, #059669 100%);color:#fff">Save</button>
+    <button onclick="submitPipeline(true)" style="background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#fff;margin-left:6px">Save &amp; Run</button>
+    <button onclick="document.getElementById('saveModal').classList.remove('active')" style="background:#64748b;color:#fff;margin-left:6px">Cancel</button>
   </div>
 </div>
 

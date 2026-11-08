@@ -7,7 +7,7 @@
 
   {{ sidebar_menu|safe }}
   <!-- !PAGE CONTENT! -->
-  <div class="w3-main" style="margin-left:300px;margin-top:43px;">
+  <div class="w3-main" style="margin-left:260px;margin-top:54px;">
     <!-- Header -->
 
     {% if title %}
@@ -43,16 +43,7 @@
       }
     </script>
 
-  <!-- Footer -->
-  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
-                <hr><br>
-
-                <strong>About ProjectCompass</strong><br>
-                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
-                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
-                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
-                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
-  </footer>
+  {% include 'components/branding_footer.html' %}
 
   <!-- End page content -->
 </div>

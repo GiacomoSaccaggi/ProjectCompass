@@ -1,7 +1,7 @@
 services:
   projectcompass:
-    image: ghcr.io/giacomosaccaggi/projectcompass:latest
-    # build: .  # uncomment to build locally instead
+    # image: ghcr.io/giacomosaccaggi/projectcompass:latest
+    build: .  # build locally to match local code
     ports:
       - "8080:8080"
     environment:
@@ -11,14 +11,27 @@ services:
       - USE_GITLAB_REPO=False
       - USERNAME=docker_user
       - MITHRIL_HOST=http://mithril:16180
+      - SECRET_KEY=admin
+      - ADMIN_USERNAME=admin
+      - "ADMIN_PASSWORD_HASH=scrypt:32768:8:1$$Qb9qoIE6k2pWeLkH$$05a224b86612a0b78e088b30241be5cbd5a99bab0f6b7f5eef37866abee7c5c82cb74934039fd3a4a592e96fd59cec3514914e90d4ce9f74fb478460ce4cc002"
+      - DB_CONNECTIONS_KEY=${DB_CONNECTIONS_KEY:-}
+      - DB_CONNECTIONS_MAX_ROWS=${DB_CONNECTIONS_MAX_ROWS:-100000}
+      # Uncomment to mount your external settings file (defaults to /app/data/projectcompass.yaml).
+      # - PC_CONFIG_FILE=/app/data/projectcompass.yaml
+      # - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      # - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
     volumes:
       - ./Analyses:/app/Analyses
       - ./Saved_data:/app/Saved_data
       - ./Saved_queries:/app/Saved_queries
+      - ./data/tmp:/app/tmp
       - ./static:/app/static
       - ./templates:/app/templates
       - ./utils:/app/utils
+      - ./blueprints:/app/blueprints
+      - ./app.py:/app/app.py
       - ./logs:/app/log
+      # - ./projectcompass.yaml:/app/data/projectcompass.yaml:ro
     restart: unless-stopped
     container_name: projectcompass_app
     depends_on:

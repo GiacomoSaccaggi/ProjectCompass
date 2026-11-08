@@ -5,13 +5,17 @@ import pandas as pd
 
 
 class DataUtils:
-    def __init__(self, dir_path, **kwargs):
+    def __init__(self, dir_path, data_dir=None, **kwargs):
         self.dir_path = dir_path
-        self.save_queries_path = f'{dir_path}Saved_queries'
-        self.save_data_path = f'{dir_path}Saved_data'
+        base_data = data_dir or dir_path
+        if not base_data.endswith('/'):
+            base_data = base_data + '/'
+        self.data_dir = base_data
+        self.save_queries_path = f'{base_data}Saved_queries'
+        self.save_data_path = f'{base_data}Saved_data'
         os.makedirs(self.save_queries_path, exist_ok=True)
         os.makedirs(self.save_data_path, exist_ok=True)
-        super().__init__(dir_path=dir_path, **kwargs)
+        super().__init__(dir_path=dir_path, data_dir=base_data, **kwargs)
 
     def upload_text_files(self, request):
         for file in request.files.getlist('upload_files'):
@@ -53,68 +57,79 @@ class DataUtils:
         # Dictionary to map simple table aliases (filename without extension) to full paths
         table_map = {}
 
-        # 2. Build the path map for all CSVs
+        # 2. Build the path map for all CSVs and register DuckDB views
+        import re
         for filename in os.listdir(self.save_data_path):
+            table_alias = filename.split(".")[0]
+            file_full_path = os.path.abspath(os.path.join(self.save_data_path, filename)).replace('\\', '/')
             if filename.endswith(".csv"):
-                # Use the filename (without extension) as the SQL table alias
-                table_alias = filename.split(".")[0]
-
-                # Create the absolute, system-independent file path
-                # This path is what DuckDB will use to read the file during the query
-                file_full_path = os.path.abspath(os.path.join(self.save_data_path, filename)).replace('\\', '/')
                 table_map[table_alias] = file_full_path
+                escaped_path = file_full_path.replace("'", "''")
+                escaped_alias = table_alias.replace('"', '""')
+                try:
+                    conn.execute(
+                        f'CREATE OR REPLACE VIEW "{escaped_alias}" AS SELECT * FROM read_csv_auto(\'{escaped_path}\')'
+                    )
+                except Exception:
+                    pass
                 print(f"Mapped table alias '{table_alias}' to file: {file_full_path}")
             elif filename.lower().endswith(('.sqlite', '.db')):
                 try:
-                    # 1.1 Load the SQLite extension
                     conn.sql("INSTALL sqlite;")
                     conn.sql("LOAD sqlite;")
                 except Exception as e:
-                    # Handle the case where the extension is not available (rare, but possible)
                     print(f"WARNING: Unable to install/load the SQLite extension: {e}")
-                # Mapping for SQLite/DB files
-                # DuckDB cannot use read_csv_auto() for SQLite.
-                # Instead, we use ATTACH, creating a 'sqlite_db' schema
-
-                # Attach the SQLite database as a separate SCHEMA
                 sqlite_schema_name = f"sqlite_{table_alias}"
                 try:
                     conn.sql(f"ATTACH '{file_full_path}' AS {sqlite_schema_name} (TYPE sqlite);")
                     print(f"Attached SQLite DB '{filename}' as schema: {sqlite_schema_name}")
-
-                    # Additional logic could be added here to list the tables
-                    # in the schema and show the user how to reference them:
-                    # SELECT * FROM sqlite_db.my_table;
-
                 except Exception as e:
                     print(f"ERROR attaching SQLite DB '{filename}': {e}")
-                    # Continue with the next file if attach fails
                     continue
 
-        # 3. Process the SQL query to replace aliases with DuckDB's file reading syntax
-        # KEY OPTIMIZATION: DuckDB's 'read_csv_auto()' function reads files directly from disk.
-        processed_query = sql_query
+        # 3. Try executing directly against registered DuckDB views first; fall back to alias substitution
+        try:
+            return conn.execute(sql_query).fetchdf()
+        except Exception:
+            pass
 
-        for alias, path in table_map.items():
-            # Replace the simple alias (used in the user's query) with the
-            # actual DuckDB function call for disk reading.
-            # This allows the user to write simple SQL like "SELECT * FROM orders"
-            # which is translated internally to "SELECT * FROM read_csv_auto('/path/to/orders.csv') AS orders"
-            processed_query = processed_query.replace(alias, f"read_csv_auto('{path}') AS {alias}")
+        processed_query = sql_query
+        for alias in sorted(table_map.keys(), key=len, reverse=True):
+            path = table_map[alias]
+            processed_query = re.sub(
+                rf"(?<![/\w.]){re.escape(alias)}(?![/\w.])",
+                f"read_csv_auto('{path}') AS {alias}",
+                processed_query,
+            )
 
         print(f"\n--- Processed Query ---\n{processed_query}\n-----------------------\n")
 
-        # 4. Execute the query
+        # 4. Execute the fallback query
         try:
-            # fetchdf() gets the result directly into a pandas DataFrame
             result_df = conn.execute(processed_query).fetchdf()
             return result_df
         except Exception as e:
             print(f"Error executing DuckDB query: {e}")
             return pd.DataFrame()
         finally:
-            # Always close the connection
             conn.close()
+
+
+    def run_sql(self, sql_query: str, connection_id: int | None = None) -> pd.DataFrame:
+        """Run a query locally or route it to a saved remote connection.
+
+        Args:
+            sql_query: SQL statement to execute.
+            connection_id: Saved connection ID, or ``None`` for local DuckDB.
+
+        Returns:
+            The query result as a pandas DataFrame.
+        """
+        if connection_id is None:
+            return self.sql(sql_query)
+        from utils.db_connection_service import DbConnectionService
+
+        return DbConnectionService().run_query(connection_id, sql_query)
 
 
     @staticmethod

@@ -1,0 +1,64 @@
+# Optional application settings. By default, Project Compass reads
+# DATA_DIR/projectcompass.yaml; PC_CONFIG_FILE can point to another path.
+# Every scalar setting can be overridden with PC_<SECTION>__<KEY> variables.
+
+branding:
+  app_name: ProjectCompass
+  page_title: null
+  sidebar_title: Analysis
+  logo_url: null
+  logo_icon_url: /static/img/logo_icon.png
+  logo_text_url: /static/img/logo_text.png
+  favicon_url: /static/img/logo.png
+  backgrounds:
+    data: /static/img/background1.PNG
+    analysis: /static/img/background2.PNG
+    upload: /static/img/upload_analysis.png
+  demo_notice:
+    enabled: true
+    text: "DEMO Project Notice: This is a demonstration-only project intended for evaluation purposes. Although it may resemble a final product, the creators assume no liability for any errors, malfunctions, or damages resulting from its use."
+  footer:
+    enabled: true
+    about: About ProjectCompass
+    slogan: Organization Is Everything®
+    copyright: Copyright ©2025 ProjectCompass. All rights reserved.
+
+theme:
+  primary_color: "#222831"
+  accent_color: "#3F51B5"
+  highlight_color: "#4DFFD6"
+  hover_color: "#DCD2FF"
+  font_family: '"Raleway", sans-serif'
+  default_dark_mode: false
+
+demo:
+  enabled: true
+  analyses_dir: null
+  data_dir: null
+
+features:
+  ai_chat: true
+  rag: true
+  k8s: true
+  pipeline_builder: true
+  schedules: true
+  executions: true
+  rawgraphs: true
+  query_runner: true
+  db_connections: true
+  todo: true
+
+# Connection lists are YAML-only. Passwords and custom URIs can use
+# ${ENV_VAR} references and are encrypted when synchronized into the database.
+# Example preset (provide WAREHOUSE_PASSWORD through the process environment);
+# replace `connections: []` with this list:
+# - name: Warehouse
+#   type: postgres
+#   host: warehouse.example.com
+#   port: 5432
+#   database: analytics
+#   username: readonly
+#   password: ${WAREHOUSE_PASSWORD}
+#   extra_params:
+#     sslmode: require
+connections: []

@@ -1,6 +1,5 @@
 """Tests for utils/rag_guardrails.py"""
-from utils.rag_guardrails import (build_rag_prompt, format_provenance,
-                                   validate_query, validate_response)
+from utils.rag_guardrails import build_rag_prompt, format_provenance, validate_query, validate_response
 
 
 def test_validate_query_empty():

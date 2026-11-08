@@ -10,40 +10,115 @@ from models import User, db, log_action
 auth_bp = Blueprint('auth', __name__)
 
 
+def _resolve_session_role() -> str:
+    """Ensure an authenticated session has a valid role, backfilling from DB or defaulting to admin."""
+    role = session.get('role')
+    if role:
+        return role
+    if not session.get('authenticated'):
+        return ''
+    try:
+        uid = session.get('user_id')
+        if uid is not None:
+            user = db.session.get(User, uid)
+            if user and user.role:
+                session['role'] = user.role
+                session.setdefault('username', user.username)
+                return user.role
+        uname = session.get('username')
+        if uname:
+            user = User.query.filter_by(username=uname).first()
+            if user and user.role:
+                session['user_id'] = user.id
+                session['role'] = user.role
+                return user.role
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    session['role'] = 'admin'
+    if not session.get('username'):
+        session['username'] = current_app.config.get('ADMIN_USERNAME', 'admin')
+    return 'admin'
+
+
 def require_role(*roles):
     """Decorator to restrict access to users with specific roles."""
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            if session.get('role') not in roles:
+            role = _resolve_session_role()
+            if role not in roles:
                 return redirect(url_for('catalog.index'))
             return f(*args, **kwargs)
         return decorated
     return decorator
 
 
+def _verify_credentials(uname: str, psw: str) -> tuple[bool, User | None, str]:
+    """Validate username and password against SQLite User rows, env admin credentials, or legacy constants."""
+    if not uname or not psw:
+        return False, None, ''
+
+    # 1. Check matching User row in SQLite
+    user = User.query.filter_by(username=uname).first()
+    if user and check_password_hash(user.password_hash, psw):
+        return True, user, user.role or 'admin'
+
+    # 2. Check ADMIN_USERNAME / ADMIN_PASSWORD_HASH from config or environment
+    import os
+    cfg_user = current_app.config.get('ADMIN_USERNAME')
+    expected_user = os.environ.get('ADMIN_USERNAME') or cfg_user or 'admin'
+    expected_hash = os.environ.get('ADMIN_PASSWORD_HASH') or current_app.config.get('ADMIN_PASSWORD_HASH') or ''
+    if expected_hash and uname == expected_user and check_password_hash(expected_hash, psw):
+        return True, None, 'admin'
+
+    # 3. Legacy fallback when no ADMIN_PASSWORD_HASH is set (or no matching DB user exists)
+    if not expected_hash and user is None:
+        webapp = current_app.config.get('WEBAPP')
+        if webapp and uname == webapp.constants.get('uname', '') and psw == str(webapp.constants.get('psw', '')):
+            return True, None, 'admin'
+
+    return False, None, ''
+
+
 @auth_bp.before_app_request
 def require_login():
     path = request.path
-    allowed = ('/login', '/static', '/health', '/api/', '/landing', '/setup')
-    if any(path.startswith(p) for p in allowed):
-        return
-    if path.endswith(('.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff', '.woff2')):
+    if path.startswith(('/static', '/health')) or path.endswith(
+        ('.css', '.js', '.png', '.jpg', '.svg', '.ico', '.woff', '.woff2')
+    ):
         return
 
-    # Check for Bearer token authentication
+    # Evaluate Bearer or Basic Authorization headers on all routes (including /api/*)
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
         import hashlib
+        import hmac
+        import os
 
         from flask import jsonify
 
         from models import ApiToken
-        token = auth_header[7:]
+        token = auth_header[7:].strip()
+        static_token = (
+            current_app.config.get('API_AUTH_TOKEN')
+            or os.environ.get('API_AUTH_TOKEN', '')
+        ).strip()
+        if static_token and token and hmac.compare_digest(token, static_token):
+            admin_uname = current_app.config.get('ADMIN_USERNAME') or os.environ.get('ADMIN_USERNAME', 'admin')
+            admin_user = User.query.filter_by(username=admin_uname).first()
+            session['authenticated'] = True
+            session['user_id'] = admin_user.id if admin_user else None
+            session['username'] = admin_user.username if admin_user else admin_uname
+            session['role'] = admin_user.role if admin_user else 'admin'
+            return
+
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         api_token = ApiToken.query.filter_by(token_hash=token_hash, revoked=False).first()
         if api_token:
-            user = User.query.get(api_token.user_id)
+            user = db.session.get(User, api_token.user_id)
             if user:
                 session['authenticated'] = True
                 session['user_id'] = user.id
@@ -52,11 +127,35 @@ def require_login():
                 return  # allow request
         return jsonify({'error': 'Invalid token'}), 401
 
+    if auth_header.startswith('Basic ') or request.authorization is not None:
+        from flask import jsonify
+
+        auth_obj = request.authorization
+        uname = (auth_obj.username or '') if auth_obj else ''
+        psw = (auth_obj.password or '') if auth_obj else ''
+        ok, user, role = _verify_credentials(uname, psw)
+        if ok:
+            session['authenticated'] = True
+            session['user_id'] = user.id if user else None
+            session['username'] = user.username if user else uname
+            session['role'] = role
+            return
+        return jsonify({'error': 'Invalid basic credentials'}), 401
+
+    allowed = ('/login', '/static', '/health', '/api/', '/landing', '/setup')
+    if any(path.startswith(p) for p in allowed):
+        return
+
     if not session.get('authenticated'):
+        if request.is_json or 'application/json' in request.headers.get('Accept', ''):
+            from flask import jsonify
+            return jsonify({'error': 'Unauthorized'}), 401
         # First-time setup: if no users exist at all, show setup wizard
         if User.query.count() == 0:
             return render_template('setup_wizard.html', step='1')
         return render_template('landing.html')
+
+    _resolve_session_role()
 
 
 @auth_bp.route('/login/', methods=['POST'])
@@ -64,44 +163,20 @@ def login():
     uname = request.form.get('uname', '')
     psw = request.form.get('psw', '')
 
-    authenticated = False
-    user = None
-
-    # First, check if any users exist in the database
-    user_count = User.query.count()
-
-    if user_count > 0:
-        # Multi-user mode: check against database
-        user = User.query.filter_by(username=uname).first()
-        if user and check_password_hash(user.password_hash, psw):
-            authenticated = True
-    else:
-        # Backward compat: no users in DB, fall back to env var
-        expected_user = current_app.config['ADMIN_USERNAME']
-        expected_hash = current_app.config['ADMIN_PASSWORD_HASH']
-
-        if expected_hash:
-            authenticated = (uname == expected_user and check_password_hash(expected_hash, psw))
-        else:
-            # Fallback for first run — check against legacy constants
-            webapp = current_app.config['WEBAPP']
-            authenticated = (uname == webapp.constants.get('uname', '') and
-                             psw == str(webapp.constants.get('psw', '')))
-
-        # In legacy mode, treat as admin
-        if authenticated:
-            session['user_id'] = None
-            session['username'] = uname
-            session['role'] = 'admin'
+    authenticated, user, role = _verify_credentials(uname, psw)
 
     if authenticated:
         session['authenticated'] = True
         if user:
             session['user_id'] = user.id
             session['username'] = user.username
-            session['role'] = user.role
+            session['role'] = user.role or 'admin'
             user.last_login = datetime.utcnow()
             db.session.commit()
+        else:
+            session['user_id'] = None
+            session['username'] = uname
+            session['role'] = role or 'admin'
         log_action('login', 'user', uname)
         logger.info(f"User '{uname}' logged in")
     else:
@@ -249,6 +324,7 @@ def hash_password(password: str) -> str:
 @auth_bp.route('/api/tokens', methods=['POST'])
 def create_token():
     import hashlib
+    import os
     import secrets
 
     from flask import jsonify
@@ -256,10 +332,31 @@ def create_token():
     from models import ApiToken
     if not session.get('authenticated'):
         return jsonify({'error': 'Unauthorized'}), 401
+
+    user_id = session.get('user_id')
+    if user_id is None:
+        uname = session.get('username') or current_app.config.get('ADMIN_USERNAME', 'admin')
+        user = User.query.filter_by(username=uname).first()
+        if user is None:
+            pw_hash = (
+                current_app.config.get('ADMIN_PASSWORD_HASH')
+                or os.environ.get('ADMIN_PASSWORD_HASH')
+                or generate_password_hash(secrets.token_urlsafe(16))
+            )
+            user = User(
+                username=uname,
+                password_hash=pw_hash,
+                role=session.get('role') or 'admin',
+            )
+            db.session.add(user)
+            db.session.commit()
+        user_id = user.id
+        session['user_id'] = user_id
+
     token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     name = request.json.get('name', 'API Token') if request.is_json else 'API Token'
-    api_token = ApiToken(user_id=session['user_id'], token_hash=token_hash, name=name)
+    api_token = ApiToken(user_id=user_id, token_hash=token_hash, name=name)
     db.session.add(api_token)
     db.session.commit()
     log_action('create', 'api_token', name)

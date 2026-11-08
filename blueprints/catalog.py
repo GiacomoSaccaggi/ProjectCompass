@@ -64,7 +64,7 @@ def _extract_lineage_from_script(script_text):
 def index():
     webapp = get_webapp()
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
-    img = '<img src="/static/img/first_page.png" style="width:100%;"><br>'
+    img = ''
     intro = webapp.environments_info['intro']
     analyses = webapp.read_multiple_analysis()
 
@@ -328,7 +328,7 @@ def iframe_page():
 def outputs_page():
     from collections import defaultdict
     webapp = get_webapp()
-    name = request.args['name'].replace('512', ' ')
+    name = request.args.get('name', '').replace('512', ' ')
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     output_base = f"{webapp.extract_main_folder()}/{name}/physical_output"
     runs = defaultdict(list)
@@ -336,9 +336,19 @@ def outputs_page():
         for f in os.listdir(output_base):
             if f == 'main' or f.startswith('.') or '.ini' in f:
                 continue
-            run_id = os.path.splitext(f)[0]
-            fpath = f"Analyses/{name}/physical_output/{f}"
-            runs[run_id].append({'name': f, 'path': fpath, 'is_html': f.endswith('.html')})
+            full_f = os.path.join(output_base, f)
+            if os.path.isfile(full_f):
+                run_id = os.path.splitext(f)[0]
+                fpath = f"Analyses/{name}/physical_output/{f}"
+                runs[run_id].append({'name': f, 'path': fpath, 'is_html': f.endswith('.html')})
+        main_dir = os.path.join(output_base, 'main')
+        if not runs and os.path.isdir(main_dir):
+            for f in os.listdir(main_dir):
+                if f.startswith('.') or '.ini' in f:
+                    continue
+                if os.path.isfile(os.path.join(main_dir, f)):
+                    fpath = f"Analyses/{name}/physical_output/main/{f}"
+                    runs['latest'].append({'name': f, 'path': fpath, 'is_html': f.endswith('.html')})
     # Sort runs by date descending
     sorted_runs = sorted(runs.items(), key=lambda x: x[0], reverse=True)
     return render_template('outputs.html',
@@ -358,9 +368,10 @@ def delete_run():
     name = request.args['name'].replace('512', ' ')
     run_id = request.args['run_id']
     output_base = f"{webapp.extract_main_folder()}/{name}/physical_output"
-    for f in os.listdir(output_base):
-        if os.path.splitext(f)[0] == run_id and f != 'main':
-            os.remove(os.path.join(output_base, f))
+    if os.path.exists(output_base):
+        for f in os.listdir(output_base):
+            if os.path.splitext(f)[0] == run_id and f != 'main':
+                os.remove(os.path.join(output_base, f))
     return redirect(f"/outputs/?name={request.args['name']}")
 
 
@@ -372,8 +383,16 @@ def physical_output():
 
 @catalog_bp.route('/serve_output/<path:filepath>')
 def serve_output(filepath):
+    from flask import abort
     webapp = get_webapp()
-    return send_file(os.path.join(webapp.dir_path, filepath))
+    data_base = getattr(webapp, 'data_dir', None) or webapp.dir_path
+    candidate_data = os.path.abspath(os.path.join(data_base, filepath))
+    if os.path.isfile(candidate_data):
+        return send_file(candidate_data)
+    candidate_dir = os.path.abspath(os.path.join(webapp.dir_path, filepath))
+    if os.path.isfile(candidate_dir):
+        return send_file(candidate_dir)
+    abort(404)
 
 
 @catalog_bp.route('/open_version/', methods=['GET'])
@@ -408,8 +427,11 @@ def create_investigations():
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     name = request.args.get('name', '').replace('512', ' ')
     metadata_path = f"{webapp.extract_main_folder()}/{name}/analysis/metadata_automatic_report.yaml"
-    with open(metadata_path) as f:
-        metadata = yaml.safe_load(f)
+    if os.path.isfile(metadata_path):
+        with open(metadata_path) as f:
+            metadata = yaml.safe_load(f) or {}
+    else:
+        metadata = {'title': name, 'inputs': {}}
 
     # Build form inputs from metadata
     input_form = [f'<input type="hidden" name="analysis_name" value="{name}">']
@@ -417,22 +439,22 @@ def create_investigations():
         field_type = field_info.get('type', 'text')
         default = field_info.get('default', '')
         desc = field_info.get('description', field_name)
-        style = 'padding:6px 12px;margin:4px;border:2px solid #00889B;border-radius:4px;width:90%'
+        style = 'width:100%;margin:6px 0 14px 0;'
         if field_type == 'select':
             options_html = ''.join(
                 f'<option value="{opt}"{" selected" if str(opt) == str(default) else ""}>{opt}</option>'
                 for opt in field_info.get('options', [])
             )
             input_form.append(
-                f'<label><b>{desc}</b></label><br>'
-                f'<select name="{field_name}" style="{style}"><br>{options_html}</select><br><br>'
+                f'<label class="w3-small"><b>{desc}</b></label>'
+                f'<select name="{field_name}" class="w3-select w3-border" style="{style}">{options_html}</select>'
             )
         else:
             html_type = 'date' if field_type == 'date' else 'text'
             input_form.append(
-                f'<label><b>{desc}</b></label><br>'
+                f'<label class="w3-small"><b>{desc}</b></label>'
                 f'<input type="{html_type}" name="{field_name}" value="{default}" '
-                f'style="{style}"><br><br>'
+                f'class="w3-input w3-border" style="{style}">'
             )
 
     return render_template('investigations.html',
@@ -449,7 +471,7 @@ def create_investigations():
 def run_investigation():
     import importlib.util
     webapp = get_webapp()
-    name = request.form.get('analysis_name', '')
+    name = request.form.get('analysis_name', '').replace('512', ' ')
     inputs = {k: v for k, v in request.form.items() if k not in ('analysis_name', 'run_investigation')}
 
     # Run the structured analysis
@@ -462,23 +484,60 @@ def run_investigation():
         spec = importlib.util.spec_from_file_location("analysis_module", script_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        module.run(inputs=inputs, output_path=output_path)
+        result = module.run(inputs=inputs, output_path=output_path)
 
         # Save timestamped version of outputs
         import datetime
         import shutil
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         version_dir = f"{webapp.extract_main_folder()}/{name}/physical_output"
+        generated_outputs = []
         for f_name in os.listdir(output_dir):
             if f_name.startswith('.') or '.ini' in f_name:
                 continue
             ext = os.path.splitext(f_name)[1]
-            shutil.copy(f"{output_dir}/{f_name}", f"{version_dir}/{timestamp}{ext}")
+            versioned_name = f"{timestamp}{ext}"
+            shutil.copy(f"{output_dir}/{f_name}", f"{version_dir}/{versioned_name}")
+            generated_outputs.append(versioned_name)
+
+        try:
+            script_text = open(script_path, encoding='utf-8', errors='ignore').read() if os.path.isfile(script_path) else ''
+            csv_inputs = {f'dataset_{i}': f'{ds}.csv' for i, ds in enumerate(_extract_lineage_from_script(script_text))}
+            merged_inputs = {**csv_inputs, **inputs}
+            _save_execution(
+                analysis_name=name,
+                user_id=session.get('user_id'),
+                status='success',
+                log_text=json.dumps(result) if isinstance(result, dict) else 'Completed via run_investigation',
+                inputs=merged_inputs,
+                outputs=generated_outputs,
+                output_path=output_path,
+            )
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
         logger.info(f"Structured analysis '{name}' completed successfully")
         log_action('run', 'analysis', name)
         return redirect(f"/outputs/?name={name.replace(' ', '512')}")
     except Exception as e:
+        try:
+            _save_execution(
+                analysis_name=name,
+                user_id=session.get('user_id'),
+                status='failed',
+                log_text=str(e),
+                inputs=inputs,
+                outputs=[],
+                output_path=output_path,
+            )
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         logger.error(f"Structured analysis error: {e}")
         return f"<h3>Analysis Error</h3><pre>{e}</pre><br><a href='/analysis'>Back to catalog</a>", 500
 
@@ -486,38 +545,76 @@ def run_investigation():
 @catalog_bp.route('/execute_stream/<name>')
 def execute_stream(name):
     """SSE endpoint for real-time execution output."""
+    import shutil
+    import sys
+
     webapp = get_webapp()
-    script_path = f"{webapp.extract_main_folder()}/{name}/analysis/structured_analysis_main.py"
-    output_dir = f"{webapp.extract_main_folder()}/{name}/physical_output/main"
+    clean_name = name.replace('512', ' ')
+    script_path = f"{webapp.extract_main_folder()}/{clean_name}/analysis/structured_analysis_main.py"
+    output_dir = f"{webapp.extract_main_folder()}/{clean_name}/physical_output/main"
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, 'output.csv')
+    user_id = session.get('user_id')
 
     def generate():
+        collected_lines = []
         try:
-            # Run as module with simple runner
             cmd = [
-                'uv', 'run', 'python', '-u', '-c',
+                sys.executable, '-u', '-c',
                 (
-                    f'import sys; sys.path.insert(0, "{os.path.dirname(script_path)}"); '
+                    f'import sys; sys.path.insert(0, {os.path.dirname(script_path)!r}); '
                     f'from structured_analysis_main import run; '
-                    f'result = run({{}}, "{output_path}"); '
-                    f'print("DONE:", result.get("status", "success") if result else "success")'
+                    f'result = run({{}}, {output_path!r}); '
+                    f'print("DONE:", result.get("status", "success") if isinstance(result, dict) else "success")'
                 )
             ]
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, bufsize=1
             )
-            _running_processes[name] = proc
+            _running_processes[clean_name] = proc
             for line in iter(proc.stdout.readline, ''):
-                yield f'data: {json.dumps({"line": line.rstrip(), "status": "running"})}\n\n'
+                clean_line = line.rstrip()
+                collected_lines.append(clean_line)
+                yield f'data: {json.dumps({"line": clean_line, "status": "running"})}\n\n'
             proc.wait()
             status = 'success' if proc.returncode == 0 else 'failed'
+
+            generated_outputs = []
+            if status == 'success' and os.path.isdir(output_dir):
+                timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                version_dir = f"{webapp.extract_main_folder()}/{clean_name}/physical_output"
+                for f_name in os.listdir(output_dir):
+                    if f_name.startswith('.') or '.ini' in f_name:
+                        continue
+                    ext = os.path.splitext(f_name)[1]
+                    versioned_name = f"{timestamp}{ext}"
+                    shutil.copy(f"{output_dir}/{f_name}", f"{version_dir}/{versioned_name}")
+                    generated_outputs.append(versioned_name)
+
+            try:
+                script_text = open(script_path, encoding='utf-8', errors='ignore').read() if os.path.isfile(script_path) else ''
+                csv_inputs = {f'dataset_{i}': f'{ds}.csv' for i, ds in enumerate(_extract_lineage_from_script(script_text))}
+                _save_execution(
+                    analysis_name=clean_name,
+                    user_id=user_id,
+                    status=status,
+                    log_text='\n'.join(collected_lines),
+                    inputs=csv_inputs,
+                    outputs=generated_outputs,
+                    output_path=output_path,
+                )
+            except Exception:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+
             yield f'data: {json.dumps({"line": "", "status": status, "done": True})}\n\n'
         except Exception as e:
             yield f'data: {json.dumps({"line": str(e), "status": "failed", "done": True})}\n\n'
         finally:
-            _running_processes.pop(name, None)
+            _running_processes.pop(clean_name, None)
 
     return Response(
         stream_with_context(generate()),
@@ -1074,50 +1171,86 @@ def delete_webhook(name, wh_id):
 
 # --- SCHEDULER ---
 
-def execute_scheduled_analysis(app, name, inputs):
-    """Execute a structured analysis (called by APScheduler)."""
-    import importlib.util
-    import shutil
-    with app.app_context():
-        webapp = get_webapp()
-        script_path = f"{webapp.extract_main_folder()}/{name}/analysis/structured_analysis_main.py"
-        output_dir = f"{webapp.extract_main_folder()}/{name}/physical_output/main"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = f"{output_dir}/output.csv"
+def execute_scheduled_flow(
+    name: str | None = None,
+    parameters: dict | None = None,
+    pip_requirements: list | str | None = None,
+    image: str | None = None,
+    chain_name: str | None = None,
+    app=None,
+):
+    """Execute a scheduled Flow or FlowChain via the Kubernetes Job runner and unified Execution pipeline."""
+    from flask import has_app_context
 
-        # Create initial execution record with 'running' status
-        exe = _save_execution(name, session.get('user_id'), 'running', inputs=inputs)
+    resolved_app = app
+    if resolved_app is None and not has_app_context():
+        import app as app_module
+        resolved_app = getattr(app_module, 'app', None)
 
+    def _run_in_ctx(flask_app):
         try:
-            spec = importlib.util.spec_from_file_location("analysis_module", script_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            module.run(inputs=inputs, output_path=output_path)
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            version_dir = f"{webapp.extract_main_folder()}/{name}/physical_output"
-            outputs = []
-            for f_name in os.listdir(output_dir):
-                if f_name.startswith('.') or '.ini' in f_name:
-                    continue
-                ext = os.path.splitext(f_name)[1]
-                dest = f"{version_dir}/{timestamp}{ext}"
-                shutil.copy(f"{output_dir}/{f_name}", dest)
-                outputs.append(f"{timestamp}{ext}")
+            webapp = flask_app.config['WEBAPP']
+            wait_sync = bool(flask_app.config.get('K8S_SYNC_WATCHER', False))
+            if chain_name:
+                if not hasattr(webapp, 'read_chain') or webapp.read_chain(chain_name) is None:
+                    msg = f"Scheduled chain '{chain_name}' does not exist."
+                    flask_app.logger.error(msg)
+                    logger.error(msg)
+                    return None
+                return webapp.launch_chain_run(
+                    chain_name=chain_name,
+                    trigger_type='scheduled',
+                    app=flask_app,
+                    wait_for_completion=wait_sync,
+                )
 
-            # Update execution record to success
-            exe.status = 'success'
-            exe.finished_at = datetime.datetime.now(datetime.timezone.utc)
-            exe.output_path = f"{version_dir}/{timestamp}"
-            exe.outputs_json = json.dumps(outputs)
-            db.session.commit()
-            logger.info(f"Scheduled analysis '{name}' completed")
-        except Exception as e:
-            # Update execution record to failed
-            exe.status = 'failed'
-            exe.finished_at = datetime.datetime.now(datetime.timezone.utc)
-            exe.log_text = str(e)
-            db.session.commit()
-            logger.error(f"Scheduled analysis '{name}' failed: {e}")
+            if not name or webapp.read_flow(name) is None:
+                msg = f"Scheduled flow '{name}' does not exist."
+                flask_app.logger.error(msg)
+                logger.error(msg)
+                return None
+
+            return webapp.launch_flow_run(
+                flow_name=name,
+                parameters=parameters or {},
+                pip_requirements=pip_requirements,
+                image=image,
+                trigger_type='scheduled',
+                app=flask_app,
+                wait_for_watcher=wait_sync,
+            )
+        except Exception as exc:
+            msg = f"Scheduled execution failed for flow={name!r} chain={chain_name!r}: {exc}"
+            flask_app.logger.error(msg)
+            logger.error(msg)
+            return None
+
+    if has_app_context():
+        from flask import current_app
+        return _run_in_ctx(current_app._get_current_object())
+    if resolved_app is not None:
+        with resolved_app.app_context():
+            return _run_in_ctx(resolved_app)
+    logger.error(f"Cannot execute scheduled flow '{name or chain_name}': no Flask application context available.")
+    return None
+
+
+def execute_scheduled_analysis(app_or_name, name=None, inputs=None):
+    """Execute a scheduled flow or structured analysis (called by APScheduler)."""
+    if isinstance(app_or_name, str):
+        resolved_app = None
+        target_name = app_or_name
+        target_inputs = name if isinstance(name, dict) else (inputs or {})
+    else:
+        resolved_app = app_or_name
+        target_name = name
+        target_inputs = inputs or {}
+
+    return execute_scheduled_flow(
+        name=target_name,
+        parameters=target_inputs,
+        app=resolved_app,
+    )
 
 
 @catalog_bp.route('/schedule_analysis/', methods=['POST'])
@@ -1126,19 +1259,29 @@ def schedule_analysis():
     from apscheduler.triggers.interval import IntervalTrigger
     from flask import current_app
 
-    name = request.form.get('analysis_name', '')
-    inputs = {k: v for k, v in request.form.items()
-              if k not in ('analysis_name', 'schedule_type', 'schedule_time', 'schedule_cron')}
+    name = (request.form.get('analysis_name') or request.form.get('flow_name') or '').strip()
+    raw_params = request.form.get('parameters')
+    if raw_params is not None:
+        webapp = get_webapp()
+        inputs = webapp.parse_flow_parameters(raw_params)
+    else:
+        inputs = {
+            k: v for k, v in request.form.items()
+            if k not in (
+                'analysis_name', 'flow_name', 'schedule_type', 'schedule_time',
+                'schedule_cron', 'cron_expr', 'interval_minutes', 'interval_seconds', 'enabled'
+            )
+        }
 
     schedule_type = request.form.get('schedule_type', '')
     schedule_time = request.form.get('schedule_time', '07:00')
-    schedule_cron = request.form.get('schedule_cron', '')
+    schedule_cron = (request.form.get('schedule_cron') or request.form.get('cron_expr') or '').strip()
 
     scheduler = current_app.config['SCHEDULER']
-    hour, minute = (int(x) for x in schedule_time.split(':')) if schedule_time else (7, 0)
+    hour, minute = (int(x) for x in schedule_time.split(':')) if ':' in schedule_time else (7, 0)
 
     import datetime
-    job_id = f"{name}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+    job_id = request.form.get('job_id') or f"{name}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
 
     if schedule_type == 'daily':
         trigger = CronTrigger(hour=hour, minute=minute)
@@ -1150,38 +1293,66 @@ def schedule_analysis():
         trigger = CronTrigger(day_of_week='fri', hour=hour, minute=minute)
     elif schedule_type == 'cron' and schedule_cron:
         trigger = CronTrigger.from_crontab(schedule_cron)
+    elif schedule_type == 'interval':
+        seconds = int(request.form.get('interval_seconds') or 0)
+        minutes = int(request.form.get('interval_minutes') or 0)
+        if seconds > 0:
+            trigger = IntervalTrigger(seconds=seconds)
+        else:
+            trigger = IntervalTrigger(minutes=max(1, minutes or 60))
     else:
         return redirect(f"/create_investigations?name={name.replace(' ', '512')}")
 
-    app = current_app._get_current_object()
     scheduler.add_job(
         id=job_id,
-        func=execute_scheduled_analysis,
+        func=execute_scheduled_flow,
         trigger=trigger,
-        args=[app, name, inputs],
-        name=f"{name} ({schedule_type})"
+        kwargs={'name': name, 'parameters': inputs},
+        name=f"{name} ({schedule_type})",
+        coalesce=True,
+        max_instances=1,
+        misfire_grace_time=60,
+        replace_existing=True,
     )
+    if request.form.get('enabled') in ('0', 'false', 'False'):
+        scheduler.pause_job(job_id)
+
     logger.info(f"Scheduled '{name}' as '{schedule_type}' (job: {job_id})")
     return redirect('/schedules/')
 
 
+@catalog_bp.route('/schedules')
 @catalog_bp.route('/schedules/')
 def schedules_page():
     from flask import current_app
     webapp = get_webapp()
-    html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     scheduler = current_app.config['SCHEDULER']
     jobs = []
     for job in scheduler.get_jobs():
+        is_paused = job.next_run_time is None
         jobs.append({
             'id': job.id,
             'name': job.name or job.id,
+            'paused': is_paused,
+            'status': 'Paused' if is_paused else 'Active',
             'next_run': str(job.next_run_time.strftime('%Y-%m-%d %H:%M')) if job.next_run_time else 'Paused',
             'trigger': str(job.trigger)
         })
+    wants_json = (
+        request.is_json
+        or 'application/json' in request.headers.get('Accept', '')
+        or request.args.get('format') == 'json'
+    )
+    if wants_json:
+        return jsonify({'schedules': jobs})
+    html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
+    flows = webapp.list_flows()
+    chains = webapp.list_chains() if hasattr(webapp, 'list_chains') else []
     return render_template('schedules.html',
                            title='Scheduled Analyses',
                            jobs=jobs,
+                           flows=flows,
+                           chains=chains,
                            head=html_part['head'],
                            top_container=html_part['top_container'],
                            sidebar_menu=html_part['sidebar_menu'],

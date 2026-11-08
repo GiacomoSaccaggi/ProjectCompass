@@ -3,78 +3,76 @@
 {{ head|safe }}
 
 <style>
-.btn {
-  background-color: DodgerBlue;
-  border: none;
-  color: white;
-  padding: 12px 16px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-/* Darker background on mouse-over */
-.btn:hover {
-  background-color: RoyalBlue;
-}
-input[type=text] {
-  padding: 6px 12px;
-  text-decoration: none;
-  margin: 4px 2px;
-  cursor: pointer;
-  width: 60%;
-  display: inline-block;
-  border-radius: 4px;
-  background-color: white;
-  color:  #005F81 ;
-  border: 2px solid  #00889B;
-  text-align: center;
-  transition: all 0.5s;
-  cursor: pointer;
-  margin: 5px;
-}
-
-
-.table-wrapper {
-  position:relative;
-}
-.table-scroll {
-  height:250px;
-  overflow:auto;
-  margin-top:20px;
-}
-.table-wrapper table {
-  width:100%;
-
-}
-.table-wrapper table * {
-  color:black;
-}
-.table-wrapper table thead th .text {
-  position:absolute;
-  top:-20px;
-  z-index:2;
-  height:20px;
-  width:35%;
-  border:1px solid red;
-}
-</style>
-<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
-<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
-<script>hljs.highlightAll();</script>
-<style>
-
-header{
+.data-upload-wrap { padding: 0 24px 20px; max-width: 860px; margin: 0 auto; }
+header.data-upload-hero {
   position: relative;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-image: url(/static/img/background1.PNG);
-  height: 50%;
-  width:100%;
-  color: #F8F8F8;
-  text-align: left;
-  padding-top: 5%;
-  font-size:32px;
+  background-position: bottom center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: 100% 42px, cover, cover;
+  background-image:
+    var(--mariner-wave-overlay),
+    linear-gradient(135deg, rgba(6, 13, 26, 0.86) 0%, rgba(11, 25, 48, 0.76) 100%),
+    url("{{ pc.branding.backgrounds.data|safe }}");
+  width: 100%;
+  color: #f8fafc;
+  padding: 22px 28px 28px !important;
+  border-bottom: 2px solid rgba(251, 191, 36, 0.42);
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+header.data-upload-hero h1 {
+  color: #f8fafc !important;
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin: 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+header.data-upload-hero h1 i { color: #fbbf24; margin-right: 8px; }
+header.data-upload-hero p { margin: 4px 0 0 0; font-size: 0.88rem; color: #cbd5e1; }
+.upload-form-card label {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--mariner-text-primary, #0f172a);
+  margin: 12px 0 5px 0;
+}
+.upload-form-card input[type=text],
+.upload-form-card input[type=number],
+.upload-form-card input[type=file] {
+  padding: 10px 14px;
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+  background-color: var(--mariner-bg-card, #ffffff);
+  color: var(--mariner-text-primary, #0f172a);
+  border: 1px solid var(--mariner-border-strong, rgba(2, 132, 199, 0.38));
+  text-align: left !important;
+}
+.upload-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 14px 0 20px 0;
+}
+.upload-form-card button[type="submit"] {
+  background: linear-gradient(135deg, var(--mariner-cyan, #0284c7) 0%, var(--mariner-teal, #0d9488) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: 8px;
+  color: white;
+  padding: 11px 22px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.upload-form-card button[type="submit"]:hover {
+  background: linear-gradient(135deg, #0369a1 0%, var(--mariner-navy, #0b1629) 100%);
+  color: #fbbf24;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
 }
 </style>
 <body class="w3-light-grey">
@@ -84,70 +82,48 @@ header{
 {{ sidebar_menu|safe }}
 
 <!-- !PAGE CONTENT! -->
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
   <!-- Header -->
-  <header class="w3-container" style="padding-top:22px">
-      <br>
-    <h1><b><i class="fa fa-dashboard"></i>    Data Explorer</b></h1>
-      <br>
-      <br>
+  <header class="w3-container data-upload-hero">
+    <div>
+      <h1><b><i class="fa fa-cloud-upload"></i>Upload Dataset</b></h1>
+      <p>Import CSV, TSV, or plain-text tables into the local DuckDB analytical catalog</p>
+    </div>
+    <a href="/all_data/" class="w3-button w3-small w3-blue" style="border-radius:8px;"><i class="fa fa-arrow-left"></i> Back to Datasets</a>
   </header>
 
-    <br>
+  <div class="data-upload-wrap">
+    <div class="w3-padding-large w3-container w3-card-1 upload-form-card">
+      <form action="/upload_data_file/" method="post" style="width: 100%;" enctype="multipart/form-data">
+        <h4 style="margin-top:0;font-weight:700;"><i class="fa fa-file-text-o" style="color:var(--mariner-cyan);"></i> Data File Uploader &amp; Parser Settings</h4>
 
-  <div class="w3-padding w3-container w3-card-1">
-        <form action="/upload_data_file/" method="post" style="width: 100%;left:25%;top:10%;" enctype = "multipart/form-data">
-            <h2>Data File Uploader and Settings</h2>
+        <label for="ctrl_file">Select data files (.csv, .tsv, text)</label>
+        <input type="file" name="upload_files" size="40" id="ctrl_file" multiple accept=".csv, .tsv, text/plain" required />
 
-            <label for="ctrl_file">Select data files (.csv, .tsv, text):</label><br>
-            <input type="file"
-                   name="upload_files"
-                   size="40"
-                   id="ctrl_file"
-                   multiple
-                   accept=".csv, .tsv, text/plain" /><br><br>
+        <div class="upload-options-grid">
+          <div>
+            <label for="separator">Column Separator</label>
+            <input type="text" name="separator" id="separator" value="," placeholder="e.g. , or \t" />
+          </div>
+          <div>
+            <label for="header">Header Row Index (0 = first row)</label>
+            <input type="number" name="header" id="header" value="0" min="-1" />
+          </div>
+          <div>
+            <label for="encoding">Character Encoding</label>
+            <input type="text" name="encoding" id="encoding" value="utf-8" placeholder="utf-8, latin-1" />
+          </div>
+        </div>
 
-            <label for="separator">Separator (e.g., ',' or '\t' for tab):</label><br>
-            <input type="text"
-                   name="separator"
-                   id="separator"
-                   value=","
-                   placeholder="Enter the delimiter" /><br><br>
-
-            <label for="header">Header Row (0 for first row, -1 or empty for no header):</label><br>
-            <input type="number"
-                   name="header"
-                   id="header"
-                   value="0"
-                   min="-1" /><br><br>
-
-            <label for="encoding">File Encoding (e.g., utf-8, latin-1):</label><br>
-            <input type="text"
-                   name="encoding"
-                   id="encoding"
-                   value="utf-8"
-                   placeholder="Enter file encoding" /><br><br>
-
-            <button type="submit">Upload and Read Data</button>
-                      <!--<br><input type="submit" value="Upload">-->
-        </form>
-
-
+        <button type="submit"><i class="fa fa-upload"></i> Upload and Read Data</button>
+      </form>
+    </div>
   </div>
 
 
 
 
-  <!-- Footer -->
-  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
-                <hr><br>
-
-                <strong>About ProjectCompass</strong><br>
-                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
-                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
-                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
-                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
-     </footer>
+  {% include 'components/branding_footer.html' %}
 
   <!-- End page content -->
 </div>

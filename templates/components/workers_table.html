@@ -1,0 +1,119 @@
+<!-- HTMX partial for live k0s worker nodes table -->
+<div id="workers-live-region">
+  <!-- Summary KPI cards -->
+  <div class="w3-row-padding w3-margin-bottom">
+    <div class="w3-quarter">
+      <div class="w3-container w3-white w3-card w3-padding-16" style="border-left: 4px solid #4CAF50;">
+        <div class="w3-left"><i class="fa fa-check-circle w3-xxlarge" style="color:#4CAF50;"></i></div>
+        <div class="w3-right"><h3>{{ summary.ready }}</h3></div>
+        <div class="w3-clear"></div>
+        <h4>Ready Workers</h4>
+      </div>
+    </div>
+    <div class="w3-quarter">
+      <div class="w3-container w3-white w3-card w3-padding-16" style="border-left: 4px solid #FF9800;">
+        <div class="w3-left"><i class="fa fa-exclamation-triangle w3-xxlarge" style="color:#FF9800;"></i></div>
+        <div class="w3-right"><h3>{{ summary.not_ready }}</h3></div>
+        <div class="w3-clear"></div>
+        <h4>NotReady (Unreachable)</h4>
+      </div>
+    </div>
+    <div class="w3-quarter">
+      <div class="w3-container w3-white w3-card w3-padding-16" style="border-left: 4px solid #9E9E9E;">
+        <div class="w3-left"><i class="fa fa-minus-circle w3-xxlarge" style="color:#9E9E9E;"></i></div>
+        <div class="w3-right"><h3>{{ summary.removed }}</h3></div>
+        <div class="w3-clear"></div>
+        <h4>Removed from Cluster</h4>
+      </div>
+    </div>
+    <div class="w3-quarter">
+      <div class="w3-container w3-white w3-card w3-padding-16" style="border-left: 4px solid #3F51B5;">
+        <div class="w3-left"><i class="fa fa-server w3-xxlarge" style="color:#3F51B5;"></i></div>
+        <div class="w3-right"><h3>{{ summary.total_active }}</h3></div>
+        <div class="w3-clear"></div>
+        <h4>Active Cluster Nodes</h4>
+      </div>
+    </div>
+  </div>
+
+  {% if summary.error %}
+  <div class="w3-panel w3-pale-yellow w3-leftbar w3-border-amber w3-padding">
+    <b><i class="fa fa-plug"></i> Kubernetes API Status:</b>
+    Unable to reach live k0s API ({{ summary.error }}). Showing last known worker states from database.
+  </div>
+  {% endif %}
+
+  {% if summary.nodes %}
+  <div class="w3-responsive">
+    <table class="w3-table w3-bordered w3-striped w3-hoverable w3-white w3-card">
+      <thead>
+        <tr class="w3-light-grey">
+          <th>Node Name</th>
+          <th>Status</th>
+          <th>Role(s)</th>
+          <th>Address (IP)</th>
+          <th>CPU (Alloc / Cap{% if summary.nodes|selectattr('cpu_usage')|list %} / Used{% endif %})</th>
+          <th>RAM (Alloc / Cap{% if summary.nodes|selectattr('memory_usage')|list %} / Used{% endif %})</th>
+          <th>Kubelet</th>
+          <th>Joined (First Seen)</th>
+          <th>Last Seen / Removed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for node in summary.nodes %}
+        <tr>
+          <td><b><i class="fa fa-hdd-o w3-margin-right"></i>{{ node.name }}</b></td>
+          <td>
+            {% if node.status == 'Ready' %}
+              <span class="w3-badge w3-green">Ready</span>
+            {% elif node.status == 'Removed' %}
+              <span class="w3-badge w3-grey">Removed</span>
+            {% else %}
+              <span class="w3-badge w3-amber">{{ node.status }}</span>
+            {% endif %}
+          </td>
+          <td><code>{{ node.roles or 'worker' }}</code></td>
+          <td><code>{{ node.internal_ip or '-' }}</code></td>
+          <td>
+            {{ node.cpu_allocatable or '-' }} / {{ node.cpu_capacity or '-' }} cores
+            {% if node.cpu_usage %}
+              <span class="w3-small w3-text-grey">({{ node.cpu_usage }} used)</span>
+            {% endif %}
+          </td>
+          <td>
+            {{ node.memory_allocatable or '-' }} / {{ node.memory_capacity or '-' }}
+            {% if node.memory_usage %}
+              <span class="w3-small w3-text-grey">({{ node.memory_usage }} used)</span>
+            {% endif %}
+          </td>
+          <td><span class="w3-small">{{ node.kubelet_version or '-' }}</span></td>
+          <td><span class="w3-small">{{ node.first_seen_at.strftime('%Y-%m-%d %H:%M:%S') if node.first_seen_at else '-' }}</span></td>
+          <td>
+            {% if node.status == 'Removed' and node.removed_at %}
+              <span class="w3-small w3-text-red">Removed {{ node.removed_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+            {% elif node.last_seen_at %}
+              <span class="w3-small">{{ node.last_seen_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="w3-panel w3-white w3-card w3-padding-24 w3-center">
+    <h4><i class="fa fa-server"></i> No k0s worker nodes discovered yet</h4>
+    <p class="w3-text-grey">
+      Connect your worker machines (AWS, GCP, Azure, bare-metal, or local PC) to the k0s control plane using
+      <code>k0s token create --role=worker</code> and <code>k0s install worker --token-file ...</code>.
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="w3-small w3-text-grey w3-margin-top">
+    <i class="fa fa-refresh"></i> Read-only view synchronized with Kubernetes API (auto-updates every 5s).
+    Last checked: {{ summary.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC') if summary.updated_at else '-' }}.
+  </div>
+</div>

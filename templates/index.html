@@ -8,161 +8,242 @@
 {{ sidebar_menu|safe }}
 
 <!-- !PAGE CONTENT! -->
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+  <style>
+    .pc-dash-wrap { padding: 22px 24px 12px; max-width: 1400px; margin: 0 auto; }
+    .pc-dash-hero {
+      padding: 24px 28px 30px;
+      border-radius: 16px;
+      margin-bottom: 22px;
+      background:
+        var(--mariner-wave-overlay),
+        radial-gradient(circle at 85% 20%, rgba(251, 191, 36, 0.16) 0%, transparent 45%),
+        linear-gradient(135deg, #060d1a 0%, #0b1930 58%, #0e2240 100%);
+      background-position: bottom center, center, center;
+      background-size: 100% 42px, 100% 100%, 100% 100%;
+      background-repeat: no-repeat;
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      border-top: 3px solid #fbbf24;
+      box-shadow: 0 12px 30px rgba(6, 13, 26, 0.20);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      color: #f8fafc;
+    }
+    .pc-dash-hero h1 {
+      margin: 0 0 4px 0;
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #f8fafc !important;
+      letter-spacing: -0.02em;
+    }
+    .pc-dash-hero h1 i { color: #fbbf24; margin-right: 8px; }
+    .pc-dash-hero p { margin: 0; color: #cbd5e1; font-size: 0.94rem; }
+    .pc-dash-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pc-dash-actions a {
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.18s ease;
+    }
+    .pc-btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+      color: #ffffff !important;
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.32);
+    }
+    .pc-btn-primary:hover { transform: translateY(-2px); color: #fbbf24 !important; }
+    .pc-btn-ghost {
+      background: rgba(14, 25, 47, 0.78);
+      color: #e2e8f0 !important;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .pc-btn-ghost:hover { background: rgba(56, 189, 248, 0.18); color: #fbbf24 !important; }
+    .pc-links-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 10px 0 0 0; list-style: none; }
+    .pc-links-list a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(2, 132, 199, 0.10);
+      border: 1px solid rgba(2, 132, 199, 0.28);
+      font-size: 0.83rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .pc-links-list a:hover {
+      background: rgba(2, 132, 199, 0.18);
+      border-color: var(--mariner-gold);
+    }
+  </style>
+
+  <div class="pc-dash-wrap">
     {{ intro_title|safe }}
 
+    <div class="pc-dash-hero">
+      <div>
+        <h1><i class="fa fa-compass"></i>{{ title }}</h1>
+        <p>{{ pc.branding.footer.slogan }} — Unified Analytics Catalog, DuckDB SQL Chartroom &amp; k0s Execution Deck</p>
+      </div>
+      <div class="pc-dash-actions">
+        <a href="/load_analysis/" class="pc-btn-primary"><i class="fa fa-plus-circle"></i> New Analysis</a>
+        {% if pc.features.pipeline_builder %}<a href="/pipeline_builder" class="pc-btn-ghost"><i class="fa fa-sitemap"></i> Pipeline Builder</a>{% endif %}
+        {% if pc.features.query_runner %}<a href="/query_runner/" class="pc-btn-ghost"><i class="fa fa-terminal"></i> SQL Runner</a>{% endif %}
+        {% if pc.features.k8s %}<a href="/flows" class="pc-btn-ghost"><i class="fa fa-code"></i> k0s Flows</a>{% endif %}
+      </div>
+    </div>
 
 {% if intro %}
-  <br>
-  <div class="w3-row-padding w3-margin-bottom">
-    <div class="w3-quarter">
+  <div class="w3-row-padding" style="margin: 0 -8px 18px -8px;">
+    <div class="w3-quarter" style="padding: 0 8px; margin-bottom: 12px;">
       <div class="w3-container w3-red w3-padding-16">
-        <div class="w3-left"><i class="fa fa-line-chart w3-xxxlarge"></i></div>
+        <div class="w3-left"><i class="fa fa-line-chart w3-xxlarge"></i></div>
         <div class="w3-right">
-          <h3>{{ number_of_analysis }}</h3>
+          <h3 style="margin:0;font-size:1.85rem;font-weight:800;">{{ number_of_analysis }}</h3>
         </div>
         <div class="w3-clear"></div>
-        <h4>Analyses uploaded</h4>
+        <h4 style="margin:8px 0 0;font-size:0.95rem;font-weight:600;opacity:0.92;">Analyses uploaded</h4>
       </div>
     </div>
-    <div class="w3-quarter">
+    <div class="w3-quarter" style="padding: 0 8px; margin-bottom: 12px;">
       <div class="w3-container w3-blue w3-padding-16">
-        <div class="w3-left"><i class="fa fa-user w3-xxxlarge"></i></div>
+        <div class="w3-left"><i class="fa fa-user w3-xxlarge"></i></div>
         <div class="w3-right">
-          <h3>{{ number_of_owners }}</h3>
+          <h3 style="margin:0;font-size:1.85rem;font-weight:800;">{{ number_of_owners }}</h3>
         </div>
         <div class="w3-clear"></div>
-        <h4>Owner counting</h4>
+        <h4 style="margin:8px 0 0;font-size:0.95rem;font-weight:600;opacity:0.92;">Owner counting</h4>
       </div>
     </div>
-    <div class="w3-quarter">
+    <div class="w3-quarter" style="padding: 0 8px; margin-bottom: 12px;">
       <div class="w3-container w3-teal w3-padding-16">
-        <div class="w3-left"><i class="fa fa-cogs w3-xxxlarge"></i></div>
+        <div class="w3-left"><i class="fa fa-cogs w3-xxlarge"></i></div>
         <div class="w3-right">
-          <h3>{{ number_of_structured_analysis }}</h3>
+          <h3 style="margin:0;font-size:1.85rem;font-weight:800;">{{ number_of_structured_analysis }}</h3>
         </div>
         <div class="w3-clear"></div>
-        <h4>Structured analyses</h4>
+        <h4 style="margin:8px 0 0;font-size:0.95rem;font-weight:600;opacity:0.92;">Structured analyses</h4>
       </div>
     </div>
-    <div class="w3-quarter">
+    <div class="w3-quarter" style="padding: 0 8px; margin-bottom: 12px;">
       <div class="w3-container w3-orange w3-text-white w3-padding-16">
-        <div class="w3-left"><i class="fa fa-users w3-xxxlarge"></i></div>
+        <div class="w3-left"><i class="fa fa-users w3-xxlarge"></i></div>
         <div class="w3-right">
-          <h3>{{ number_of_products }}</h3>
+          <h3 style="margin:0;font-size:1.85rem;font-weight:800;">{{ number_of_products }}</h3>
         </div>
         <div class="w3-clear"></div>
-        <h4>Products</h4>
-      </div>
-    </div>
-  </div>
-  <!-- Activity Feed -->
-  <div class="w3-container">
-    <div class="w3-card w3-white w3-padding" style="margin-top:1rem;margin-left:10%;margin-right:10%;">
-      <h5><i class="fa fa-history"></i> Recent Activity</h5>
-      <div hx-get="/api/activity_html" hx-trigger="load" hx-swap="innerHTML" style="max-height:300px;overflow-y:auto;">
-        <div class="skeleton" style="height:1.2rem;width:80%;margin:8px 0;"></div>
-        <div class="skeleton" style="height:1.2rem;width:65%;margin:8px 0;"></div>
-        <div class="skeleton" style="height:1.2rem;width:72%;margin:8px 0;"></div>
-        <div class="skeleton" style="height:1.2rem;width:58%;margin:8px 0;"></div>
+        <h4 style="margin:8px 0 0;font-size:0.95rem;font-weight:600;opacity:0.92;">Products</h4>
       </div>
     </div>
   </div>
 
-  <div class="w3-container">
+  <div class="w3-row-padding" style="margin: 0 -8px;">
+    <!-- Left Column: Recent Activity & Useful Links -->
+    <div class="w3-col l7 m12" style="padding: 0 8px;">
+      <div class="w3-card w3-white w3-padding-large" style="margin-bottom: 16px;">
+        <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-history" style="color:var(--mariner-cyan);"></i> Recent Activity</h5>
+        <div hx-get="/api/activity_html" hx-trigger="load" hx-swap="innerHTML" style="max-height:280px;overflow-y:auto;">
+          <div class="skeleton" style="height:1.2rem;width:80%;margin:8px 0;"></div>
+          <div class="skeleton" style="height:1.2rem;width:65%;margin:8px 0;"></div>
+          <div class="skeleton" style="height:1.2rem;width:72%;margin:8px 0;"></div>
+          <div class="skeleton" style="height:1.2rem;width:58%;margin:8px 0;"></div>
+        </div>
+      </div>
 
-  <div class="w3-col w3-bar w3-text-projectcompass" style="padding: 10%;">
-  <div class="w3-padding w3-container w3-card-1">
-    {{ intro|safe }}
-    <br><br>
-    <h5><b><i class="fa fa-external-link"></i>    Useful links:</b></h5>
-    <ul>
-    {% for name, link in links.items() %}
-      <a href="{{ link }}">{{ name }}</a><br>
-    {% endfor %}
-    </ul>
-  <hr>
-    <h5>Products:</h5>
-    <center>
-    <div style="width:40%;">
-    <canvas id="myChart" width="400" height="400"></canvas>
+      <div class="w3-card w3-white w3-padding-large" style="margin-bottom: 16px;">
+        <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-external-link" style="color:var(--mariner-gold);"></i> Useful Links &amp; Platform Guide</h5>
+        <div class="pc-links-list">
+          {% for name, link in links.items() %}
+            <a href="{{ link }}"><i class="fa fa-link"></i> {{ name }}</a>
+          {% endfor %}
+          <a href="/overview"><i class="fa fa-book"></i> Architecture &amp; Overview</a>
+          <a href="/analysis"><i class="fa fa-folder-open-o"></i> Browse Catalog</a>
+        </div>
+        <details style="margin-top: 14px; font-size: 0.88rem; color: var(--mariner-text-secondary);">
+          <summary style="cursor: pointer; font-weight: 600; color: var(--mariner-cyan);">About {{ pc.branding.app_name }} &amp; Key Capabilities</summary>
+          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--mariner-border-subtle);">
+            {{ intro|safe }}
+          </div>
+        </details>
+      </div>
     </div>
-    </center>
-    <script>
 
-      // Append '4d' to the colors (alpha channel), except for the hovered index
-      function handleHover(evt, item, legend) {
-        legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
-          colors[index] = index === item.index || color.length === 9 ? color : color + '4D';
-        });
-        legend.chart.update();
-      }
-
-      // Removes the alpha channel from background colors
-      function handleLeave(evt, item, legend) {
-        legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
-          colors[index] = color.length === 9 ? color.slice(0, -2) : color;
-        });
-        legend.chart.update();
-      }
-
-      var ctx = document.getElementById("myChart").getContext('2d');
-      var myChart = new Chart(ctx, {
-        type: 'polarArea',
-        data: {
-          labels: [{{ product_labels|safe }}],
-          datasets: [{
-            label: '# of Analysis',
-            data: [{{ product_res|safe }}],
-            backgroundColor: [
-                        '#4dc9f6',
-                        '#f67019',
-                        '#f53794',
-                        '#537bc4',
-                        '#acc236',
-                        '#166a8f',
-                        '#00a950',
-                        '#58595b',
-                        '#8549ba'],
-            // borderColor: [{{ product_color2|safe }}],
-            borderWidth: 1
-          }]
-        },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'top',
-            onHover: handleHover,
-            onLeave: handleLeave
-          },
-          title: {
-            display: true,
-            text: 'Analysis by product'
+    <!-- Right Column: Products Polar Area Chart -->
+    <div class="w3-col l5 m12" style="padding: 0 8px;">
+      <div class="w3-card w3-white w3-padding-large" style="margin-bottom: 16px;">
+        <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-pie-chart" style="color:var(--mariner-teal);"></i> Analyses by Product</h5>
+        <div style="max-width: 320px; margin: 8px auto;">
+          <canvas id="myChart" width="320" height="320"></canvas>
+        </div>
+        <script>
+          function handleHover(evt, item, legend) {
+            legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
+              colors[index] = index === item.index || color.length === 9 ? color : color + '4D';
+            });
+            legend.chart.update();
           }
-        }
-      },
-      });
-    </script>
 
+          function handleLeave(evt, item, legend) {
+            legend.chart.data.datasets[0].backgroundColor.forEach((color, index, colors) => {
+              colors[index] = color.length === 9 ? color.slice(0, -2) : color;
+            });
+            legend.chart.update();
+          }
 
-
+          var ctx = document.getElementById("myChart").getContext('2d');
+          var myChart = new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+              labels: [{{ product_labels|safe }}],
+              datasets: [{
+                label: '# of Analysis',
+                data: [{{ product_res|safe }}],
+                backgroundColor: [
+                  '#0284c7',
+                  '#0d9488',
+                  '#d97706',
+                  '#38bdf8',
+                  '#2dd4bf',
+                  '#0369a1',
+                  '#059669',
+                  '#64748b',
+                  '#7c3aed'
+                ],
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  onHover: handleHover,
+                  onLeave: handleLeave
+                },
+                title: {
+                  display: false
+                }
+              }
+            }
+          });
+        </script>
+      </div>
+    </div>
   </div>
-  </div>
-  </div>
-  <hr>
 {% endif %}
 
+  </div>
 
-  <!-- Footer -->
-  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
-                <hr><br>
-                <strong>About ProjectCompass</strong><br>
-                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
-                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
-                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
-                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
-  </footer>
+
+  {% include 'components/branding_footer.html' %}
 
   <!-- End page content -->
 </div>

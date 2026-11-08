@@ -1,0 +1,1391 @@
+"""
+░██╗░░██╗░█████╗░░██████╗░░░░░░██╗░░░██╗████████╗██╗██╗░░░░░░██████╗
+░██║░██╔╝██╔══██╗██╔════╝░░░░░░██║░░░██║╚══██╔══╝██║██║░░░░░██╔════╝
+░█████═╝░╚█████╔╝╚█████╗░█████╗██║░░░██║░░░██║░░░██║██║░░░░░╚█████╗░
+░██╔═██╗░██╔══██╗░╚═══██╗╚════╝██║░░░██║░░░██║░░░██║██║░░░░░░╚═══██╗
+░██║░╚██╗╚█████╔╝██████╔╝░░░░░░╚██████╔╝░░░██║░░░██║███████╗██████╔╝
+░╚═╝░░╚═╝░╚════╝░╚═════╝░░░░░░░░╚═════╝░░░░╚═╝░░░╚═╝╚══════╝╚═════╝░
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import re
+import threading
+import time
+from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any
+
+import httpx
+import yaml
+
+from logging_config import logger
+from models import ChainExecution, Execution, FlowChain, K8sWorkerNode, db, fire_webhooks
+
+
+class K8sClientError(Exception):
+    """Base exception for Kubernetes API and configuration errors."""
+
+
+class K8sConfigurationError(K8sClientError):
+    """Raised when Kubernetes API credentials or endpoints are not configured."""
+
+
+class K8sApiError(K8sClientError):
+    """Raised when the Kubernetes API returns an error status or fails to connect."""
+
+    def __init__(self, message: str, status_code: int | None = None, body: str = "") -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body
+
+
+class BaseK8sClient(ABC):
+    """Abstract parent class encapsulating Kubernetes REST API transport.
+
+    Provides authenticated REST primitives over httpx using either in-cluster
+    ServiceAccount credentials, a k0s/Kubernetes kubeconfig file, or explicit
+    environment variables, without requiring external cluster agents.
+    """
+
+    IN_CLUSTER_TOKEN_PATH: str = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    IN_CLUSTER_CA_PATH: str = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    DEFAULT_K0S_KUBECONFIG: str = "/var/lib/k0s/pki/admin.conf"
+
+    def __init__(self, dir_path: str = "", data_dir: str = "", **kwargs: Any) -> None:
+        """Initialize Kubernetes API transport state and forward cooperative kwargs."""
+        self.dir_path: str = dir_path
+        self.data_dir: str = data_dir or dir_path
+        self._k8s_namespace: str = os.environ.get("K8S_NAMESPACE", "default")
+        self._k8s_api_url: str = ""
+        self._k8s_token: str = ""
+        self._k8s_verify: bool | str = True
+        self._k8s_client_cert: tuple[str, str] | None = None
+        self._k8s_timeout: float = 15.0
+        self._last_k8s_error: str | None = None
+        self._load_k8s_credentials()
+        super().__init__(**kwargs)
+
+    def _load_k8s_credentials(self) -> None:
+        """Discover Kubernetes API endpoint and authentication credentials."""
+        self._k8s_namespace = os.environ.get("K8S_NAMESPACE", "default")
+        explicit_url = os.environ.get("K8S_API_URL", "").strip()
+        explicit_token = os.environ.get("K8S_BEARER_TOKEN", "").strip()
+        verify_env = os.environ.get("K8S_VERIFY_SSL", "true").strip().lower()
+
+        if explicit_url:
+            self._k8s_api_url = explicit_url.rstrip("/")
+            self._k8s_token = explicit_token
+            self._k8s_verify = verify_env not in ("false", "0", "no")
+            return
+
+        in_cluster_pref = os.environ.get("K8S_IN_CLUSTER", "auto").strip().lower()
+        k8s_host = os.environ.get("KUBERNETES_SERVICE_HOST", "").strip()
+        k8s_port = os.environ.get("KUBERNETES_SERVICE_PORT", "443").strip()
+
+        if in_cluster_pref in ("true", "1", "auto") and k8s_host and os.path.exists(self.IN_CLUSTER_TOKEN_PATH):
+            try:
+                with open(self.IN_CLUSTER_TOKEN_PATH, encoding="utf-8") as token_file:
+                    self._k8s_token = token_file.read().strip()
+                self._k8s_api_url = f"https://{k8s_host}:{k8s_port}"
+                if os.path.exists(self.IN_CLUSTER_CA_PATH) and verify_env not in ("false", "0", "no"):
+                    self._k8s_verify = self.IN_CLUSTER_CA_PATH
+                else:
+                    self._k8s_verify = False
+                return
+            except OSError as exc:
+                logger.warning(f"Failed reading in-cluster Kubernetes credentials: {exc}")
+
+        kubeconfig_candidates = [
+            os.environ.get("K8S_KUBECONFIG", "").strip(),
+            os.environ.get("KUBECONFIG", "").strip(),
+            self.DEFAULT_K0S_KUBECONFIG,
+            os.path.expanduser("~/.kube/config"),
+        ]
+        for candidate in kubeconfig_candidates:
+            if candidate and os.path.isfile(candidate):
+                if self._parse_kubeconfig_file(candidate, verify_env):
+                    return
+
+    def _parse_kubeconfig_file(self, kubeconfig_path: str, verify_env: str) -> bool:
+        """Load server URL, CA bundle, and token/client certs from a kubeconfig file."""
+        try:
+            with open(kubeconfig_path, encoding="utf-8") as cfg_file:
+                cfg = yaml.safe_load(cfg_file) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            logger.warning(f"Could not parse kubeconfig at {kubeconfig_path}: {exc}")
+            return False
+
+        clusters = cfg.get("clusters") or []
+        users = cfg.get("users") or []
+        contexts = cfg.get("contexts") or []
+        current_ctx_name = cfg.get("current-context")
+
+        cluster_info: dict[str, Any] = {}
+        user_info: dict[str, Any] = {}
+
+        if contexts:
+            selected_ctx = next(
+                (c.get("context", {}) for c in contexts if c.get("name") == current_ctx_name),
+                contexts[0].get("context", {}),
+            )
+            cluster_name = selected_ctx.get("cluster")
+            user_name = selected_ctx.get("user")
+            if selected_ctx.get("namespace") and not os.environ.get("K8S_NAMESPACE"):
+                self._k8s_namespace = str(selected_ctx["namespace"])
+            cluster_info = next(
+                (c.get("cluster", {}) for c in clusters if c.get("name") == cluster_name),
+                clusters[0].get("cluster", {}) if clusters else {},
+            )
+            user_info = next(
+                (u.get("user", {}) for u in users if u.get("name") == user_name),
+                users[0].get("user", {}) if users else {},
+            )
+        else:
+            if clusters:
+                cluster_info = clusters[0].get("cluster", {})
+            if users:
+                user_info = users[0].get("user", {})
+
+        server = str(cluster_info.get("server", "")).strip()
+        if not server:
+            return False
+
+        self._k8s_api_url = server.rstrip("/")
+        self._k8s_token = str(user_info.get("token", "")).strip()
+
+        tmp_dir = os.path.join(self.dir_path or ".", "tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        if verify_env in ("false", "0", "no") or cluster_info.get("insecure-skip-tls-verify"):
+            self._k8s_verify = False
+        elif cluster_info.get("certificate-authority") and os.path.isfile(str(cluster_info["certificate-authority"])):
+            self._k8s_verify = str(cluster_info["certificate-authority"])
+        elif cluster_info.get("certificate-authority-data"):
+            try:
+                ca_bytes = base64.b64decode(cluster_info["certificate-authority-data"])
+                ca_path = os.path.join(tmp_dir, "k8s_ca.crt")
+                with open(ca_path, "wb") as ca_file:
+                    ca_file.write(ca_bytes)
+                self._k8s_verify = ca_path
+            except Exception:
+                self._k8s_verify = False
+
+        cert_path = user_info.get("client-certificate")
+        key_path = user_info.get("client-key")
+        if cert_path and key_path and os.path.isfile(str(cert_path)) and os.path.isfile(str(key_path)):
+            self._k8s_client_cert = (str(cert_path), str(key_path))
+        elif user_info.get("client-certificate-data") and user_info.get("client-key-data"):
+            try:
+                cert_bytes = base64.b64decode(user_info["client-certificate-data"])
+                key_bytes = base64.b64decode(user_info["client-key-data"])
+                c_file = os.path.join(tmp_dir, "k8s_client.crt")
+                k_file = os.path.join(tmp_dir, "k8s_client.key")
+                with open(c_file, "wb") as cf:
+                    cf.write(cert_bytes)
+                with open(k_file, "wb") as kf:
+                    kf.write(key_bytes)
+                self._k8s_client_cert = (c_file, k_file)
+            except Exception as exc:
+                logger.warning(f"Failed writing client certificate from kubeconfig: {exc}")
+
+        return True
+
+    def _build_headers(self, accept: str = "application/json") -> dict[str, str]:
+        """Construct HTTP headers for Kubernetes API requests."""
+        headers: dict[str, str] = {"Accept": accept}
+        if self._k8s_token:
+            headers["Authorization"] = f"Bearer {self._k8s_token}"
+        return headers
+
+    def _ensure_configured(self) -> None:
+        """Reload credentials if needed and raise if no API endpoint is configured."""
+        if not self._k8s_api_url:
+            self._load_k8s_credentials()
+        if not self._k8s_api_url:
+            raise K8sConfigurationError(
+                "Kubernetes API endpoint is not configured. Set K8S_API_URL / K8S_KUBECONFIG "
+                "or run on a host with k0s (/var/lib/k0s/pki/admin.conf)."
+            )
+
+    def _k8s_request(
+        self,
+        method: str,
+        path: str,
+        json_body: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Execute an authenticated JSON request against the Kubernetes API server."""
+        self._ensure_configured()
+        url = f"{self._k8s_api_url}/{path.lstrip('/')}"
+        try:
+            with httpx.Client(
+                verify=self._k8s_verify,
+                cert=self._k8s_client_cert,
+                timeout=self._k8s_timeout,
+            ) as client:
+                response = client.request(
+                    method=method.upper(),
+                    url=url,
+                    headers=self._build_headers(),
+                    json=json_body,
+                    params=params,
+                )
+        except httpx.HTTPError as exc:
+            self._last_k8s_error = str(exc)
+            raise K8sApiError(f"Kubernetes API request failed ({method} {path}): {exc}") from exc
+
+        if response.status_code >= 400:
+            err_msg = f"Kubernetes API returned HTTP {response.status_code} for {method} {path}"
+            try:
+                err_payload = response.json()
+                if isinstance(err_payload, dict) and err_payload.get("message"):
+                    err_msg = f"{err_msg}: {err_payload['message']}"
+            except ValueError:
+                pass
+            self._last_k8s_error = err_msg
+            raise K8sApiError(err_msg, status_code=response.status_code, body=response.text)
+
+        self._last_k8s_error = None
+        if not response.text.strip():
+            return {}
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise K8sApiError(f"Invalid JSON from Kubernetes API ({path}): {exc}") from exc
+
+    def _k8s_get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Perform an authenticated GET request against the Kubernetes REST API."""
+        return self._k8s_request("GET", path, params=params)
+
+    def _k8s_post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Perform an authenticated POST request against the Kubernetes REST API."""
+        return self._k8s_request("POST", path, json_body=payload)
+
+    def _k8s_delete(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        json_body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Perform an authenticated DELETE request against the Kubernetes REST API."""
+        return self._k8s_request("DELETE", path, json_body=json_body, params=params)
+
+    def _k8s_get_text(self, path: str, params: dict[str, Any] | None = None) -> str:
+        """Perform an authenticated GET request returning plain text (such as Pod logs)."""
+        self._ensure_configured()
+        url = f"{self._k8s_api_url}/{path.lstrip('/')}"
+        try:
+            with httpx.Client(
+                verify=self._k8s_verify,
+                cert=self._k8s_client_cert,
+                timeout=self._k8s_timeout,
+            ) as client:
+                response = client.get(
+                    url,
+                    headers=self._build_headers(accept="text/plain, */*"),
+                    params=params,
+                )
+        except httpx.HTTPError as exc:
+            raise K8sApiError(f"Kubernetes log fetch failed ({path}): {exc}") from exc
+
+        if response.status_code >= 400:
+            raise K8sApiError(
+                f"Kubernetes API returned HTTP {response.status_code} for GET {path}",
+                status_code=response.status_code,
+                body=response.text,
+            )
+        return response.text
+
+    @abstractmethod
+    def get_cluster_summary(self) -> dict[str, Any]:
+        """Return synchronized cluster worker state and summary metrics."""
+
+
+class K8sClusterUtils(BaseK8sClient):
+    """Child class responsible for read-only worker node discovery and state tracking.
+
+    Synchronizes `/api/v1/nodes` (and optional `metrics.k8s.io` node metrics)
+    with the `K8sWorkerNode` SQLite table so the UI distinguishes active (`Ready`),
+    unreachable (`NotReady`), and deleted (`Removed`) cluster nodes.
+    """
+
+    def __init__(self, dir_path: str = "", **kwargs: Any) -> None:
+        """Initialize cluster node monitor state."""
+        super().__init__(dir_path=dir_path, **kwargs)
+
+    @staticmethod
+    def _parse_node_status(node_item: dict[str, Any]) -> str:
+        """Determine whether a Kubernetes Node is Ready, NotReady, or Unknown."""
+        conditions = node_item.get("status", {}).get("conditions") or []
+        for cond in conditions:
+            if cond.get("type") == "Ready":
+                cond_status = str(cond.get("status", "")).strip()
+                if cond_status == "True":
+                    return "Ready"
+                return "NotReady"
+        return "Unknown"
+
+    @staticmethod
+    def _parse_node_roles(node_item: dict[str, Any]) -> str:
+        """Extract node roles from standard Kubernetes and k0s labels."""
+        labels = node_item.get("metadata", {}).get("labels") or {}
+        roles: list[str] = []
+        for key, val in labels.items():
+            if key.startswith("node-role.kubernetes.io/"):
+                role_name = key.split("/", 1)[1].strip()
+                if role_name and role_name not in roles:
+                    roles.append(role_name)
+            elif key in ("kubernetes.io/role", "node.k0sproject.io/role") and val:
+                role_val = str(val).strip()
+                if role_val and role_val not in roles:
+                    roles.append(role_val)
+        if not roles:
+            return "worker"
+        return ",".join(sorted(roles))
+
+    @staticmethod
+    def _parse_node_ip(node_item: dict[str, Any]) -> str:
+        """Extract the primary IP address of a node from status.addresses."""
+        addresses = node_item.get("status", {}).get("addresses") or []
+        internal_ip = ""
+        external_ip = ""
+        hostname = ""
+        for addr in addresses:
+            addr_type = addr.get("type")
+            addr_val = str(addr.get("address", "")).strip()
+            if addr_type == "InternalIP" and addr_val:
+                internal_ip = addr_val
+            elif addr_type == "ExternalIP" and addr_val:
+                external_ip = addr_val
+            elif addr_type == "Hostname" and addr_val:
+                hostname = addr_val
+        return internal_ip or external_ip or hostname or "-"
+
+    @staticmethod
+    def _format_memory(raw_mem: str | None) -> str:
+        """Format Kubernetes memory quantities (Ki, Mi, Gi) into human-readable units."""
+        if not raw_mem:
+            return "-"
+        val = str(raw_mem).strip()
+        try:
+            if val.endswith("Ki"):
+                kib = int(val[:-2])
+                gib = kib / (1024 * 1024)
+                if gib >= 1.0:
+                    return f"{gib:.1f} GiB"
+                mib = kib / 1024
+                return f"{mib:.0f} MiB"
+            if val.endswith("Mi"):
+                mib_val = float(val[:-2])
+                if mib_val >= 1024:
+                    return f"{mib_val / 1024:.1f} GiB"
+                return f"{mib_val:.0f} MiB"
+            if val.endswith("Gi"):
+                return f"{float(val[:-2]):.1f} GiB"
+        except ValueError:
+            pass
+        return val
+
+    def _fetch_node_metrics(self) -> dict[str, dict[str, str]]:
+        """Query optional metrics.k8s.io endpoint for live CPU and RAM usage per node."""
+        try:
+            payload = self._k8s_get("/apis/metrics.k8s.io/v1beta1/nodes")
+        except K8sClientError:
+            return {}
+
+        usage_by_node: dict[str, dict[str, str]] = {}
+        for item in payload.get("items") or []:
+            name = item.get("metadata", {}).get("name")
+            usage = item.get("usage") or {}
+            if name:
+                usage_by_node[str(name)] = {
+                    "cpu": str(usage.get("cpu", "")),
+                    "memory": self._format_memory(usage.get("memory")),
+                }
+        return usage_by_node
+
+    def sync_worker_nodes(self) -> tuple[list[K8sWorkerNode], str | None]:
+        """Synchronize live Kubernetes nodes with the SQLite K8sWorkerNode table.
+
+        Nodes returned by `/api/v1/nodes` are inserted or updated with their live
+        `Ready` or `NotReady` condition. Previously known nodes that are no longer
+        present in `/api/v1/nodes` are marked as `Removed` with `removed_at` set,
+        preserving the distinction between an unreachable node and a deleted node.
+        """
+        try:
+            nodes_payload = self._k8s_get("/api/v1/nodes")
+        except K8sClientError as exc:
+            existing_nodes = K8sWorkerNode.query.order_by(K8sWorkerNode.name.asc()).all()
+            return existing_nodes, str(exc)
+
+        metrics_map = self._fetch_node_metrics()
+        items = nodes_payload.get("items") or []
+        now = datetime.utcnow()
+        seen_names: set[str] = set()
+
+        for item in items:
+            metadata = item.get("metadata") or {}
+            node_name = str(metadata.get("name", "")).strip()
+            if not node_name:
+                continue
+
+            seen_names.add(node_name)
+            uid = str(metadata.get("uid", "")).strip() or None
+            node_status = self._parse_node_status(item)
+            roles = self._parse_node_roles(item)
+            internal_ip = self._parse_node_ip(item)
+
+            status_block = item.get("status") or {}
+            capacity = status_block.get("capacity") or {}
+            allocatable = status_block.get("allocatable") or {}
+            node_info = status_block.get("nodeInfo") or {}
+
+            cpu_cap = str(capacity.get("cpu", "-"))
+            mem_cap = self._format_memory(capacity.get("memory"))
+            cpu_alloc = str(allocatable.get("cpu", "-"))
+            mem_alloc = self._format_memory(allocatable.get("memory"))
+            kubelet_ver = str(node_info.get("kubeletVersion", "")) or None
+
+            node_metrics = metrics_map.get(node_name, {})
+            cpu_use = node_metrics.get("cpu") or None
+            mem_use = node_metrics.get("memory") or None
+
+            record = K8sWorkerNode.query.filter_by(name=node_name).first()
+            if record is None:
+                record = K8sWorkerNode(
+                    name=node_name,
+                    uid=uid,
+                    status=node_status,
+                    roles=roles,
+                    internal_ip=internal_ip,
+                    cpu_capacity=cpu_cap,
+                    memory_capacity=mem_cap,
+                    cpu_allocatable=cpu_alloc,
+                    memory_allocatable=mem_alloc,
+                    cpu_usage=cpu_use,
+                    memory_usage=mem_use,
+                    kubelet_version=kubelet_ver,
+                    first_seen_at=now,
+                    last_seen_at=now,
+                    removed_at=None,
+                )
+                db.session.add(record)
+            else:
+                record.uid = uid
+                record.status = node_status
+                record.roles = roles
+                record.internal_ip = internal_ip
+                record.cpu_capacity = cpu_cap
+                record.memory_capacity = mem_cap
+                record.cpu_allocatable = cpu_alloc
+                record.memory_allocatable = mem_alloc
+                record.cpu_usage = cpu_use
+                record.memory_usage = mem_use
+                record.kubelet_version = kubelet_ver
+                record.last_seen_at = now
+                record.removed_at = None
+
+        all_records = K8sWorkerNode.query.all()
+        for existing in all_records:
+            if existing.name not in seen_names and existing.status != "Removed":
+                existing.status = "Removed"
+                existing.removed_at = now
+
+        db.session.commit()
+        ordered_nodes = K8sWorkerNode.query.order_by(K8sWorkerNode.name.asc()).all()
+        return ordered_nodes, None
+
+    def get_cluster_summary(self) -> dict[str, Any]:
+        """Synchronize worker nodes and compute cluster health summary counters."""
+        nodes, error = self.sync_worker_nodes()
+        ready_count = sum(1 for n in nodes if n.status == "Ready")
+        not_ready_count = sum(1 for n in nodes if n.status in ("NotReady", "Unknown"))
+        removed_count = sum(1 for n in nodes if n.status == "Removed")
+        return {
+            "nodes": nodes,
+            "total_active": ready_count + not_ready_count,
+            "ready": ready_count,
+            "not_ready": not_ready_count,
+            "removed": removed_count,
+            "connected": error is None,
+            "error": error,
+            "updated_at": datetime.utcnow(),
+        }
+
+
+class K8sFlowRunnerUtils(K8sClusterUtils):
+    """Child class orchestrating isolated Kubernetes batch/v1 Jobs and log persistence.
+
+    Each manual or scheduled Flow execution creates a distinct `Execution` record
+    (`run_id`), provisions a per-run `ConfigMap` (`pc-flow-cfg-<run_id>`) and optional
+    `Secret` (`pc-flow-sec-<run_id>`), submits a `batch/v1` `Job` (`backoffLimit: 0`,
+    `automountServiceAccountToken: false`), and streams Pod stdout/stderr into SQLite.
+    """
+
+    def __init__(self, dir_path: str = "", **kwargs: Any) -> None:
+        """Initialize Flow runner state and watcher synchronization Settings."""
+        self._watcher_poll_interval: float = 0.5
+        self._watcher_max_polls: int = 7200
+        self._active_watchers: dict[int, threading.Thread] = {}
+        super().__init__(dir_path=dir_path, **kwargs)
+
+    @staticmethod
+    def _sanitize_k8s_label(value: str) -> str:
+        """Convert an arbitrary string into a valid Kubernetes label value (<=63 chars)."""
+        cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", (value or "flow").strip()).strip("-._")
+        return (cleaned or "flow")[:63]
+
+    @staticmethod
+    def _build_entrypoint_script(pip_requirements: list[str]) -> str:
+        """Build the container shell entrypoint that optionally installs pip packages."""
+        lines = [
+            "#!/bin/sh",
+            "set -e",
+            "export HOME=/tmp",
+            "export PATH=\"/tmp/.local/bin:$PATH\"",
+            "export PYTHONPATH=\"/tmp/.local/lib/python/site-packages:$PYTHONPATH\"",
+        ]
+        if pip_requirements:
+            lines.extend(
+                [
+                    "if [ -s /workspace/requirements.txt ]; then",
+                    "  echo \"[ProjectCompass] Installing pip requirements...\"",
+                    "  pip install --no-cache-dir --quiet --user -r /workspace/requirements.txt",
+                    "fi",
+                ]
+            )
+        lines.append("exec python -u /workspace/flow.py")
+        return "\n".join(lines) + "\n"
+
+    def build_configmap_manifest(
+        self,
+        run_id: int,
+        flow_name: str,
+        code: str,
+        parameters: dict[str, Any],
+        pip_requirements: list[str],
+        namespace: str,
+    ) -> dict[str, Any]:
+        """Construct the per-run Kubernetes ConfigMap manifest containing flow.py and entrypoint."""
+        cm_name = f"pc-flow-cfg-{run_id}"
+        reqs_text = "\n".join(pip_requirements) + ("\n" if pip_requirements else "")
+        return {
+            "apiVersion": "v1",
+            "kind": "ConfigMap",
+            "metadata": {
+                "name": cm_name,
+                "namespace": namespace,
+                "labels": {
+                    "app.kubernetes.io/managed-by": "projectcompass",
+                    "projectcompass/run-id": str(run_id),
+                    "projectcompass/flow": self._sanitize_k8s_label(flow_name),
+                },
+            },
+            "data": {
+                "flow.py": code if code.endswith("\n") else f"{code}\n",
+                "params.json": json.dumps(parameters, indent=2),
+                "requirements.txt": reqs_text,
+                "entrypoint.sh": self._build_entrypoint_script(pip_requirements),
+            },
+        }
+
+    def build_secret_manifest(
+        self,
+        run_id: int,
+        flow_name: str,
+        env_vars: dict[str, str],
+        namespace: str,
+    ) -> dict[str, Any]:
+        """Construct the temporary per-run Kubernetes Secret manifest for flow credentials."""
+        sec_name = f"pc-flow-sec-{run_id}"
+        return {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {
+                "name": sec_name,
+                "namespace": namespace,
+                "labels": {
+                    "app.kubernetes.io/managed-by": "projectcompass",
+                    "projectcompass/run-id": str(run_id),
+                    "projectcompass/flow": self._sanitize_k8s_label(flow_name),
+                },
+            },
+            "type": "Opaque",
+            "stringData": {str(k): str(v) for k, v in env_vars.items()},
+        }
+
+    def build_job_manifest(
+        self,
+        run_id: int,
+        flow_name: str,
+        image: str,
+        parameters: dict[str, Any],
+        has_secret: bool,
+        namespace: str,
+        ttl_seconds: int = 300,
+        secret_refs: list[str] | str | None = None,
+    ) -> dict[str, Any]:
+        """Construct the isolated Kubernetes batch/v1 Job manifest with backoffLimit=0."""
+        job_name = f"pc-flow-job-{run_id}"
+        cm_name = f"pc-flow-cfg-{run_id}"
+        sec_name = f"pc-flow-sec-{run_id}"
+
+        cpu_request = os.environ.get("K8S_DEFAULT_CPU_REQUEST", "500m").strip() or "500m"
+        cpu_limit = os.environ.get("K8S_DEFAULT_CPU_LIMIT", "1").strip() or "1"
+        mem_request = os.environ.get("K8S_DEFAULT_MEMORY_REQUEST", "512Mi").strip() or "512Mi"
+        mem_limit = os.environ.get("K8S_DEFAULT_MEMORY_LIMIT", "1Gi").strip() or "1Gi"
+
+        env_list: list[dict[str, str]] = [
+            {"name": "PYTHONUNBUFFERED", "value": "1"},
+            {"name": "FLOW_NAME", "value": flow_name},
+            {"name": "FLOW_RUN_ID", "value": str(run_id)},
+            {"name": "FLOW_PARAMS_JSON", "value": json.dumps(parameters)},
+            {"name": "FLOW_PARAMS_FILE", "value": "/workspace/params.json"},
+        ]
+        for key, val in parameters.items():
+            safe_env_key = re.sub(r"[^A-Za-z0-9_]", "_", str(key)).upper()
+            if safe_env_key:
+                env_list.append({"name": f"PC_PARAM_{safe_env_key}", "value": str(val)})
+
+        container_spec: dict[str, Any] = {
+            "name": "flow-runner",
+            "image": image,
+            "command": ["/bin/sh", "/workspace/entrypoint.sh"],
+            "workingDir": "/tmp",
+            "env": env_list,
+            "resources": {
+                "requests": {"cpu": cpu_request, "memory": mem_request},
+                "limits": {"cpu": cpu_limit, "memory": mem_limit},
+            },
+            "volumeMounts": [
+                {
+                    "name": "flow-workspace",
+                    "mountPath": "/workspace",
+                    "readOnly": True,
+                }
+            ],
+        }
+
+        cluster_secret_refs_raw = os.environ.get("K8S_SECRET_REFS", "")
+        combined_secret_names: list[str] = []
+        for token in re.split(r"[\r\n,]+", cluster_secret_refs_raw):
+            cleaned = token.strip()
+            if cleaned and cleaned not in combined_secret_names:
+                combined_secret_names.append(cleaned)
+
+        if secret_refs:
+            flow_refs = (
+                [str(s).strip() for s in secret_refs]
+                if isinstance(secret_refs, list)
+                else [t.strip() for t in re.split(r"[\r\n,]+", str(secret_refs))]
+            )
+            for ref in flow_refs:
+                if ref and ref not in combined_secret_names:
+                    combined_secret_names.append(ref)
+
+        env_from: list[dict[str, Any]] = [
+            {"secretRef": {"name": ref_name}} for ref_name in combined_secret_names
+        ]
+        if has_secret:
+            env_from.append({"secretRef": {"name": sec_name}})
+        if env_from:
+            container_spec["envFrom"] = env_from
+
+        return {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": job_name,
+                "namespace": namespace,
+                "labels": {
+                    "app.kubernetes.io/managed-by": "projectcompass",
+                    "projectcompass/run-id": str(run_id),
+                    "projectcompass/flow": self._sanitize_k8s_label(flow_name),
+                },
+            },
+            "spec": {
+                "backoffLimit": 0,
+                "ttlSecondsAfterFinished": ttl_seconds,
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "app.kubernetes.io/managed-by": "projectcompass",
+                            "projectcompass/run-id": str(run_id),
+                            "projectcompass/flow": self._sanitize_k8s_label(flow_name),
+                            "job-name": job_name,
+                        }
+                    },
+                    "spec": {
+                        "automountServiceAccountToken": False,
+                        "restartPolicy": "Never",
+                        "containers": [container_spec],
+                        "volumes": [
+                            {
+                                "name": "flow-workspace",
+                                "configMap": {
+                                    "name": cm_name,
+                                    "defaultMode": 365,
+                                },
+                            }
+                        ],
+                    },
+                },
+            },
+        }
+
+    def launch_flow_run(
+        self,
+        flow_name: str,
+        parameters: dict[str, Any] | str | None = None,
+        pip_requirements: list[str] | str | None = None,
+        env_vars: dict[str, str] | str | None = None,
+        secret_refs: list[str] | str | None = None,
+        image: str | None = None,
+        user_id: int | None = None,
+        trigger_type: str = "manual",
+        app: Any | None = None,
+        wait_for_watcher: bool = False,
+    ) -> Execution:
+        """Create a unique Execution record, submit a Kubernetes Job, and start log watching."""
+        flow_data = self.read_flow(flow_name)  # type: ignore[attr-defined]
+        if flow_data is None:
+            raise ValueError(f"Flow '{flow_name}' does not exist.")
+
+        merged_params: dict[str, Any] = dict(flow_data.get("parameters") or {})
+        if parameters is not None:
+            override_params = self.parse_flow_parameters(parameters)  # type: ignore[attr-defined]
+            if override_params or isinstance(parameters, dict):
+                merged_params.update(override_params)
+
+        if pip_requirements is not None and str(pip_requirements).strip() != "":
+            resolved_reqs: list[str] = self.parse_pip_requirements(pip_requirements)  # type: ignore[attr-defined]
+        else:
+            resolved_reqs = list(flow_data.get("pip_requirements") or [])
+
+        if secret_refs is not None and str(secret_refs).strip() != "":
+            resolved_secret_refs: list[str] = self.parse_secret_refs(secret_refs)  # type: ignore[attr-defined]
+        else:
+            resolved_secret_refs = list(flow_data.get("secret_refs") or [])
+
+        parsed_env: dict[str, str] = self.parse_env_vars(env_vars)  # type: ignore[attr-defined]
+        default_img = os.environ.get("K8S_DEFAULT_IMAGE", "python:3.11-slim")
+        resolved_image = (image or "").strip() or str(flow_data.get("image") or default_img)
+        namespace = self._k8s_namespace or os.environ.get("K8S_NAMESPACE", "default")
+        ttl_seconds = int(os.environ.get("K8S_JOB_TTL_SECONDS", 300))
+
+        # Store only secret KEYS in inputs_json — never store secret values in plaintext
+        safe_inputs_metadata = {
+            "parameters": merged_params,
+            "pip_requirements": resolved_reqs,
+            "image": resolved_image,
+            "secret_keys": sorted(parsed_env.keys()),
+            "secret_refs": resolved_secret_refs,
+            "trigger_type": trigger_type,
+        }
+
+        exe = Execution(
+            analysis_name=flow_data["name"],
+            user_id=user_id,
+            status="running",
+            namespace=namespace,
+            trigger_type=trigger_type,
+            inputs_json=json.dumps(safe_inputs_metadata),
+            log_text=f"[ProjectCompass] Submitting Kubernetes Job for flow '{flow_data['name']}'...\n",
+        )
+        db.session.add(exe)
+        db.session.commit()
+
+        run_id = int(exe.id)
+        job_name = f"pc-flow-job-{run_id}"
+        cm_name = f"pc-flow-cfg-{run_id}"
+        sec_name = f"pc-flow-sec-{run_id}" if parsed_env else None
+
+        exe.job_name = job_name
+        db.session.commit()
+
+        cm_manifest = self.build_configmap_manifest(
+            run_id=run_id,
+            flow_name=flow_data["name"],
+            code=flow_data["code"],
+            parameters=merged_params,
+            pip_requirements=resolved_reqs,
+            namespace=namespace,
+        )
+        job_manifest = self.build_job_manifest(
+            run_id=run_id,
+            flow_name=flow_data["name"],
+            image=resolved_image,
+            parameters=merged_params,
+            has_secret=bool(parsed_env),
+            namespace=namespace,
+            ttl_seconds=ttl_seconds,
+            secret_refs=resolved_secret_refs,
+        )
+
+        created_cm = False
+        created_secret = False
+        try:
+            self._k8s_post(f"/api/v1/namespaces/{namespace}/configmaps", cm_manifest)
+            created_cm = True
+            if parsed_env:
+                sec_manifest = self.build_secret_manifest(
+                    run_id=run_id,
+                    flow_name=flow_data["name"],
+                    env_vars=parsed_env,
+                    namespace=namespace,
+                )
+                self._k8s_post(f"/api/v1/namespaces/{namespace}/secrets", sec_manifest)
+                created_secret = True
+
+            self._k8s_post(f"/apis/batch/v1/namespaces/{namespace}/jobs", job_manifest)
+            exe.log_text = (
+                f"[ProjectCompass] Submitted Kubernetes Job '{job_name}' (image: {resolved_image}).\n"
+            )
+            db.session.commit()
+        except K8sClientError as exc:
+            if created_secret and sec_name:
+                self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/{sec_name}")
+            if created_cm:
+                self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/configmaps/{cm_name}")
+
+            exe.status = "failed"
+            exe.finished_at = datetime.utcnow()
+            exe.error_message = str(exc)
+            exe.log_text = (exe.log_text or "") + f"[ProjectCompass] ERROR launching Kubernetes Job: {exc}\n"
+            db.session.commit()
+            return exe
+
+        flask_app = app
+        if flask_app is None:
+            from flask import current_app
+            try:
+                flask_app = current_app._get_current_object()  # type: ignore[attr-defined]
+            except RuntimeError:
+                flask_app = None
+
+        if wait_for_watcher:
+            self._watch_k8s_job(
+                app=flask_app,
+                run_id=run_id,
+                namespace=namespace,
+                job_name=job_name,
+                cm_name=cm_name,
+                secret_name=sec_name,
+            )
+            db.session.refresh(exe)
+        else:
+            watcher_thread = threading.Thread(
+                target=self._watch_k8s_job,
+                kwargs={
+                    "app": flask_app,
+                    "run_id": run_id,
+                    "namespace": namespace,
+                    "job_name": job_name,
+                    "cm_name": cm_name,
+                    "secret_name": sec_name,
+                },
+                daemon=True,
+                name=f"k8s-watcher-run-{run_id}",
+            )
+            self._active_watchers[run_id] = watcher_thread
+            watcher_thread.start()
+
+        return exe
+
+    def _cleanup_k8s_resource(self, path: str, params: dict[str, Any] | None = None) -> None:
+        """Delete a temporary Kubernetes resource (Secret/ConfigMap/Job) ignoring 404 errors."""
+        try:
+            self._k8s_delete(path, params=params)
+        except K8sClientError as exc:
+            logger.debug(f"Cleanup of Kubernetes resource {path} skipped or failed: {exc}")
+
+    def _watch_k8s_job(
+        self,
+        app: Any | None,
+        run_id: int,
+        namespace: str,
+        job_name: str,
+        cm_name: str,
+        secret_name: str | None,
+    ) -> None:
+        """Background worker that tails Pod stdout/stderr into Execution.log_text and updates status."""
+        from flask import has_app_context
+
+        if has_app_context() or app is None:
+            self._watch_k8s_job_in_context(
+                run_id=run_id,
+                namespace=namespace,
+                job_name=job_name,
+                cm_name=cm_name,
+                secret_name=secret_name,
+            )
+        else:
+            with app.app_context():
+                self._watch_k8s_job_in_context(
+                    run_id=run_id,
+                    namespace=namespace,
+                    job_name=job_name,
+                    cm_name=cm_name,
+                    secret_name=secret_name,
+                )
+
+    def _watch_k8s_job_in_context(
+        self,
+        run_id: int,
+        namespace: str,
+        job_name: str,
+        cm_name: str,
+        secret_name: str | None,
+    ) -> None:
+        """Execute Pod log polling and status synchronization inside an active Flask app context."""
+        header_line = f"[ProjectCompass] Submitted Kubernetes Job '{job_name}'.\n"
+        captured_pod_logs = ""
+        pod_name: str | None = None
+        assigned_node: str | None = None
+
+        try:
+            for _ in range(self._watcher_max_polls):
+                exe = db.session.get(Execution, run_id)
+                if exe is None or exe.status == "aborted":
+                    return
+
+                try:
+                    pods_resp = self._k8s_get(
+                        f"/api/v1/namespaces/{namespace}/pods",
+                        params={"labelSelector": f"job-name={job_name}"},
+                    )
+                except K8sClientError as exc:
+                    exe.status = "failed"
+                    exe.finished_at = datetime.utcnow()
+                    exe.error_message = str(exc)
+                    exe.log_text = (exe.log_text or header_line) + f"\n[ProjectCompass] K8s API error: {exc}\n"
+                    db.session.commit()
+                    return
+
+                pod_items = pods_resp.get("items") or []
+                pod: dict[str, Any] | None = pod_items[0] if pod_items else None
+                pod_phase = ""
+                exit_code: int | None = None
+                term_error: str | None = None
+
+                if pod is not None:
+                    pod_name = str(pod.get("metadata", {}).get("name", "")) or pod_name
+                    spec_node = pod.get("spec", {}).get("nodeName")
+                    if spec_node and spec_node != assigned_node:
+                        assigned_node = str(spec_node)
+                        exe.node_name = assigned_node
+                        db.session.commit()
+
+                    pod_status = pod.get("status") or {}
+                    pod_phase = str(pod_status.get("phase", ""))
+                    container_statuses = pod_status.get("containerStatuses") or []
+                    if container_statuses:
+                        state = container_statuses[0].get("state") or {}
+                        terminated = state.get("terminated")
+                        if isinstance(terminated, dict):
+                            if "exitCode" in terminated:
+                                exit_code = int(terminated["exitCode"])
+                            reason = terminated.get("reason") or ""
+                            msg = terminated.get("message") or ""
+                            if exit_code not in (None, 0):
+                                term_error = f"{reason}: {msg}".strip(": ") or f"Container exited with code {exit_code}"
+
+                    if pod_name and pod_phase in ("Running", "Succeeded", "Failed"):
+                        try:
+                            raw_logs = self._k8s_get_text(
+                                f"/api/v1/namespaces/{namespace}/pods/{pod_name}/log"
+                            )
+                            if raw_logs != captured_pod_logs:
+                                captured_pod_logs = raw_logs
+                                node_banner = (
+                                    f"[ProjectCompass] Running on worker node '{assigned_node}' (Pod '{pod_name}').\n"
+                                    if assigned_node
+                                    else f"[ProjectCompass] Running in Pod '{pod_name}'.\n"
+                                )
+                                exe.log_text = header_line + node_banner + captured_pod_logs
+                                db.session.commit()
+                        except K8sClientError:
+                            pass
+
+                job_succeeded = False
+                job_failed = False
+                job_fail_msg: str | None = None
+                try:
+                    job_obj = self._k8s_get(f"/apis/batch/v1/namespaces/{namespace}/jobs/{job_name}")
+                    job_status = job_obj.get("status") or {}
+                    if int(job_status.get("succeeded", 0) or 0) >= 1:
+                        job_succeeded = True
+                    if int(job_status.get("failed", 0) or 0) >= 1:
+                        job_failed = True
+                    for cond in job_status.get("conditions") or []:
+                        if cond.get("type") == "Failed" and cond.get("status") == "True":
+                            job_failed = True
+                            job_fail_msg = cond.get("message") or cond.get("reason")
+                        elif cond.get("type") == "Complete" and cond.get("status") == "True":
+                            job_succeeded = True
+                except K8sClientError:
+                    pass
+
+                if pod_phase == "Succeeded" or job_succeeded:
+                    exe = db.session.get(Execution, run_id)
+                    if exe and exe.status != "aborted":
+                        node_banner = (
+                            f"[ProjectCompass] Running on worker node '{assigned_node}' (Pod '{pod_name}').\n"
+                            if assigned_node
+                            else ""
+                        )
+                        exe.status = "success"
+                        exe.exit_code = 0 if exit_code is None else exit_code
+                        exe.finished_at = datetime.utcnow()
+                        exe.log_text = header_line + node_banner + captured_pod_logs
+                        db.session.commit()
+                        fire_webhooks(
+                            exe.analysis_name,
+                            {"run_id": exe.id, "analysis": exe.analysis_name, "status": "success"},
+                        )
+                    return
+
+                if pod_phase == "Failed" or job_failed:
+                    exe = db.session.get(Execution, run_id)
+                    if exe and exe.status != "aborted":
+                        node_banner = (
+                            f"[ProjectCompass] Running on worker node '{assigned_node}' (Pod '{pod_name}').\n"
+                            if assigned_node
+                            else ""
+                        )
+                        resolved_err = term_error or job_fail_msg or "Flow script exited with non-zero status"
+                        exe.status = "failed"
+                        exe.exit_code = exit_code if exit_code is not None else 1
+                        exe.error_message = resolved_err
+                        exe.finished_at = datetime.utcnow()
+                        exe.log_text = (
+                            header_line
+                            + node_banner
+                            + captured_pod_logs
+                            + ("" if captured_pod_logs.endswith("\n") or not captured_pod_logs else "\n")
+                            + f"[ProjectCompass] Run failed ({resolved_err}).\n"
+                        )
+                        db.session.commit()
+                        fire_webhooks(
+                            exe.analysis_name,
+                            {
+                                "run_id": exe.id,
+                                "analysis": exe.analysis_name,
+                                "status": "failed",
+                                "error": resolved_err,
+                            },
+                        )
+                    return
+
+                time.sleep(self._watcher_poll_interval)
+        finally:
+            if secret_name:
+                self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/{secret_name}")
+            self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/configmaps/{cm_name}")
+            self._active_watchers.pop(run_id, None)
+
+    def abort_flow_run(self, run_id: int) -> Execution | None:
+        """Abort an active Kubernetes Job run and persist the aborted status."""
+        exe = db.session.get(Execution, run_id)
+        if exe is None:
+            return None
+        if exe.status == "running":
+            ns = exe.namespace or self._k8s_namespace or "default"
+            if exe.job_name:
+                self._cleanup_k8s_resource(
+                    f"/apis/batch/v1/namespaces/{ns}/jobs/{exe.job_name}",
+                    params={"propagationPolicy": "Background"},
+                )
+            self._cleanup_k8s_resource(f"/api/v1/namespaces/{ns}/secrets/pc-flow-sec-{run_id}")
+            self._cleanup_k8s_resource(f"/api/v1/namespaces/{ns}/configmaps/pc-flow-cfg-{run_id}")
+            exe.status = "aborted"
+            exe.finished_at = datetime.utcnow()
+            exe.error_message = "Aborted by user"
+            exe.log_text = (exe.log_text or "") + "\n[ProjectCompass] Run aborted by user.\n"
+            db.session.commit()
+        return exe
+
+
+class K8sChainRunnerUtils(K8sFlowRunnerUtils):
+    """Child class orchestrating sequential linear chains of Flows (A -> B -> C).
+
+    Each step in a FlowChain executes as a separate Kubernetes batch/v1 Job via
+    `launch_flow_run(..., wait_for_watcher=True)`. If any step finishes with a
+    status other than `success`, the chain stops immediately and records `failed`.
+    """
+
+    def __init__(self, dir_path: str = "", **kwargs: Any) -> None:
+        """Initialize sequential FlowChain runner state."""
+        self._active_chain_threads: dict[int, threading.Thread] = {}
+        super().__init__(dir_path=dir_path, **kwargs)
+
+    @staticmethod
+    def parse_chain_flow_names(raw_flows: list[str] | str | None) -> list[str]:
+        """Parse an ordered sequence of flow names from a list, JSON array, or delimited string."""
+        if raw_flows is None:
+            return []
+        if isinstance(raw_flows, list):
+            return [str(item).strip() for item in raw_flows if str(item).strip()]
+        text = str(raw_flows).strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            except ValueError:
+                pass
+        normalized = text.replace("->", ",").replace("→", ",")
+        return [tok.strip() for tok in re.split(r"[\r\n,]+", normalized) if tok.strip()]
+
+    @staticmethod
+    def _serialize_chain(chain: FlowChain) -> dict[str, Any]:
+        """Convert a FlowChain SQLAlchemy record into a dictionary representation."""
+        try:
+            flow_names = json.loads(chain.flow_names_json or "[]")
+            if not isinstance(flow_names, list):
+                flow_names = []
+        except ValueError:
+            flow_names = []
+        return {
+            "id": chain.id,
+            "name": chain.name,
+            "description": chain.description or "",
+            "flow_names": [str(f) for f in flow_names],
+            "flow_names_text": ", ".join(str(f) for f in flow_names),
+            "flow_names_arrow": " -> ".join(str(f) for f in flow_names),
+            "owner": chain.owner or "flow-author",
+            "created_at": chain.created_at,
+        }
+
+    def save_chain(
+        self,
+        name: str,
+        flow_names: list[str] | str,
+        description: str = "",
+        owner: str = "flow-author",
+    ) -> dict[str, Any]:
+        """Create or update a linear FlowChain in SQLite after validating each step."""
+        chain_name = (name or "").strip()
+        if not chain_name or "/" in chain_name or "\\" in chain_name or ".." in chain_name:
+            raise ValueError(f"Invalid chain name: {name!r}")
+
+        ordered_flows = self.parse_chain_flow_names(flow_names)
+        if not ordered_flows:
+            raise ValueError("A flow chain must include at least one flow.")
+
+        for step_flow in ordered_flows:
+            if self.read_flow(step_flow) is None:  # type: ignore[attr-defined]
+                raise ValueError(f"Flow '{step_flow}' does not exist.")
+
+        chain = FlowChain.query.filter_by(name=chain_name).first()
+        if chain is None:
+            chain = FlowChain(
+                name=chain_name,
+                description=(description or "").strip(),
+                flow_names_json=json.dumps(ordered_flows),
+                owner=owner or "flow-author",
+            )
+            db.session.add(chain)
+        else:
+            chain.description = (description or "").strip()
+            chain.flow_names_json = json.dumps(ordered_flows)
+            chain.owner = owner or chain.owner or "flow-author"
+
+        db.session.commit()
+        return self._serialize_chain(chain)
+
+    def read_chain(self, name: str) -> dict[str, Any] | None:
+        """Return a FlowChain dictionary by name, or None if not found."""
+        chain_name = (name or "").strip()
+        if not chain_name:
+            return None
+        chain = FlowChain.query.filter_by(name=chain_name).first()
+        if chain is None:
+            return None
+        return self._serialize_chain(chain)
+
+    def list_chains(self) -> list[dict[str, Any]]:
+        """Return all configured FlowChains ordered by name."""
+        chains = FlowChain.query.order_by(FlowChain.name.asc()).all()
+        return [self._serialize_chain(c) for c in chains]
+
+    def delete_chain(self, name: str) -> bool:
+        """Delete a FlowChain by name."""
+        chain_name = (name or "").strip()
+        if not chain_name:
+            return False
+        chain = FlowChain.query.filter_by(name=chain_name).first()
+        if chain is None:
+            return False
+        db.session.delete(chain)
+        db.session.commit()
+        return True
+
+    def launch_chain_run(
+        self,
+        chain_name: str,
+        parameters: dict[str, Any] | str | None = None,
+        user_id: int | None = None,
+        trigger_type: str = "manual",
+        app: Any | None = None,
+        wait_for_completion: bool = False,
+    ) -> ChainExecution:
+        """Launch a sequential execution of all flows in a FlowChain."""
+        chain = FlowChain.query.filter_by(name=(chain_name or "").strip()).first()
+        if chain is None:
+            raise ValueError(f"Flow chain '{chain_name}' does not exist.")
+
+        flow_names = self.parse_chain_flow_names(chain.flow_names_json)
+        if not flow_names:
+            raise ValueError(f"Flow chain '{chain_name}' has no configured steps.")
+
+        chain_exe = ChainExecution(
+            chain_id=chain.id,
+            chain_name=chain.name,
+            status="running",
+            current_step=0,
+            execution_ids_json="[]",
+            trigger_type=trigger_type,
+        )
+        db.session.add(chain_exe)
+        db.session.commit()
+
+        chain_run_id = int(chain_exe.id)
+        flask_app = app
+        if flask_app is None:
+            from flask import current_app
+
+            try:
+                flask_app = current_app._get_current_object()  # type: ignore[attr-defined]
+            except RuntimeError:
+                flask_app = None
+
+        if wait_for_completion:
+            self._execute_chain_steps(
+                app=flask_app,
+                chain_run_id=chain_run_id,
+                flow_names=flow_names,
+                parameters=parameters,
+                user_id=user_id,
+                trigger_type=trigger_type,
+            )
+            db.session.refresh(chain_exe)
+        else:
+            worker = threading.Thread(
+                target=self._execute_chain_steps,
+                kwargs={
+                    "app": flask_app,
+                    "chain_run_id": chain_run_id,
+                    "flow_names": flow_names,
+                    "parameters": parameters,
+                    "user_id": user_id,
+                    "trigger_type": trigger_type,
+                },
+                daemon=True,
+                name=f"k8s-chain-run-{chain_run_id}",
+            )
+            self._active_chain_threads[chain_run_id] = worker
+            worker.start()
+
+        return chain_exe
+
+    def _execute_chain_steps(
+        self,
+        app: Any | None,
+        chain_run_id: int,
+        flow_names: list[str],
+        parameters: dict[str, Any] | str | None,
+        user_id: int | None,
+        trigger_type: str,
+    ) -> None:
+        """Background worker that runs each flow in sequence and halts immediately on failure."""
+        from flask import has_app_context
+
+        if has_app_context() or app is None:
+            self._execute_chain_steps_in_context(
+                app=app,
+                chain_run_id=chain_run_id,
+                flow_names=flow_names,
+                parameters=parameters,
+                user_id=user_id,
+                trigger_type=trigger_type,
+            )
+        else:
+            with app.app_context():
+                self._execute_chain_steps_in_context(
+                    app=app,
+                    chain_run_id=chain_run_id,
+                    flow_names=flow_names,
+                    parameters=parameters,
+                    user_id=user_id,
+                    trigger_type=trigger_type,
+                )
+
+    def _execute_chain_steps_in_context(
+        self,
+        app: Any | None,
+        chain_run_id: int,
+        flow_names: list[str],
+        parameters: dict[str, Any] | str | None,
+        user_id: int | None,
+        trigger_type: str,
+    ) -> None:
+        """Execute sequential flow steps inside an active Flask application context."""
+        execution_ids: list[int] = []
+        try:
+            for step_idx, flow_name in enumerate(flow_names):
+                chain_exe = db.session.get(ChainExecution, chain_run_id)
+                if chain_exe is None or chain_exe.status == "aborted":
+                    return
+
+                chain_exe.current_step = step_idx
+                db.session.commit()
+
+                step_exe = self.launch_flow_run(
+                    flow_name=flow_name,
+                    parameters=parameters,
+                    user_id=user_id,
+                    trigger_type=trigger_type,
+                    app=app,
+                    wait_for_watcher=True,
+                )
+                execution_ids.append(int(step_exe.id))
+
+                chain_exe = db.session.get(ChainExecution, chain_run_id)
+                if chain_exe is None:
+                    return
+                chain_exe.execution_ids_json = json.dumps(execution_ids)
+
+                if step_exe.status != "success":
+                    chain_exe.status = "failed"
+                    chain_exe.finished_at = datetime.utcnow()
+                    err_detail = step_exe.error_message or f"status={step_exe.status}"
+                    chain_exe.error_message = (
+                        f"Step {step_idx + 1} ('{flow_name}', run #{step_exe.id}) failed: {err_detail}"
+                    )
+                    db.session.commit()
+                    return
+
+                db.session.commit()
+
+            chain_exe = db.session.get(ChainExecution, chain_run_id)
+            if chain_exe and chain_exe.status != "aborted":
+                chain_exe.current_step = len(flow_names)
+                chain_exe.status = "success"
+                chain_exe.finished_at = datetime.utcnow()
+                db.session.commit()
+        except Exception as exc:
+            chain_exe = db.session.get(ChainExecution, chain_run_id)
+            if chain_exe:
+                chain_exe.status = "failed"
+                chain_exe.finished_at = datetime.utcnow()
+                chain_exe.error_message = str(exc)
+                db.session.commit()
+        finally:
+            self._active_chain_threads.pop(chain_run_id, None)

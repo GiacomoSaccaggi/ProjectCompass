@@ -4,86 +4,92 @@
 
 <style>
 input[type=text], input[type=password], input[type=email], select {
-    padding: 8px 12px;
-    margin: 4px 2px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
+    padding: 9px 14px;
+    margin: 5px 2px;
+    border-radius: 8px;
+    border: 1px solid var(--mariner-border-strong, rgba(2, 132, 199, 0.38));
 }
 input[type=submit] {
-    padding: 10px 20px;
-    background-color: #2D323A;
+    padding: 10px 22px;
+    background: linear-gradient(135deg, var(--mariner-cyan, #0284c7) 0%, var(--mariner-teal, #0d9488) 100%);
     color: white;
-    border: none;
-    border-radius: 4px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
 }
 input[type=submit]:hover {
-    background-color: #4DFFD6;
-    color: #2D323A;
+    background: linear-gradient(135deg, #0369a1 0%, var(--mariner-navy, #0b1629) 100%);
+    color: #fbbf24;
 }
 .delete-btn {
-    background-color: #dc3545;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
     color: white;
     border: none;
     padding: 6px 12px;
-    border-radius: 4px;
+    border-radius: 6px;
+    font-weight: 600;
     cursor: pointer;
 }
 .delete-btn:hover {
-    background-color: #c82333;
+    background: #b91c1c;
 }
 .role-badge {
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
-.role-admin { background-color: #dc3545; color: white; }
-.role-editor { background-color: #007bff; color: white; }
-.role-viewer { background-color: #6c757d; color: white; }
+.role-admin { background-color: rgba(180, 83, 9, 0.16); color: #b45309; border: 1px solid rgba(180, 83, 9, 0.4); }
+.role-editor { background-color: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.4); }
+.role-viewer { background-color: rgba(100, 116, 139, 0.16); color: #475569; border: 1px solid rgba(100, 116, 139, 0.35); }
+body.dark-mode .role-admin { color: #fbbf24; border-color: rgba(251, 191, 36, 0.45); }
+body.dark-mode .role-editor { color: #38bdf8; border-color: rgba(56, 189, 248, 0.45); }
+body.dark-mode .role-viewer { color: #cbd5e1; }
 </style>
 
 <body class="w3-light-grey">
 {{ top_container|safe }}
 {{ sidebar_menu|safe }}
 
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
-    <div class="w3-container" style="padding: 20px;">
-        <h2><i class="fa fa-users"></i> User Management</h2>
-        <hr>
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+    <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);">
+        <h2 style="margin:0;font-size:1.65rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-users" style="color:#fbbf24;margin-right:8px;"></i>User &amp; Role Management</h2>
+        <p style="margin:4px 0 0;font-size:0.9rem;color:#cbd5e1;">Create accounts, assign RBAC roles (Admin, Editor, Viewer), and audit platform access.</p>
+    </header>
 
+    <div class="w3-container" style="padding: 20px 24px 32px; max-width: 1360px; margin: 0 auto;">
         <!-- Create User Form -->
-        <div class="w3-card w3-white w3-margin-bottom" style="padding: 20px;">
-            <h4>Create New User</h4>
+        <div class="w3-card w3-white w3-margin-bottom" style="padding: 22px 24px;">
+            <h4 style="margin-top:0;font-weight:700;"><i class="fa fa-user-plus" style="color:var(--mariner-cyan);margin-right:6px;"></i>Create New User</h4>
             <form action="/admin/users/create" method="POST">
-                <table>
-                    <tr>
-                        <td><label>Username:</label></td>
-                        <td><input type="text" name="username" required placeholder="username"></td>
-                    </tr>
-                    <tr>
-                        <td><label>Password:</label></td>
-                        <td><input type="password" name="password" required placeholder="password"></td>
-                    </tr>
-                    <tr>
-                        <td><label>Email:</label></td>
-                        <td><input type="email" name="email" placeholder="email@example.com"></td>
-                    </tr>
-                    <tr>
-                        <td><label>Role:</label></td>
-                        <td>
-                            <select name="role">
-                                <option value="editor">Editor</option>
-                                <option value="viewer">Viewer</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td><input type="submit" value="Create User"></td>
-                    </tr>
-                </table>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;align-items:end;">
+                    <div>
+                        <label style="display:block;font-size:0.8rem;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Username *</label>
+                        <input type="text" name="username" required placeholder="username" style="width:100%;margin:0;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.8rem;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Password *</label>
+                        <input type="password" name="password" required placeholder="password" style="width:100%;margin:0;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.8rem;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Email</label>
+                        <input type="email" name="email" placeholder="email@example.com" style="width:100%;margin:0;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.8rem;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Role</label>
+                        <select name="role" style="width:100%;margin:0;">
+                            <option value="editor">Editor</option>
+                            <option value="viewer">Viewer</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <input type="submit" value="Create User" style="width:100%;margin:0;">
+                    </div>
+                </div>
             </form>
         </div>
 

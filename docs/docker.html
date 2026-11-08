@@ -1,142 +1,247 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Docker – ProjectCompass Docs</title>
-  <style>
-    *{box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;margin:0;background:#f4f6f9;color:#2d323a}
-    header{background:#3F51B5;color:#fff;padding:2rem 3rem}
-    header h1{margin:0;font-size:1.8rem}
-    header p{margin:.4rem 0 0;opacity:.85;font-size:.9rem}
-    nav{background:#fff;border-bottom:1px solid #dde;padding:.7rem 3rem;display:flex;gap:1.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:10}
-    nav a{color:#3F51B5;text-decoration:none;font-weight:500;font-size:.9rem}
-    nav a:hover{text-decoration:underline}
-    main{max-width:900px;margin:2.5rem auto;padding:0 2rem}
-    h2{border-bottom:2px solid #e8eaf6;padding-bottom:.4rem;color:#3F51B5;margin-top:2.5rem}
-    h3{color:#2d323a;margin-top:1.5rem;font-size:1rem}
-    p,li{line-height:1.7;font-size:.95rem}
-    code{background:#e8eaf6;padding:2px 6px;border-radius:4px;font-size:.85rem}
-    pre{background:#2d323a;color:#e8eaf6;padding:1.2rem 1.5rem;border-radius:8px;overflow-x:auto;font-size:.84rem;line-height:1.6}
-    table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.07);margin:1rem 0 2rem}
-    th{background:#3F51B5;color:#fff;padding:.65rem 1rem;text-align:left;font-size:.85rem}
-    td{padding:.6rem 1rem;border-bottom:1px solid #eef;font-size:.85rem;vertical-align:top}
-    tr:last-child td{border-bottom:none}
-    .warn{background:#fff8e1;border-left:4px solid #f9a825;padding:.8rem 1rem;border-radius:4px;font-size:.9rem;margin:1rem 0}
-    footer{text-align:center;padding:2rem;color:#999;font-size:.82rem;margin-top:3rem;border-top:1px solid #dde}
-  </style>
+  <title>Docker &amp; Production Deployment — ProjectCompass Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="assets/docs.css">
 </head>
 <body>
-<header>
-  <h1>Docker Deployment</h1>
-  <p>Running ProjectCompass and Mithril with Docker Compose</p>
-</header>
-<nav>
-  <a href="../index.html">Home</a>
-  <a href="overview.html">Overview</a>
-  <a href="architecture.html">Architecture</a>
-  <a href="routes.html">API Routes</a>
-  <a href="core_classes.html">Core Classes</a>
-  <a href="templates.html">Templates</a>
-  <a href="configuration.html">Configuration</a>
-  <a href="docker.html">Docker</a>
-</nav>
-<main>
 
-  <h2>Services Overview</h2>
-  <table>
-    <tr><th>Service</th><th>Image</th><th>External Port</th><th>Internal Port</th><th>Purpose</th></tr>
-    <tr><td><code>projectcompass_app</code></td><td>Custom (Dockerfile)</td><td>8080</td><td>5000</td><td>Flask app served by Gunicorn</td></tr>
-    <tr><td><code>mithril</code></td><td>ghcr.io/giacomosaccaggi/mithril:latest</td><td>16180</td><td>16180</td><td>Multi-model LLM orchestration engine</td></tr>
-  </table>
+<header class="top-nav">
+  <div class="top-nav-inner">
+    <a href="../index.html" class="brand-link">
+      <svg class="compass-mini" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="18" r="15.5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6"/>
+        <circle cx="18" cy="18" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M18 7 L18 24" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M18 8 L26 22 L18 22 Z" fill="currentColor" fill-opacity="0.32" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M16.5 10.5 L11 22 L16.5 22 Z" fill="#fbbf24" fill-opacity="0.45" stroke="#fbbf24" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M10 24.5 L26 24.5 L23.5 27.5 L12.5 27.5 Z" fill="currentColor" fill-opacity="0.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      </svg>
+      <span>ProjectCompass</span>
+      <span class="brand-tag">⛵ Regatta Docs</span>
+    </a>
 
-  <h2>Quick Start</h2>
-  <pre># Start both services
-docker-compose up -d
+    <nav class="nav-links" aria-label="Primary Documentation Navigation">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="user_guide.html">User Guide</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="core_classes.html">Core Classes</a>
+      <a href="templates.html">Templates</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="kubernetes_console.html">K8s Console</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+      <a href="docker.html" class="active">Docker</a>
+    </nav>
 
-# Follow logs
-docker-compose logs -f
-
-# Stop and remove containers
-docker-compose down</pre>
-
-  <h2>Volumes</h2>
-  <table>
-    <tr><th>Host Path</th><th>Container Path</th><th>Description</th></tr>
-    <tr><td><code>./Analyses</code></td><td><code>/app/Analyses</code></td><td>Analysis repository – persisted across restarts</td></tr>
-    <tr><td><code>./logs</code></td><td><code>/app/log</code></td><td>Application and Gunicorn logs</td></tr>
-    <tr><td><code>.mithril | /root/.mithril | Fellowship config and model settings</td></tr>
-  </table>
-
-  <h2>Environment Variables (Docker)</h2>
-  <table>
-    <tr><th>Variable</th><th>Value in Docker</th><th>Description</th></tr>
-    <tr><td><code>FLASK_ENV</code></td><td>production</td><td>Binds Flask on <code>0.0.0.0</code></td></tr>
-    <tr><td><code>PORT</code></td><td>5000</td><td>Internal port Gunicorn listens on</td></tr>
-    <tr><td><code>FLASK_DEBUG</code></td><td>False</td><td>Disables debug mode in production</td></tr>
-  </table>
-
-  <h2>Manual Setup Scripts</h2>
-  <pre># Build image and start containers automatically
-./docker_build_and_run.sh
-
-# Configure Mithril API keys
-# Set MITHRIL_KEY_GEMINI=... in .env
-
-# Docker maintenance (cleanup, rebuild)
-./scripts/docker_maintenance.sh</pre>
-
-  <h2>Useful Docker Commands</h2>
-  <pre># View application logs
-docker logs projectcompass_app
-
-# View Ollama logs
-docker logs ollama
-
-# Open a shell inside the app container
-docker exec -it projectcompass_app bash
-
-# Test Ollama API
-curl http://localhost:16180/api/tags
-
-# Stop containers without removing them
-docker stop projectcompass_app ollama
-
-# Remove containers
-docker rm projectcompass_app ollama
-
-# Remove the Ollama model volume (WARNING: deletes all downloaded models)
-docker volume rm ollama_data</pre>
-
-  <h2>Health Check</h2>
-  <p>The application exposes a health check endpoint at <code>GET /check</code> which returns <code>{"success": true}</code> with HTTP 200. The <code>.dockerhealthcheck</code> file configures Docker to poll this endpoint.</p>
-  <pre>curl http://localhost:8080/check</pre>
-
-  <h2>Production Considerations</h2>
-  <div class="warn">
-    Set <code>SECRET_KEY</code> and <code>ADMIN_PASSWORD_HASH</code> environment variables before deploying. Generate a password hash with: <code>python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('your-password'))"</code>
+    <div class="nav-actions">
+      <button type="button" id="theme-toggle" class="theme-toggle-btn">
+        <span aria-hidden="true">⛵</span> <span>Day Sail</span>
+      </button>
+    </div>
   </div>
-  <ul>
-    <li><strong>RAM:</strong> Ollama with llama3 requires at least 8 GB of available RAM.</li>
-    <li><strong>Disk:</strong> LLM model weights require several GB of disk space in the <code>ollama_data</code> volume.</li>
-    <li><strong>Ports:</strong> Ensure ports 8080 and 16180 are not blocked by a firewall.</li>
-    <li><strong>Backups:</strong> Regularly back up the <code>./Analyses</code> directory and the <code>ollama_data</code> volume.</li>
-    <li><strong>CORS:</strong> Update <code>ALLOWED_ORIGINS</code> in <code>config.py</code> or via environment variable to restrict cross-origin access.</li>
-    <li><strong>Gunicorn:</strong> The production image uses Gunicorn as the WSGI server. Tune workers and timeout in <code>docker-compose.prod.yml</code> as needed.</li>
-  </ul>
+</header>
 
-  <h2>Compose File Variants</h2>
-  <table>
-    <tr><th>File</th><th>Purpose</th></tr>
-    <tr><td><code>docker-compose.yml</code></td><td>Base configuration for both services</td></tr>
-    <tr><td><code>docker-compose.prod.yml</code></td><td>Production overrides (resource limits, restart policies)</td></tr>
-    <tr><td><code>docker-compose.override.yml</code></td><td>Local development overrides (auto-applied by Docker Compose)</td></tr>
-  </table>
-  <pre># Run with production overrides
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d</pre>
+<section class="page-header">
+  <div class="page-header-inner">
+    <div class="breadcrumb">
+      <a href="../index.html">⛵ Command Deck</a>
+      <span>/</span>
+      <span>Pillar IV: Sextant, Logbook &amp; Harbor Ops</span>
+      <span>/</span>
+      <span>Docker &amp; Production Deployment</span>
+    </div>
+    <h1>Docker Compose, Mithril Sidecar &amp; Production Deployment</h1>
+    <p class="lead">
+      How to berth ProjectCompass and the Mithril multi-model LLM engine with Docker Compose, configure persistent volumes (`DATA_DIR=/app/data`), run health checks, and harden production deployments.
+    </p>
+    <div class="page-meta-badges">
+      <span class="badge badge-cyan">11 • Drydock &amp; Berth</span>
+      <span class="badge badge-emerald">Docker Compose + Mithril</span>
+      <span class="badge badge-gold">Production Checklist</span>
+    </div>
+  </div>
+</section>
 
-</main>
-<footer>ProjectCompass &mdash; <em>Organization Is Everything&reg;</em> &mdash; Copyright &copy;2025&ndash;2026</footer>
+<div class="docs-layout">
+  <main class="docs-content">
+
+    <h2 id="services-overview">1. Container Services Architecture</h2>
+    <p>
+      ProjectCompass ships with multi-profile Docker Compose configurations pairing the Gunicorn-served Flask application with <a href="https://giacomosaccaggi.github.io/Mithril/" target="_blank" rel="noopener"><strong>Mithril</strong></a>:
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Service Name</th>
+            <th>Container Image</th>
+            <th>Host Port</th>
+            <th>Internal Port</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>projectcompass_app</code></td>
+            <td><code>ghcr.io/giacomosaccaggi/projectcompass:latest</code> (or local <code>Dockerfile</code>)</td>
+            <td><code>8080</code></td>
+            <td><code>5000</code></td>
+            <td>ProjectCompass Master web UI, REST API, DuckDB/ConnectorX engine, and APScheduler leader.</td>
+          </tr>
+          <tr>
+            <td><code>mithril</code></td>
+            <td><code>ghcr.io/giacomosaccaggi/mithril:latest</code></td>
+            <td><code>16180</code></td>
+            <td><code>16180</code></td>
+            <td>Multi-model LLM orchestration &amp; cross-encoder reranking engine (Gemini, OpenAI, Anthropic, Groq, local GGUF).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="compose-variants">2. Docker Compose Variants &amp; Quick Start</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Compose File</th>
+            <th>Target Environment</th>
+            <th>Launch Command</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>docker-compose.public.yml</code></td>
+            <td>Zero-clone evaluation using pre-built GHCR images</td>
+            <td><code>docker compose -f docker-compose.public.yml up -d</code></td>
+          </tr>
+          <tr>
+            <td><code>docker-compose.yml</code> + <code>docker-compose.override.yml</code></td>
+            <td>Local development with live host bind mounts</td>
+            <td><code>docker compose up -d</code></td>
+          </tr>
+          <tr>
+            <td><code>docker-compose.yml</code> + <code>docker-compose.prod.yml</code></td>
+            <td>Production deployment with restart policies &amp; resource caps</td>
+            <td><code>docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><code class="language-bash"># 1. Start both ProjectCompass (:8080) and Mithril (:16180)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# 2. Stream container logs
+docker compose logs -f projectcompass_app
+
+# 3. Verify health check endpoints
+curl -fsSL http://localhost:8080/health
+curl -fsSL http://localhost:8080/check</code></pre>
+
+    <h2 id="volumes-and-persistence">3. Persistent Volumes &amp; State Layout</h2>
+    <p>
+      To ensure SQLite databases (`projectcompass.db`, `scheduler_jobs.db`), ChromaDB RAG embeddings (`rag_data/`), encrypted DB connection keys (`tmp/.db_connections.key`), and catalog analyses survive container upgrades, mount `/app/data` (or individual directories) persistently:
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Host Path / Volume</th>
+            <th>Container Path</th>
+            <th>Persisted Artifacts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>./data</code> (or named volume)</td>
+            <td><code>/app/data</code> (<code>DATA_DIR</code>)</td>
+            <td><code>projectcompass.db</code>, <code>scheduler_jobs.db</code>, <code>rag_data/</code>, <code>tmp/.db_connections.key</code>, <code>projectcompass.yaml</code></td>
+          </tr>
+          <tr>
+            <td><code>./Analyses</code></td>
+            <td><code>/app/Analyses</code></td>
+            <td>Catalog analysis folders, Structured Analyses, Pipeline configs, and k0s Flow scripts (`flow.py`)</td>
+          </tr>
+          <tr>
+            <td><code>./Saved_data</code> &amp; <code>./Saved_queries</code></td>
+            <td><code>/app/Saved_data</code> &amp; <code>/app/Saved_queries</code></td>
+            <td>Uploaded CSV/SQLite datasets and saved `.sql` files</td>
+          </tr>
+          <tr>
+            <td><code>./logs</code></td>
+            <td><code>/app/log</code></td>
+            <td>Structured application and Gunicorn access/error logs</td>
+          </tr>
+          <tr>
+            <td><code>./.mithril</code></td>
+            <td><code>/root/.mithril</code></td>
+            <td>Mithril provider configuration and cached local model weights</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="production-hardening">4. Production Hardening Checklist</h2>
+    <div class="callout callout-helm">
+      <div class="callout-title">🛡️ Helm Control — Mandatory Pre-Flight Checklist</div>
+      <ul>
+        <li><strong>Set Fixed Cryptographic Keys</strong>: Always provide persistent <code>SECRET_KEY</code> and <code>DB_CONNECTIONS_KEY</code> in `.env` so sessions and encrypted ConnectorX database credentials remain valid across container recreations.</li>
+        <li><strong>Configure Admin &amp; Bearer Credentials</strong>: Set <code>ADMIN_PASSWORD_HASH</code> (generated via <code>werkzeug.security.generate_password_hash</code>) or complete the <code>/setup</code> wizard immediately on first boot.</li>
+        <li><strong>Single Scheduler Leader</strong>: When scaling Gunicorn workers inside a single container, `acquire_scheduler_lock()` (`fcntl.flock` on `/app/data/tmp/scheduler.lock`) guarantees only one worker executes cron jobs. Do not run multiple independent container replicas against the same SQLite file.</li>
+        <li><strong>Mount Kubeconfig for External k0s Master</strong>: If ProjectCompass runs in Docker and orchestrates a host or remote k0s cluster, mount the readable kubeconfig file into the container and set <code>KUBECONFIG_PATH=/app/data/k0s-compass.conf</code>.</li>
+      </ul>
+    </div>
+
+    <div class="page-pager">
+      <a href="configuration.html" class="pager-link">
+        <span class="pager-label">&larr; Previous</span>
+        <span class="pager-title">Configuration &amp; RBAC Reference</span>
+      </a>
+      <a href="../index.html" class="pager-link" style="text-align: right;">
+        <span class="pager-label">Return to Hub &rarr;</span>
+        <span class="pager-title">Nautical Command Deck (index.html)</span>
+      </a>
+    </div>
+
+  </main>
+
+  <aside class="docs-toc" aria-label="On this page">
+    <div class="docs-toc-title">🧭 On This Page</div>
+    <ul id="toc-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <strong>ProjectCompass</strong> — <em>Organization Is Everything®</em> &bull; By
+      <a href="https://giacomosaccaggi.github.io/" target="_blank" rel="noopener">Giacomo Saccaggi</a>
+    </div>
+    <div class="footer-links">
+      <a href="../index.html">Hub</a>
+      <a href="overview.html">Overview</a>
+      <a href="k0s_setup.html">k0s Setup</a>
+      <a href="worker_library.html">Worker Library</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <a href="configuration.html">Config</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="assets/docs.js"></script>
 </body>
 </html>

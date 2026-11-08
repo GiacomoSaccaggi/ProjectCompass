@@ -3,119 +3,125 @@
 {{ head|safe }}
 
 <style>
-input[type=button], input[type=submit], input[type=reset] {
-  padding: 16px 32px;
-  text-decoration: none;
-  margin: 4px 2px;
-  cursor: pointer;
-  display: inline-block;
-  border-radius: 4px;
-  background-color: white;
-  color:  #4614B4;
-  border: 2px solid  #2D323A;
-  text-align: center;
-  transition: all 0.5s;
-  cursor: pointer;
-  margin: 5px;
+.query-page-wrap { padding: 0 24px 16px; max-width: 1400px; margin: 0 auto; }
+header.query-hero {
+  position: relative;
+  background-position: bottom center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: 100% 42px, cover, cover;
+  background-image:
+    var(--mariner-wave-overlay),
+    linear-gradient(135deg, rgba(6, 13, 26, 0.86) 0%, rgba(11, 25, 48, 0.76) 100%),
+    url("{{ pc.branding.backgrounds.data|safe }}");
+  width: 100%;
+  color: #f8fafc;
+  padding: 22px 28px 28px !important;
+  border-bottom: 2px solid rgba(251, 191, 36, 0.42);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
 }
-:root {
-  --radius: 2px;
-  --baseFg: dimgray;
-  --baseBg: white;
-  --accentFg: #222831;
-  --accentBg:  #2D323A;
+header.query-hero h1 {
+  color: #f8fafc !important;
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin: 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
 }
-input[type=button]:hover, input[type=submit]:hover, input[type=reset]:hover {
-      background-color:  #2D323A;
-      color: white;
-    }
-input[type=text], input[type=month], input[type=email], input[type=file], textarea {
-  padding: 6px 12px;
-  text-decoration: none;
-  margin: 4px 2px;
-  cursor: pointer;
-  width: 60%;
-  display: inline-block;
-  border-radius: 4px;
-  background-color: white;
-  color:  #005F81 ;
-  border: 2px solid  #00889B;
-  text-align: center;
-  transition: all 0.5s;
-  cursor: pointer;
-  margin: 5px;
-}
+header.query-hero h1 i { color: #fbbf24; margin-right: 8px; }
+header.query-hero p { margin: 4px 0 0 0; font-size: 0.88rem; color: #cbd5e1; }
 
-
-#table-wrapper {
-  position:relative;
+.query-card input[type=button],
+.query-card input[type=submit],
+.query-card input[type=reset],
+.query-card button {
+  padding: 9px 18px;
+  margin: 4px 6px 4px 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--mariner-cyan, #0284c7) 0%, var(--mariner-teal, #0d9488) 100%);
+  color: #ffffff;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  font-weight: 600;
+  font-size: 0.86rem;
+  transition: all 0.2s ease;
 }
+.query-card input[type=button]:hover,
+.query-card input[type=submit]:hover,
+.query-card input[type=reset]:hover,
+.query-card button:hover {
+  background: linear-gradient(135deg, #0369a1 0%, var(--mariner-navy, #0b1629) 100%);
+  color: #fbbf24;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+}
+.query-card input[type=text] {
+  padding: 9px 12px;
+  width: 100%;
+  border-radius: 8px;
+  background-color: var(--mariner-bg-card, #ffffff);
+  color: var(--mariner-text-primary, #0f172a);
+  border: 1px solid var(--mariner-border-strong, rgba(2, 132, 199, 0.38));
+  text-align: left !important;
+}
+#query {
+  display: block;
+  min-height: 72px;
+  padding: 12px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: #38bdf8;
+  background: #060d1a;
+  border-radius: 8px;
+  outline: none;
+}
+#table-wrapper { position: relative; }
 #table-scroll {
-  height:500px;
-  overflow:auto;
-  margin-top:20px;
+  max-height: 460px;
+  overflow: auto;
+  margin-top: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--mariner-border-subtle);
 }
-#table-wrapper table {
-  width:100%;
-
+#table-wrapper table { width: 100%; border-collapse: collapse; }
+#table-wrapper table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--mariner-bg-table-head, #e6dfd1);
+  color: var(--mariner-navy, #0b1629);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.8rem;
+  border-bottom: 2px solid var(--mariner-border-gold);
 }
-#table-wrapper table * {
-  color:black;
+#table-wrapper table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mariner-border-subtle);
+  font-size: 0.85rem;
 }
-#table-wrapper table thead th .text {
-  position:absolute;
-  top:-20px;
-  z-index:2;
-  height:20px;
-  width:35%;
-  border:1px solid red;
+.query-save-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
 }
 .column_result_save {
-  float: left;
-  width: 50%;
-  padding: 10px;
+  background: rgba(2, 132, 199, 0.05);
+  border: 1px solid var(--mariner-border-subtle);
+  border-radius: 10px;
+  padding: 14px 16px;
 }
-
 </style>
 
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/default.min.css">
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
 <script>hljs.highlightAll();</script>
-<style>
-
-header{
-  position: relative;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-image: url(/static/img/background1.PNG);
-  height: 50%;
-  width:100%;
-  color: #F8F8F8;
-  text-align: left;
-  padding-top: 5%;
-  font-size:32px;
-}
-button {
-  background-color: #8A2BE2;
-  margin-right: 5px;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #6B238E;
-}
-
-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.4);
-}
-</style>
 <body class="w3-light-grey">
 
 {{ top_container|safe }}
@@ -124,31 +130,61 @@ button:focus {
 
 
 <!-- !PAGE CONTENT! -->
-<div class="w3-main" style="margin-left:300px;margin-top:43px;" id="main_body">
+<div class="w3-main" style="margin-left:260px;margin-top:54px;" id="main_body">
   <!-- Header -->
-  <header class="w3-container" style="padding-top:22px">
-      <br>
-    <h1><b><i class="fa fa-dashboard"></i>    Data Explorer {{ message|safe }}</b></h1>
-      <br>
-      <br>
+  <header class="w3-container query-hero">
+    <div>
+      <h1><b><i class="fa fa-terminal"></i>SQL Query Runner {{ message|safe }}</b></h1>
+      <p>Execute interactive SQL queries on local DuckDB tables or saved ConnectorX database connections</p>
+    </div>
+    <a href="/all_data/" class="w3-button w3-small w3-blue" style="border-radius:8px;"><i class="fa fa-table"></i> Datasets</a>
   </header>
 
-    <br>
+  <div class="query-page-wrap">
+  <div class="w3-padding-large w3-container w3-card-1 query-card">
 
-  <div class="w3-padding w3-container w3-card-1">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+        <h5 style="margin:0;font-weight:700;"><i class="fa fa-history" style="color:var(--mariner-cyan);"></i> Query History</h5>
+        <a href="#" onclick="deleteHistory();return false;" style="font-size:0.84rem;font-weight:600;"><i class="fa fa-trash-o"></i> Clear history</a>
+      </div>
+      <div id="queryhistory" style="margin-bottom: 16px;"></div>
 
-        <h2>Query History</h2>
-          <h6><b><i class="fa fa-recycle"></i>    <a href="#" onclick="deleteHistory();return false;">Clear the history</a></b></h6><br>
-          <div id="queryhistory">
-            <!-- Qui verrà inserito il bottone generato dinamicamente -->
+      <form action="/query_results/" method="post" id="query_form" style="width: 100%;" onkeypress="return copy_query(event)" onkeyup="return copy_query(event)" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+
+          {% if pc.features.db_connections %}
+          <div style="margin-bottom: 14px;">
+            <label for="connection_id" style="display:block;font-size:0.84rem;font-weight:700;margin-bottom:4px;"><i class="fa fa-plug"></i> Data Source</label>
+            <select id="connection_id" name="connection_id" class="w3-select w3-border w3-round" style="max-width:420px;display:block;">
+              <option value="" {% if not selected_connection_id %}selected{% endif %}>Local (DuckDB)</option>
+              {% for connection in connections %}
+              <option value="{{ connection.id }}" {% if selected_connection_id == connection.id %}selected{% endif %}>
+                {{ connection.name }}
+              </option>
+              {% endfor %}
+            </select>
+            <div id="connection-tables" class="w3-panel w3-pale-blue" style="display:none;max-width:520px;margin-top:8px;">
+              <b>Tables</b>
+              <ul id="connection-table-list" style="max-height:180px;overflow:auto;"></ul>
+            </div>
           </div>
-    <br><br>
-      <form action="/query_results/" method="post" id="query_form" style="width: 100%;left:25%;top:10%;"  onkeypress="return copy_query(event)" onkeyup="return copy_query(event)" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+          {% endif %}
 
-          <label for="output_query">Query:</label><br>
-          <pre><code contenteditable="true" class="language-sql" id="query" >{{ query }}</code></pre>
-          <textarea rows="50000" cols="50000" id="output_query" name="output_query" style="display:none;">{{ query }}</textarea><br>
-          <br><input type="submit" value="Run query">
+          <div style="margin-bottom: 12px;">
+            {% if datasets %}
+            <div style="margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+              <span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;color:var(--mariner-text-secondary);margin-right:4px;"><i class="fa fa-table"></i> Local DuckDB Tables:</span>
+              {% for ds in datasets %}
+              <button type="button" onclick="document.getElementById('query').innerText='SELECT * FROM {{ ds }} LIMIT 25';syncQueryFields();" style="padding:4px 10px;margin:0;font-size:0.78rem;border-radius:999px;background:rgba(2,132,199,0.12);color:var(--mariner-cyan);border:1px solid rgba(2,132,199,0.32);">
+                <code>{{ ds }}</code>
+              </button>
+              {% endfor %}
+            </div>
+            {% endif %}
+            <label for="output_query" style="display:block;font-size:0.84rem;font-weight:700;margin-bottom:4px;"><i class="fa fa-code"></i> SQL Query <span style="font-weight:400;color:var(--mariner-text-muted);font-size:0.78rem;">(Ctrl+Enter to execute)</span></label>
+            <pre style="margin:0;padding:0;background:transparent;border:none;"><code contenteditable="true" class="language-sql" id="query">{{ query }}</code></pre>
+            <textarea rows="5" cols="80" id="output_query" name="output_query" style="display:none;">{{ query }}</textarea>
+          </div>
+          <input type="submit" value="Run query">
       </form>
       <script type="text/javascript">
         function blockSpecialCharNoSpaces(e){
@@ -159,19 +195,23 @@ button:focus {
         function copy_query(e){
             var k;
             document.all ? k = e.keyCode : k = e.which;
-            document.getElementById("output_query").innerHTML = document.getElementById("query").innerHTML ;
-            document.getElementById("output_query_to_save").innerHTML = document.getElementById("query").innerHTML ;
-            document.getElementById("output_query_to_save_data").innerHTML = document.getElementById("query").innerHTML ;
+            syncQueryFields();
             return k;
           }
 
+        function syncQueryFields(){
+            ["output_query", "output_query_to_save", "output_query_to_rawgraph", "output_query_to_save_data"].forEach(function(id){
+                var field = document.getElementById(id);
+                if (field) field.value = document.getElementById("query").innerHTML;
+            });
+        }
 
-        var input = document.getElementById("body");
-        input.addEventListener("keyup", function(event) {
-            document.getElementById("output_query").innerHTML = document.getElementById("query").innerHTML ;
-            document.getElementById("output_query_to_save").innerHTML = document.getElementById("query").innerHTML ;
-            document.getElementById("output_query_to_save_data").innerHTML = document.getElementById("query").innerHTML ;
-        });
+
+        var queryEl = document.getElementById("query");
+        if (queryEl) {
+            queryEl.addEventListener("keyup", syncQueryFields);
+            queryEl.addEventListener("input", syncQueryFields);
+        }
 
 
       </script>
@@ -254,7 +294,7 @@ button:focus {
         });
       </script>
 
-    <div style="display:{{ show_res }};">
+    <div id="query-results" style="display:{{ show_res }};">
      <h5><b><i class="fa fa-sign-out"></i>    Results:</b></h5>
       <a href="#" onclick="download_table_as_csv('query_result');">Download as CSV</a>
        <div id="table-wrapper"><div id="table-scroll">
@@ -281,29 +321,95 @@ button:focus {
 
        </div>
     </div>
-    <br><br>
-    <div style="display:{{ show_res }};">
-        <br><h5><b><i class="fa fa-save"></i>    Save the query:</b></h5>
+    {% if total_pages > 1 %}
+    <form action="/query_results/" method="post" class="w3-center w3-padding" style="display:{{ show_res }};">
+      <input type="hidden" name="output_query" value="{{ query }}">
+      <input type="hidden" name="connection_id" value="{{ selected_connection_id or '' }}">
+      <button type="submit" name="page" value="{{ page - 1 }}" {% if page <= 1 %}disabled{% endif %}>Previous</button>
+      <span class="w3-padding">Page {{ page }} of {{ total_pages }}</span>
+      <button type="submit" name="page" value="{{ page + 1 }}" {% if page >= total_pages %}disabled{% endif %}>Next</button>
+    </form>
+    {% endif %}
+    <div style="display:{{ show_res }};margin-top:20px;">
+      <h5 style="margin-bottom:8px;font-weight:700;"><i class="fa fa-save" style="color:var(--mariner-gold);"></i> Export, Save, or Visualize Query Results</h5>
+      <div class="query-save-grid">
+        {% if pc.features.rawgraphs %}
+        <div class="column_result_save">
+          <form action="/graph_analysis/" method="post" style="width: 100%;" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+            <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:8px;">Interactive Visualization</label>
+            <textarea rows="5" cols="50" id="output_query_to_rawgraph" name="output_query_to_rawgraph" style="display:none;">{{ query }}</textarea>
+            <input type="hidden" name="connection_id" value="{{ selected_connection_id or '' }}">
+            <input type="submit" value="Open in RAWGraphs">
+          </form>
+        </div>
+        {% endif %}
+        <div class="column_result_save">
+          <form action="/save_query/" method="post" style="width:100%;">
+            <label for="saved-query-title" style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px;">Save SQL Query</label>
+            <input id="saved-query-title" type="text" name="title" maxlength="100" placeholder="Query name..." required style="margin-bottom:8px;">
+            <textarea id="output_query_to_save" name="output_query_to_save" style="display:none;">{{ query }}</textarea>
+            <input type="hidden" name="connection_id" value="{{ selected_connection_id or '' }}">
+            <button type="submit" class="w3-button w3-indigo w3-round"><i class="fa fa-save"></i> Save query</button>
+          </form>
+        </div>
+        {% if not selected_connection_id %}
+        <div class="column_result_save">
+          <form action="/tmp_table/" method="post" style="width: 100%;" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+            <label for="name_table" style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px;">Materialize as DuckDB Table</label>
+            <input type="text" id="name_table" name="name_table" maxlength="40" placeholder="Temporary table name..." onkeypress="return blockSpecialCharNoSpaces(event)" required style="margin-bottom:8px;">
+            <textarea rows="5" cols="50" id="output_query_to_save_data" name="output_query_to_save_data" style="display:none;">{{ query }}</textarea>
+            <input type="submit" value="Create temporary table">
+          </form>
+        </div>
+        {% endif %}
+      </div>
     </div>
 
-    <div class ="column_result_save" style="display:{{ show_res }};">
-          <form action="/graph_analysis/" method="post" style="width: 100%;left:25%;top:10%;" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
+  </div>
+  </div>
+    {% if pc.features.db_connections %}<script>
+      const sourceSelector = document.getElementById('connection_id');
+      const tableBrowser = document.getElementById('connection-tables');
+      const tableList = document.getElementById('connection-table-list');
 
-              <textarea rows="50000" cols="50000" id="output_query_to_rawgraph" name="output_query_to_rawgraph" style="display:none;">{{ query }}</textarea>
-              <br><input type="submit" value="Open in RAWGraphs">
-          </form>
-      </div>
-    <div class ="column_result_save" style="display:{{ show_res }};">
-          <form action="/tmp_table/" method="post" style="width: 100%;left:25%;top:10%;" onsubmit='document.getElementById("main_body").style.display = "none";document.getElementById("loader").style.display = "block";'>
-              <label for="name_table">Temporary table name:</label><br>
-              <input type="text" id="name_table"  name="name_table" maxlength="40" onkeypress="return blockSpecialCharNoSpaces(event)" required><br>
-              <textarea rows="50000" cols="50000" id="output_query_to_save_data" name="output_query_to_save_data" style="display:none;">{{ query }}</textarea>
-              <br><input type="submit" value="Create temporary table">
-          </form>
-      </div>
+      async function loadConnectionTables() {
+        const connectionId = sourceSelector.value;
+        tableList.replaceChildren();
+        tableBrowser.style.display = connectionId ? 'block' : 'none';
+        if (!connectionId) return;
+        try {
+          const response = await fetch('/connections/' + encodeURIComponent(connectionId) + '/tables');
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Unable to load tables.');
+          result.tables.forEach(function(table) {
+            const item = document.createElement('li');
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'w3-button w3-small w3-light-grey w3-margin-bottom';
+            button.textContent = table;
+            button.addEventListener('click', function() {
+              const escapedTable = table.replace(/"/g, '""');
+              document.getElementById('query').innerText = 'SELECT * FROM "' + escapedTable + '" LIMIT 10';
+              syncQueryFields();
+            });
+            item.appendChild(button);
+            tableList.appendChild(item);
+          });
+          if (!result.tables.length) {
+            const item = document.createElement('li');
+            item.textContent = 'No tables returned.';
+            tableList.appendChild(item);
+          }
+        } catch (error) {
+          const item = document.createElement('li');
+          item.textContent = error.message || 'Unable to load tables.';
+          tableList.appendChild(item);
+        }
+      }
 
-
-</div>
+      sourceSelector.addEventListener('change', loadConnectionTables);
+      loadConnectionTables();
+    </script>{% endif %}
     <script>
         // Quick and simple export target #table_id into a csv
         function download_table_as_csv(table_id, separator = ',') {
@@ -338,16 +444,7 @@ button:focus {
 
     </script>
 
-  <!-- Footer -->
-  <footer class="w3-container w3-padding-16 w3-light-grey" style="text-align: center;padding-left: 15%;padding-right: 15%;">
-                <hr><br>
-
-                <strong>About ProjectCompass</strong><br>
-                <a href="/documentation">ProjectCompass</a> revolutionizes data analysis organization and execution as a comprehensive platform for cataloging, documenting, and running analytical projects. Through our intuitive tag-based structure and unified execution environment, we empower data teams with accessible documentation and consistent workflow management—streamlining collaboration from conception to deployment.
-                A Python-based solution, ProjectCompass operates across multiple environments and integrates seamlessly with existing data infrastructures. Learn more about our catalog, exploration tools, and execution engine capabilities.<br>
-                Powered by ProjectCompass Platform - <strong>Organization Is Everything®</strong><br><br>
-                <a href="/license">Copyright &copy;2025 ProjectCompass. All rights reserved. Confidential and Proprietary</a><br><br>
-  </footer>
+  {% include 'components/branding_footer.html' %}
 
   <!-- End page content -->
 </div>

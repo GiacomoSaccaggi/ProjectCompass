@@ -2,312 +2,317 @@
 <html>
 {{ head|safe }}
 <style>
-                html,body{font-family:'Baloo 2, sans-serif';font-size:15px;line-height:1.5;text-align: justify;text-justify: inter-word;color:#4D577D;}html{overflow-x:hidden}
-                h1{font-size:64px}h2{font-size:25px;color:#32BBB9;}h3{font-size:15px}h4{font-size:12px}h5{font-size:10px}h6{font-size:9px}
-                h1,h2,h3,h4,h5,h6{font-weight:400;margin:10px 0}.w3-wide{letter-spacing:4px}
-                footer{text-align: center;padding-left: 15%;padding-right: 15%;}
-                header{
-                  position: relative;
-                  background-position: center;
-                  background-repeat: no-repeat;
-                  background-size: cover;
-                  background-image: url(/static/img/upload_analysis.png);
-                  height: 50%;
-                  width:100%;
-                  color: #002041;
-                  text-align: center;
-                  padding-top: 5%;
-                  font-size:32px;
-                }
-                .user-select-none .svg-container {
-                  height: 100%;
-                  width:100%;
-                }
-                .report {
-                    padding-right: 20%;
-                    padding-bottom: 5%;
-                    padding-left: 20%;
-                }
-                input[type=button], input[type=submit], input[type=reset] {
-                  padding: 16px 32px;
-                  text-decoration: none;
-                  margin: 4px 2px;
-                  cursor: pointer;
-                  display: inline-block;
-                  border-radius: 4px;
-                  background-color: white;
-                  color:  #4614B4;
-                  border: 2px solid  #2D323A;
-                  text-align: center;
-                  transition: all 0.5s;
-                  cursor: pointer;
-                  margin: 5px;
-                }
-                :root {
-                  --radius: 2px;
-                  --baseFg: dimgray;
-                  --baseBg: white;
-                  --accentFg: #222831;
-                  --accentBg:  #2D323A;
-                }
-                input[type=button]:hover, input[type=submit]:hover, input[type=reset]:hover {
-                      background-color:  #2D323A;
-                      color: white;
-                    }
-
-                input[type=text], input[type=month],  input[type=date], input[type=email], input[type=file], textarea {
-                  padding: 6px 12px;
-                  text-decoration: none;
-                  margin: 4px 2px;
-                  cursor: pointer;
-                  width: 100%;
-                  display: inline-block;
-                  border-radius: 4px;
-                  background-color: white;
-                  color:  #005F81 ;
-                  border: 2px solid  #00889B;
-                  text-align: center;
-                  transition: all 0.5s;
-                  cursor: pointer;
-                  margin: 5px;
-                }
-
-                select {
-                  padding: 6px 12px;
-                  text-decoration: none;
-                  margin: 4px 2px;
-                  cursor: pointer;
-                  width: 100%;
-                  display: inline-block;
-                  border-radius: 4px;
-                  background-color: white;
-                  color:  #4D577D ;
-                  border: 2px solid  #C8CBD8;
-                  text-align: center;
-                  transition: all 0.5s;
-                  cursor: pointer;
-                  margin: 5px;
-                }
-
-                .content {
-                  padding: 0 18px;
-                  display: none;
-                  overflow: hidden;
-                  background-color: #f1f1f1;
-                }
-                /*rules*/
-                @media only screen and (max-width: 1024px) {
-                .report{padding-right: 5%; padding-left: 5%;}
-                }
-                /* ----------- iPhone 6+, 7+ and 8+ ----------- */
-                /* Portrait */
-                @media only screen and (max-width: 1024px) {
-                h2{font-size:18px}
-                h3{font-size:10px}
-                }
-                @media only screen and (max-width: 835px) {
-                h2{font-size:18px}
-                h3{font-size:8px}
-                }
-                @media only screen and (max-width: 700px) {
-                h2{font-size:15px}
-                h3{font-size:6px}
-                }
-                @media only screen and (max-width: 525px) {
-                h2{font-size:13px}
-                h3{font-size:5px}
-                }
-                @media only screen and (max-width: 370px) {
-                h2{font-size:10px}
-                h3{font-size:3px}
-                }
-
-            #regForm {
-              background-color: #ffffff;
-              font-family: Raleway;
-            }
-
-
-            /* Mark input boxes that gets an error on validation: */
-            input.invalid {
-              background-color: #ffdddd;
-            }
-
-            /* Hide all steps by default: */
-            .tab {
-              display: none;
-            }
-
-            button {
-              background-color: #2D323A;
-              color: #ffffff;
-              border: none;
-              padding: 10px 20px;
-              font-size: 17px;
-              font-family: Raleway;
-              cursor: pointer;
-            }
-
-            button:hover {
-              opacity: 0.8;
-            }
-
-            #prevBtn {
-              background-color: #bbbbbb;
-            }
-
-            /* Make circles that indicate the steps of the form: */
-            .step {
-              height: 15px;
-              width: 15px;
-              margin: 0 2px;
-              background-color: #bbbbbb;
-              border: none;
-              border-radius: 50%;
-              display: inline-block;
-              opacity: 0.5;
-            }
-
-            .step.active {
-              opacity: 1;
-            }
-
-            /* Mark the steps that are finished and valid: */
-            .step.finish {
-              background-color: #04AA6D;
-            }
-            </style>
+  #regForm {
+    max-width: 900px;
+    margin: 22px auto 32px;
+    background-color: var(--mariner-bg-card, #ffffff);
+    border: 1px solid var(--mariner-border-subtle, rgba(15, 23, 42, 0.12));
+    border-radius: 16px;
+    box-shadow: var(--mariner-shadow-card);
+    overflow: hidden;
+  }
+  #regForm header {
+    position: relative;
+    background-position: bottom center, center, center;
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-size: 100% 42px, cover, cover;
+    background-image:
+      var(--mariner-wave-overlay),
+      linear-gradient(135deg, rgba(6, 13, 26, 0.88) 0%, rgba(11, 25, 48, 0.78) 100%),
+      url("{{ pc.branding.backgrounds.upload|safe }}");
+    width: 100%;
+    color: #f8fafc;
+    text-align: left;
+    padding: 24px 32px 30px;
+    border-bottom: 2px solid rgba(251, 191, 36, 0.42);
+  }
+  #regForm header h1 {
+    color: #f8fafc !important;
+    font-size: 1.65rem;
+    font-weight: 800;
+    margin: 0;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  }
+  #regForm header p {
+    margin: 4px 0 0 0;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+  }
+  #regForm .report {
+    padding: 28px 32px 24px;
+    background-color: transparent !important;
+  }
+  #regForm label {
+    display: block;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--mariner-text-primary, #0f172a);
+    margin: 12px 0 4px 0;
+  }
+  #regForm input[type=text],
+  #regForm input[type=month],
+  #regForm input[type=date],
+  #regForm input[type=email],
+  #regForm input[type=file],
+  #regForm textarea,
+  #regForm select {
+    padding: 10px 14px;
+    margin: 0 0 6px 0;
+    width: 100%;
+    display: block;
+    border-radius: 8px;
+    background-color: var(--mariner-bg-card, #ffffff);
+    color: var(--mariner-text-primary, #0f172a);
+    border: 1px solid var(--mariner-border-strong, rgba(2, 132, 199, 0.38));
+    text-align: left !important;
+    font-size: 0.92rem;
+    transition: all 0.2s ease;
+  }
+  #regForm input[type=button],
+  #regForm input[type=submit],
+  #regForm input[type=reset] {
+    padding: 9px 18px;
+    margin: 6px 6px 6px 0;
+    cursor: pointer;
+    display: inline-block;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--mariner-cyan, #0284c7) 0%, var(--mariner-teal, #0d9488) 100%);
+    color: #ffffff;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    font-weight: 600;
+    font-size: 0.86rem;
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+  #regForm input[type=button]:hover,
+  #regForm input[type=submit]:hover,
+  #regForm input[type=reset]:hover {
+    background: linear-gradient(135deg, #0369a1 0%, var(--mariner-navy, #0b1629) 100%);
+    color: #fbbf24;
+  }
+  #regForm input.invalid {
+    border-color: #dc2626 !important;
+    background-color: rgba(220, 38, 38, 0.08) !important;
+  }
+  #regForm .tab {
+    display: none;
+  }
+  #regForm .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+  }
+  @media (max-width: 700px) {
+    #regForm .form-grid-2 { grid-template-columns: 1fr; }
+    #regForm .report { padding: 20px 18px; }
+  }
+  #prevBtn, #nextBtn {
+    background: linear-gradient(135deg, var(--mariner-cyan, #0284c7) 0%, var(--mariner-teal, #0d9488) 100%);
+    color: #ffffff;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  #prevBtn {
+    background: #64748b;
+    border-color: transparent;
+    margin-right: 8px;
+  }
+  #prevBtn:hover, #nextBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.28);
+  }
+  .step {
+    height: 12px;
+    width: 36px;
+    margin: 0 4px;
+    background-color: rgba(100, 116, 139, 0.35);
+    border: none;
+    border-radius: 999px;
+    display: inline-block;
+    transition: all 0.2s ease;
+  }
+  .step.active {
+    background-color: var(--mariner-cyan, #0284c7);
+    width: 48px;
+  }
+  .step.finish {
+    background-color: var(--mariner-teal, #0d9488);
+  }
+</style>
 <body class="w3-light-grey">
 {{ top_container|safe }}
 {{ sidebar_menu|safe }}
 
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
-<div style="padding:1rem 1.5rem;">
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+<div style="padding: 8px 24px 24px;">
 
+  <!-- MultiStep Form -->
+  <form action="/produce_analysis/" method="post" style="width: 100%;" enctype="multipart/form-data" id="regForm">
+    <header>
+      <h1><i class="fa fa-compass" style="color:#fbbf24;margin-right:8px;"></i>{{ 'Create & Upload Analysis' if new_analysis else 'Edit Analysis: ' ~ analysis['title'] }}</h1>
+      <p>Configure catalog metadata, input parameters, physical outputs, and repository links</p>
+    </header>
 
-           <!-- MultiStep Form -->
-        <form action="/produce_analysis/" method="post" style="width: 100%;left:25%;top:10%;" enctype = "multipart/form-data" id="regForm">
-           <header>
-                    <strong><h1>Upload analysis</h1></strong><br><br><br>
-            </header>
+    <div class="report">
+      <!-- Step 1: Metadata & Files -->
+      <div class="tab">
+        <h5 style="margin:0 0 12px 0;color:var(--mariner-cyan);font-weight:700;"><i class="fa fa-info-circle"></i> Step 1 of 3 — Core Metadata &amp; Files</h5>
+        <input type="text" id="new_analysis" name="new_analysis" value="{{ 'new' if new_analysis else 'old'}}" style="display:none;" readonly required>
 
-            <div class="report" style="background-color:WHITE">
-            <!-- fieldsets -->
-            <div class="tab">
-                <p>
-                      <input type="text" id="new_analysis" name="new_analysis" value="{{ 'new' if new_analysis else 'old'}}"  style="display:none;width: 40%;" readonly required>
-                      <strong><label for="title">* Title of the analysis:</label></strong><br>
-                      <input type="text" id="title" name="title" value="{{ '' if new_analysis else analysis['title']}}"  placeholder="Title of the analysis with no special characters" maxlength="40" pattern="([^\s][A-z0-9À-ž\s]+)" {{ '' if new_analysis else 'readonly' | safe}} required><br>
-                      <strong><label for="description">* Scope:</label></strong><br>
-                      <textarea rows="4" cols="50" id="description" name="description" required>{{ '' if new_analysis else analysis['description']}}</textarea><br>
-                      <strong><label for="email">* Owner of the analysis:</label></strong><br>
-                      <input type="email" id="email" name="email" value="{{ '' if new_analysis else analysis['owner']}}" placeholder="name.surname@gmail.com" required><br>
-                      <strong><label for="collaborators">  Collaborators of the analysis:</label></strong><br>
-                      <input type="text" id="collaborators" name="collaborators" value="{{ '' if new_analysis else analysis['collaborators']}}" placeholder="collaborators"><br>
-                      <strong><label for="start_date">* Start date project:</label></strong><br>
-                      <input type="date" id="start_date" name="start_date" value="{{ '' if new_analysis else analysis['start_date']}}" required><br>
-                      <strong><label for="product">* Product:</label></strong><br>
-                      <input type="text" list="product_types" id="product" name="product"  value="{{ '' if new_analysis else analysis['product']}}" required><br>
-                          <datalist id="product_types">
-                              {% for val in tool_choices['product'] %}
-                                    <option value="{{ val }}">
-                               {% endfor %}
-                          </datalist>
-                      <strong><label for="countries">* Countries:</label></strong><br>
-                      <input type="text" list="list_countries" id="countries" name="countries"  value="{{ '' if new_analysis else analysis['countries']}}" required><br>
-                          <datalist id="list_countries">
-                              {% for val in tool_choices['countries'] %}
-                                    <option value="{{ val }}">
-                               {% endfor %}
-                          </datalist>
-                    <div style="{{ '' if new_analysis else 'display:none;'}}" >
-                      <p><strong><big>Select directory or files/file:</big></strong></p>
-                      <input type="file" name="upload_files" size="40" id="ctrl" webkitdirectory mozdirectory msdirectory odirectory directory multiple/><br>
-                    </div>
-                    <div style="{{ 'display:none;' if new_analysis else ''}}" >
-                      <p><strong><big>If you want modify files you have to go directly in the folder inside analysis</big></strong></p>
-                    </div>
-                </p>
+        <label for="title">* Title of the analysis</label>
+        <input type="text" id="title" name="title" value="{{ '' if new_analysis else analysis['title']}}" placeholder="Title of the analysis (alphanumeric and spaces)" maxlength="40" pattern="([^\s][A-z0-9À-ž\s]+)" {{ '' if new_analysis else 'readonly' | safe}} required>
+
+        <label for="description">* Scope &amp; Purpose</label>
+        <textarea rows="3" cols="50" id="description" name="description" placeholder="Describe the analytical objective, methodology, and key findings..." required>{{ '' if new_analysis else analysis['description']}}</textarea>
+
+        <div class="form-grid-2">
+          <div>
+            <label for="email">* Owner Email</label>
+            <input type="email" id="email" name="email" value="{{ '' if new_analysis else analysis['owner']}}" placeholder="name.surname@example.com" required>
+          </div>
+          <div>
+            <label for="collaborators">Collaborators</label>
+            <input type="text" id="collaborators" name="collaborators" value="{{ '' if new_analysis else analysis['collaborators']}}" placeholder="Optional team members">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div>
+            <label for="start_date">* Start Date</label>
+            <input type="date" id="start_date" name="start_date" value="{{ '' if new_analysis else analysis['start_date']}}" required>
+          </div>
+          <div>
+            <label for="product">* Product / Domain</label>
+            <input type="text" list="product_types" id="product" name="product" value="{{ '' if new_analysis else analysis['product']}}" placeholder="Select or type a product" required>
+            <datalist id="product_types">
+              {% for val in tool_choices['product'] %}
+                <option value="{{ val }}">
+              {% endfor %}
+            </datalist>
+          </div>
+        </div>
+
+        <label for="countries">* Countries / Region</label>
+        <input type="text" list="list_countries" id="countries" name="countries" value="{{ '' if new_analysis else analysis['countries']}}" placeholder="e.g. Global, Italy, EU" required>
+        <datalist id="list_countries">
+          {% for val in tool_choices['countries'] %}
+            <option value="{{ val }}">
+          {% endfor %}
+        </datalist>
+
+        <div style="{{ 'margin-top:12px;' if new_analysis else 'display:none;'}}">
+          <label for="ctrl"><i class="fa fa-folder-open-o"></i> Select Analysis Directory or Files</label>
+          <input type="file" name="upload_files" size="40" id="ctrl" webkitdirectory mozdirectory msdirectory odirectory directory multiple/>
+        </div>
+        <div style="{{ 'display:none;' if new_analysis else 'margin-top:12px;'}}" class="w3-panel w3-pale-blue w3-leftbar w3-border-blue w3-padding-small">
+          <small><i class="fa fa-info-circle"></i> To modify analysis code files directly, edit the folder inside <code>Analyses/</code> or use the Flows editor.</small>
+        </div>
+      </div>
+
+      <!-- Step 2: Inputs & Outputs -->
+      <div class="tab">
+        <h5 style="margin:0 0 12px 0;color:var(--mariner-cyan);font-weight:700;"><i class="fa fa-sliders"></i> Step 2 of 3 — Inputs &amp; Output Specification</h5>
+        <div class="w3-panel" style="background:rgba(2,132,199,0.05);padding:14px;border-radius:10px;margin-top:0;">
+          <div class="form-grid-2">
+            <div>
+              <label for="varibleinputname" style="margin-top:0;">Input Variable Name</label>
+              <input type="text" id="varibleinputname" placeholder="e.g. target_col" onkeypress="return blockSpecialCharNoSpaces(event)">
             </div>
-            <div class="tab">
-                <p>
-                      <p><strong><big>Enter input and type value you have to insert in the analysis:</big></strong></p>
-                      <p><strong><label for="varibleinputname">Variable input name:</label></strong><br>
-                      <input type="text" id="varibleinputname" onkeypress="return blockSpecialCharNospace(event)"><br>
-                      <strong><label for="varibleinputdefaultvalue">Variable input description or default value:</label></strong><br>
-                      <input type="text" id="varibleinputdefaultvalue"><br>
-                      <strong><label for="varibleinputtype">Variable input type:</label></strong><br>
-                      <input type="text" list="types" id="varibleinputtype" onkeypress="return blockSpecialCharNoSpaces(event)"><br>
-                          <datalist id="types">
-                              {% for val in tool_choices['input type'] %}
-                                    <option value="{{ val }}">
-                               {% endfor %}
-                          </datalist>
-                      <input type="button" onclick="insertItemIntoListBox()" value="Insert" style="width: 30%;padding: 8px 16px;" />
-                      <input type="button" onclick="removeItemIntoListBox()" style="width: 30%;padding: 8px 16px;" value="Remove Selected">
-                      </p>
-                      <select id="listinput" name="listinputs" size="5" style="width: 60%;">
-                              {% for k, v in analysis['inputs'].items() %}
-                                    <option>{{ k }}:{{  v['type'] }}={{  v['default']  }}</option>
-                               {% endfor %}
-                      </select>
-                      <br>
-                      <strong><label for="output_type">* Output type:</label></strong><br>
-                      <input type="text" list="out_types" id="output_type" value="{{ '' if new_analysis else analysis['output_type']}}"  name="output_type" style="{{ '' if new_analysis else analysis['output_type']}}" required><br>
-                          <datalist id="out_types">
-                              {% for val in tool_choices['output type'] %}
-                                    <option value="{{ val }}">
-                               {% endfor %}
-                          </datalist>
-                      <strong><label for="output_description">* Output description:</label></strong><br>
-                      <textarea rows="4" cols="50" id="output_description" name="output_description" style="{{ '' if new_analysis else analysis['output_description']}}" required>{{ '' if new_analysis else analysis['output description']}}</textarea><br>
-                      <p><strong><big>Physical output (.jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf):</big></strong></p>
-                      <input type="file" name="output_file" size="40" accept=".jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf"/><br>
-                </p>
+            <div>
+              <label for="varibleinputtype" style="margin-top:0;">Input Type</label>
+              <input type="text" list="types" id="varibleinputtype" placeholder="e.g. text, number, date" onkeypress="return blockSpecialCharNoSpaces(event)">
+              <datalist id="types">
+                {% for val in tool_choices['input type'] %}
+                  <option value="{{ val }}">
+                {% endfor %}
+              </datalist>
             </div>
-            <div class="tab">
-                <p>
-                      <input type="text" id="inputs" name="inputs" value="{{ analysis['inline_inputs'] }}" style="display:none;width: 40%;"><br>
-                      <!-- documentation --->
-                      <p><strong><big>Enter documentation:</big></strong></p>
-                      <p>
-                         <strong><label for="name_link">Name of link:</label></strong><br>
-                          <input type="text" id="name_link" onkeypress="return blockSpecialChar(event)"><br>
-                          <strong><label for="link_doc">Link:</label></strong><br>
-                          <input type="text" id="link_doc"><br>
-                          <input type="button" onclick="insertLinkIntoListBox()" value="Insert" style="width: 30%;padding: 8px 16px;" />
-                          <input type="button" onclick="removeLinkIntoListBox()" style="width: 30%;padding: 8px 16px;" value="Remove Selected">
-                      </p>
-                      <select id="listlink" name="listlinks" size="5" style="width: 60%;">
-                              {% for k, v in analysis['links'].items() %}
-                                    <option>{{ k }}==={{ v }}</option>
-                               {% endfor %}
-                      </select>
-                      <input type="text" id="links" name="links" value="{{ analysis['inline_links'] }}" style="display:none;width: 40%;"><br>
-                      <strong><label for="gdrive">Google drive folder:</label></strong><br>
-                      <input type="text" id="gdrive" name="gdrive" value="{{ '' if new_analysis else analysis['gdrive']}}"  style="{{ '' if new_analysis else analysis['gdrive']}}" placeholder="https://drive.google.com/drive/folders/..."><br>
-                      <strong><label for="gitlab">Gitlab repository:</label></strong><br>
-                      <input type="text" id="gitlab" name="gitlab" value="{{ '' if new_analysis else analysis['gitlab']}}"  style="{{ '' if new_analysis else analysis['gitlab']}}" placeholder="https://gitlab.com/your-org/..."><br>
-                      <strong><label for="dashboard">Dashboard link:</label></strong><br>
-                      <input type="text" id="dashboard" name="dashboard" value="{{ '' if new_analysis else analysis['dashboard link']}}"  style="{{ '' if new_analysis else analysis['dashboard']}}" placeholder="Dashboard link"><br>
+          </div>
+          <label for="varibleinputdefaultvalue">Default Value / Description</label>
+          <input type="text" id="varibleinputdefaultvalue" placeholder="Default parameter value">
+          <div style="margin-top:6px;">
+            <input type="button" onclick="insertItemIntoListBox()" value="+ Add Input">
+            <input type="button" onclick="removeItemIntoListBox()" value="Remove Selected" style="background:#dc2626;border-color:transparent;">
+          </div>
+          <select id="listinput" name="listinputs" size="4" style="margin-top:8px;">
+            {% for k, v in analysis['inputs'].items() %}
+              <option>{{ k }}:{{ v['type'] }}={{ v['default'] }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-                </p>
+        <label for="output_type">* Output Type</label>
+        <input type="text" list="out_types" id="output_type" value="{{ '' if new_analysis else analysis['output_type']}}" name="output_type" placeholder="e.g. HTML Report, CSV, Dashboard" required>
+        <datalist id="out_types">
+          {% for val in tool_choices['output type'] %}
+            <option value="{{ val }}">
+          {% endfor %}
+        </datalist>
+
+        <label for="output_description">* Output Description</label>
+        <textarea rows="3" cols="50" id="output_description" name="output_description" placeholder="Describe the generated artifacts or report metrics..." required>{{ '' if new_analysis else analysis['output description']}}</textarea>
+
+        <label><i class="fa fa-file-o"></i> Physical Output File (.jpg, .png, .csv, .xlsx, .html, .pdf)</label>
+        <input type="file" name="output_file" size="40" accept=".jpg, .jpeg, .png, .doc, .csv, .xlsx, .html, .pdf"/>
+      </div>
+
+      <!-- Step 3: Links & Repositories -->
+      <div class="tab">
+        <h5 style="margin:0 0 12px 0;color:var(--mariner-cyan);font-weight:700;"><i class="fa fa-external-link"></i> Step 3 of 3 — Documentation &amp; Repository Links</h5>
+        <input type="text" id="inputs" name="inputs" value="{{ analysis['inline_inputs'] }}" style="display:none;">
+
+        <div class="w3-panel" style="background:rgba(2,132,199,0.05);padding:14px;border-radius:10px;margin-top:0;">
+          <div class="form-grid-2">
+            <div>
+              <label for="name_link" style="margin-top:0;">Documentation Label</label>
+              <input type="text" id="name_link" placeholder="e.g. Confluence Spec" onkeypress="return blockSpecialChar(event)">
             </div>
-              <div style="overflow:auto;">
-                <div style="float:right;">
-                  <button type="button" id="prevBtn" onclick="nextPrev(-1)">Previous</button>
-                  <button type="button" id="nextBtn" onclick="nextPrev(1)">Next</button>
-                </div>
-              </div>
-              <!-- Circles which indicates the steps of the form: -->
-              <div style="text-align:center;margin-top:40px;">
-                <span class="step"></span>
-                <span class="step"></span>
-                <span class="step"></span>
-                <span class="step"></span>
-              </div>
-              </div>
-        </form>
+            <div>
+              <label for="link_doc" style="margin-top:0;">URL</label>
+              <input type="text" id="link_doc" placeholder="https://...">
+            </div>
+          </div>
+          <div style="margin-top:6px;">
+            <input type="button" onclick="insertLinkIntoListBox()" value="+ Add Link">
+            <input type="button" onclick="removeLinkIntoListBox()" value="Remove Selected" style="background:#dc2626;border-color:transparent;">
+          </div>
+          <select id="listlink" name="listlinks" size="4" style="margin-top:8px;">
+            {% for k, v in analysis['links'].items() %}
+              <option>{{ k }}==={{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <input type="text" id="links" name="links" value="{{ analysis['inline_links'] }}" style="display:none;">
+
+        <label for="gdrive">Google Drive Folder (optional)</label>
+        <input type="text" id="gdrive" name="gdrive" value="{{ '' if new_analysis else analysis['gdrive']}}" placeholder="https://drive.google.com/drive/folders/...">
+
+        <label for="gitlab">Git Repository (optional)</label>
+        <input type="text" id="gitlab" name="gitlab" value="{{ '' if new_analysis else analysis['gitlab']}}" placeholder="https://gitlab.com/your-org/...">
+
+        <label for="dashboard">External Dashboard Link (optional)</label>
+        <input type="text" id="dashboard" name="dashboard" value="{{ '' if new_analysis else analysis['dashboard link']}}" placeholder="https://...">
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:16px;border-top:1px solid var(--mariner-border-subtle);">
+        <div>
+          <span class="step"></span>
+          <span class="step"></span>
+          <span class="step"></span>
+        </div>
+        <div>
+          <button type="button" id="prevBtn" onclick="nextPrev(-1)">&larr; Previous</button>
+          <button type="button" id="nextBtn" onclick="nextPrev(1)">Next &rarr;</button>
+        </div>
+      </div>
+    </div>
+  </form>
         <script type="text/javascript">
                     function blockSpecialChar(e){
                         var k;

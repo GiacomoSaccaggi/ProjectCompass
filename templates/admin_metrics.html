@@ -10,43 +10,70 @@
     margin-bottom: 30px;
 }
 .kpi-card {
-    background: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: var(--mariner-bg-card, #fffdf8);
+    border: 1px solid var(--mariner-border-subtle);
+    border-top: 3px solid var(--mariner-cyan, #0284c7);
+    border-radius: 14px;
+    padding: 22px 20px;
+    box-shadow: var(--mariner-shadow-card);
     text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--mariner-shadow-hover);
 }
 .kpi-value {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #2D323A;
+    font-size: 2.4rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--mariner-navy, #0b1629);
 }
 .kpi-label {
-    font-size: 0.9rem;
-    color: #666;
-    margin-top: 5px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mariner-text-muted, #64748b);
+    margin-top: 6px;
 }
-.kpi-card.success .kpi-value { color: #28a745; }
-.kpi-card.primary .kpi-value { color: #007bff; }
-.kpi-card.warning .kpi-value { color: #ffc107; }
-.kpi-card.info .kpi-value { color: #17a2b8; }
+.kpi-card.success { border-top-color: #059669; }
+.kpi-card.success .kpi-value { color: #059669; }
+.kpi-card.primary { border-top-color: #0284c7; }
+.kpi-card.primary .kpi-value { color: #0284c7; }
+.kpi-card.warning { border-top-color: #b45309; }
+.kpi-card.warning .kpi-value { color: #b45309; }
+.kpi-card.info { border-top-color: #0d9488; }
+.kpi-card.info .kpi-value { color: #0d9488; }
 
 .chart-container {
-    background: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: var(--mariner-bg-card, #fffdf8);
+    border: 1px solid var(--mariner-border-subtle);
+    border-top: 3px solid var(--mariner-gold, #b45309);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: var(--mariner-shadow-card);
     margin-bottom: 20px;
 }
 .chart-container h4 {
     margin: 0 0 15px;
-    color: #2D323A;
+    color: var(--mariner-navy, #0b1629);
+    font-weight: 700;
+}
+.chart-container h4 i {
+    color: var(--mariner-cyan, #0284c7);
+    margin-right: 6px;
 }
 .chart-row {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 20px;
 }
+body.dark-mode .kpi-card, body.dark-mode .chart-container { background: rgba(14, 25, 47, 0.88); }
+body.dark-mode .kpi-card.primary .kpi-value { color: #38bdf8; }
+body.dark-mode .kpi-card.warning .kpi-value { color: #fbbf24; }
+body.dark-mode .kpi-card.info .kpi-value { color: #2dd4bf; }
+body.dark-mode .kpi-card.success .kpi-value { color: #34d399; }
 @media (max-width: 900px) {
     .chart-row { grid-template-columns: 1fr; }
 }
@@ -56,10 +83,12 @@
 {{ top_container|safe }}
 {{ sidebar_menu|safe }}
 
-<div class="w3-main" style="margin-left:300px;margin-top:43px;">
-    <div class="w3-container" style="padding: 20px;">
-        <h2><i class="fa fa-dashboard"></i> Observability Dashboard</h2>
-        <hr>
+<div class="w3-main" style="margin-left:260px;margin-top:54px;">
+    <header style="background:var(--mariner-wave-overlay),linear-gradient(135deg,#060d1a 0%,#0b1930 60%,#0e2240 100%);background-position:bottom center,center;background-repeat:no-repeat;background-size:100% 42px,cover;color:#f8fafc;padding:22px 28px 28px;border-bottom:2px solid rgba(251,191,36,0.42);">
+        <h2 style="margin:0;font-size:1.65rem;font-weight:800;color:#f8fafc !important;"><i class="fa fa-line-chart" style="color:#fbbf24;margin-right:8px;"></i>Observability Dashboard</h2>
+        <p style="margin:4px 0 0;font-size:0.9rem;color:#cbd5e1;">Live telemetry for analysis runs, status distribution, user activity, and catalog coverage.</p>
+    </header>
+    <div class="w3-container" style="padding: 20px 24px 32px; max-width: 1360px; margin: 0 auto;">
 
         <!-- KPI Cards -->
         <div class="metrics-grid" id="kpiCards">
@@ -132,8 +161,9 @@ function loadMetrics() {
                     datasets: [{
                         label: 'Executions',
                         data: dailyValues,
-                        backgroundColor: 'rgba(45, 50, 58, 0.7)',
-                        borderColor: '#2D323A',
+                        backgroundColor: 'rgba(2, 132, 199, 0.72)',
+                        borderColor: '#0284c7',
+                        borderRadius: 6,
                         borderWidth: 1
                     }]
                 },
@@ -186,8 +216,9 @@ function loadMetrics() {
                     datasets: [{
                         label: 'Executions',
                         data: topValues,
-                        backgroundColor: 'rgba(77, 255, 214, 0.7)',
-                        borderColor: '#4DFFD6',
+                        backgroundColor: 'rgba(13, 148, 136, 0.72)',
+                        borderColor: '#0d9488',
+                        borderRadius: 6,
                         borderWidth: 1
                     }]
                 },

@@ -4,9 +4,10 @@ EXPOSE 8080
 ENV FLASK_ENV=production
 ENV FLASK_DEBUG=False
 ENV PORT=8080
+ENV DATA_DIR=/app/data
 
 WORKDIR /app
-RUN mkdir -p log Analyses Saved_data Saved_queries templates static utils blueprints tmp
+RUN mkdir -p /app/data log Analyses Saved_data Saved_queries templates static utils blueprints tmp
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
@@ -16,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
-COPY app.py basefun.py config.py logging_config.py run.py ./
+COPY app.py basefun.py config.py logging_config.py models.py run.py ./
 COPY pyproject.toml ./
 COPY templates/ templates/
 COPY static/ static/

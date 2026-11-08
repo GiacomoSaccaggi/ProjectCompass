@@ -1,8 +1,13 @@
+# +----------------------------------------------+
+# | SHARED TEST FIXTURES                         |
+# +----------------------------------------------+
 import os
 import sys
 from unittest.mock import patch
 
 import pytest
+
+os.environ['PC_CONFIG_FILE'] = os.devnull
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -25,7 +30,7 @@ def _mock_local_embedder():
 
 
 @pytest.fixture
-def app():
+def app(tmp_path):
     from app import create_app
     from config import Config
     from models import db
@@ -35,6 +40,7 @@ def app():
         SECRET_KEY = 'test-secret'
         WTF_CSRF_ENABLED = False
         SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+        PC_CONFIG_FILE = os.devnull
 
     app = create_app(TestConfig)
 

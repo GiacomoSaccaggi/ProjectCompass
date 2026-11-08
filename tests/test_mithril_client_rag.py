@@ -1,5 +1,4 @@
 """Tests for MithrilClient embed() and rerank() methods."""
-import json
 from unittest.mock import MagicMock, patch
 
 import httpx

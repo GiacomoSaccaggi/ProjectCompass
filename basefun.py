@@ -14,19 +14,25 @@
 
 # Import Pkg
 import base64
+import os
 import zlib
 
 from utils.analysis_utils import AnalysisUtils
 from utils.data_utils import DataUtils
 from utils.html_utils import HTMLUtils
+from utils.k8s_utils import K8sChainRunnerUtils
 
 
 # Import env variables
-class ProjectCompass(DataUtils, AnalysisUtils, HTMLUtils):
-    def __init__(self, dir_path):
+class ProjectCompass(DataUtils, AnalysisUtils, HTMLUtils, K8sChainRunnerUtils):
+    def __init__(self, dir_path, data_dir=None):
 
         self.dir_path = dir_path
-        super().__init__(dir_path=dir_path)
+        resolved_data = data_dir or os.environ.get('DATA_DIR') or dir_path
+        if not resolved_data.endswith('/'):
+            resolved_data = resolved_data + '/'
+        self.data_dir = resolved_data
+        super().__init__(dir_path=dir_path, data_dir=self.data_dir)
 
         self.environments = [self.template, self.save_folder_path]
         self.project_folder = ''

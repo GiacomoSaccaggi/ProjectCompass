@@ -1,10 +1,19 @@
 
 
+from __future__ import annotations
+
 # Import Pkg
+import copy
 import os
 import re
+from html import escape as escape_html
+from typing import TYPE_CHECKING
 
 import yaml
+from jinja2 import Environment, FileSystemLoader
+
+if TYPE_CHECKING:
+    from utils.app_settings import PublicAppSettings
 
 
 class HTMLUtils:
@@ -34,8 +43,34 @@ class HTMLUtils:
             else:
                 with open(f'{self.template_folder}/environment_variables/{file}', encoding='utf-8') as f:
                     self.environments_info[file.split('.')[0]] = '\n'.join(f.readlines())
+        self._base_environments_info = copy.deepcopy(self.environments_info)
         with open(self.template, encoding='utf-8') as f:
-            text = '\n'.join(f.readlines())
+            text = f.read()
+        self._split_header(text)
+        super().__init__()
+
+    def apply_settings(self, settings: PublicAppSettings) -> None:
+        """Render shared navigation with escaped branding and theme values."""
+        safe_app_name = escape_html(settings.branding.app_name)
+        self.environments_info = copy.deepcopy(self._base_environments_info)
+        for key, value in self.environments_info.items():
+            if isinstance(value, str):
+                replacement = safe_app_name if key == 'intro' else settings.branding.app_name
+                self.environments_info[key] = value.replace('ProjectCompass', replacement)
+            elif isinstance(value, dict):
+                self.environments_info[key] = {
+                    settings.branding.app_name if label == 'ProjectCompass' else label: link
+                    for label, link in value.items()
+                }
+        environment = Environment(
+            loader=FileSystemLoader(self.template_folder),
+            autoescape=True,
+        )
+        rendered_header = environment.get_template('header.html').render(pc=settings)
+        self._split_header(rendered_header)
+
+    def _split_header(self, text: str) -> None:
+        """Split rendered header markup into the legacy shared page fragments."""
         self.tags = [i.replace(' start ', '').replace('start ', '') for i in re.findall(r'<!--(.*)-->', text)
                      if 'start' in i]
         self.html_parts = {}
@@ -48,7 +83,6 @@ class HTMLUtils:
                 self.html_parts[t.strip()] = text[
                                         (text.index(f'start {t}-->')
                                          + len(f'start {t}-->')):text.index(f'<!--end {t}-->')]
-        super().__init__(**kwargs)
 
     def substitute_html(self, **kwargs):
         tmp_html_parts = {}

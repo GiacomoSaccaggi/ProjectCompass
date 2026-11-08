@@ -4,12 +4,39 @@ import pandas as pd
 from flask import Blueprint, current_app, jsonify, request
 
 from logging_config import logger
+from models import DbConnection, db
+from utils.db_errors import ConnectionNotFoundError, ConnectionValidationError, DbConnectionError
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
 def get_webapp():
     return current_app.config['WEBAPP']
+
+
+def _resolve_connection_id(connection: int | str | None) -> int | None:
+    """Resolve an optional API connection reference by ID or saved name."""
+    if connection is None or connection == '':
+        return None
+    if isinstance(connection, bool):
+        raise ConnectionValidationError('The connection value must be an ID or saved connection name.')
+    if isinstance(connection, int):
+        saved = db.session.get(DbConnection, connection)
+        if saved is None:
+            raise ConnectionNotFoundError('The saved database connection was not found.')
+        return saved.id
+    if not isinstance(connection, str) or not connection.strip():
+        raise ConnectionValidationError('The connection value must be an ID or saved connection name.')
+
+    connection_name = connection.strip()
+    if connection_name.isdecimal():
+        saved = db.session.get(DbConnection, int(connection_name))
+        if saved is not None:
+            return saved.id
+    saved = DbConnection.query.filter_by(name=connection_name).first()
+    if saved is None:
+        raise ConnectionNotFoundError('The saved database connection was not found.')
+    return saved.id
 
 
 @api_bp.route('/health')
@@ -52,15 +79,16 @@ def api_search_html():
     except Exception:
         return '<div style="padding:10px;color:#999;">Search error</div>'
     if not results:
-        return '<div style="padding:10px;color:#999;">No results</div>'
+        return '<div style="padding:10px 14px;color:var(--mariner-text-muted, #94a3b8);font-size:0.84rem;">No results</div>'
     html = ''
     for r in results:
         name, title = r[0], r[1] or r[0]
+        safe_name = name.replace(' ', '512')
         html += (
-            f'<a href="/analysis?q={name}" style="display:block;padding:8px 12px;'
-            f'text-decoration:none;color:#333;border-bottom:1px solid #f0f0f0;" '
-            f'onmouseover="this.style.background=\'#f0f4ff\'" '
-            f'onmouseout="this.style.background=\'\'">{title}</a>'
+            f'<a href="/open_version?name={safe_name}" style="display:block;padding:9px 14px;'
+            f'text-decoration:none;color:var(--mariner-text-primary, #0f172a);'
+            f'border-bottom:1px solid var(--mariner-border-subtle, rgba(148,163,184,0.18));font-size:0.86rem;font-weight:600;">'
+            f'<i class="fa fa-compass" style="color:var(--mariner-cyan, #0284c7);margin-right:6px;"></i>{title}</a>'
         )
     return html
 
@@ -133,6 +161,65 @@ def get_analysis(name):
         return jsonify({'error': str(e)}), 404
 
 
+@api_bp.route('/analyses/<name>/run', methods=['POST'])
+def run_analysis_api(name):
+    """Trigger an analysis or flow inside Analyses/<name>/ as a Kubernetes Job and return run metadata."""
+    from flask import session
+
+    from models import log_action
+
+    if not session.get('authenticated'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    if session.get('role') == 'viewer':
+        return jsonify({'error': 'Forbidden: viewer role cannot execute analyses or flows.'}), 403
+
+    webapp = get_webapp()
+    resolved_name = name.replace('512', ' ')
+    flow = webapp.read_flow(resolved_name)
+    if flow is None:
+        return jsonify({'error': f"Analysis or flow '{resolved_name}' not found."}), 404
+
+    payload = request.get_json(silent=True) if request.is_json else {}
+    payload = payload or {}
+    parameters = payload.get('parameters') or payload.get('inputs') or {}
+    pip_requirements = payload.get('pip_requirements')
+    env_vars = payload.get('env_vars')
+    secret_refs = payload.get('secret_refs')
+    image = payload.get('image')
+    wait_sync = bool(
+        payload.get('wait')
+        or request.args.get('wait') == '1'
+        or current_app.config.get('K8S_SYNC_WATCHER', False)
+    )
+
+    exe = webapp.launch_flow_run(
+        flow_name=resolved_name,
+        parameters=parameters,
+        pip_requirements=pip_requirements,
+        env_vars=env_vars,
+        secret_refs=secret_refs,
+        image=image,
+        user_id=session.get('user_id'),
+        trigger_type='manual',
+        app=current_app._get_current_object(),
+        wait_for_watcher=wait_sync,
+    )
+    log_action('run_analysis_api', 'analysis', resolved_name, details={'run_id': exe.id, 'job_name': exe.job_name})
+    return jsonify({
+        'run_id': exe.id,
+        'id': exe.id,
+        'analysis_name': exe.analysis_name,
+        'flow_name': exe.analysis_name,
+        'job_name': exe.job_name,
+        'status': exe.status,
+        'exit_code': exe.exit_code,
+        'error_message': exe.error_message,
+        'log_text': exe.log_text or '',
+        'detail_url': f'/runs/{exe.id}',
+        'stream_url': f'/runs/{exe.id}/stream',
+    })
+
+
 @api_bp.route('/data')
 def list_data():
     webapp = get_webapp()
@@ -167,7 +254,8 @@ def run_query():
     logger.info(f"API query: {sql[:100]}...")
 
     try:
-        df = webapp.sql(sql)
+        connection_id = _resolve_connection_id(data.get('connection'))
+        df = webapp.run_sql(sql, connection_id)
         total = len(df)
         if total > limit:
             df = df.head(limit)
@@ -177,6 +265,10 @@ def run_query():
             'total_rows': total,
             'truncated': total > limit,
         })
+    except ConnectionNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except DbConnectionError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -217,9 +309,9 @@ def api_activity_html():
         }
         icon = icon_map.get(e.action, 'fa-circle')
         html += (
-            f'<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:.8rem;">'
-            f'<i class="fa {icon}" style="width:20px;color:#3F51B5;"></i> '
-            f'<b>{username}</b> {e.action} '
-            f'<span style="color:#666;">{e.target_type}: {e.target_name}</span></div>'
+            f'<div style="padding:7px 2px;border-bottom:1px solid var(--mariner-border-subtle, rgba(15,23,42,0.1));font-size:.84rem;">'
+            f'<i class="fa {icon}" style="width:22px;color:var(--mariner-cyan, #0284c7);"></i> '
+            f'<b>{username}</b> <span style="color:var(--mariner-teal, #0d9488);font-weight:600;">{e.action}</span> '
+            f'<span style="color:var(--mariner-text-muted, #64748b);">{e.target_type}: {e.target_name}</span></div>'
         )
-    return html or '<div style="padding:10px;color:#999;">No activity yet</div>'
+    return html or '<div style="padding:10px;color:var(--mariner-text-muted, #94a3b8);">No activity yet</div>'
