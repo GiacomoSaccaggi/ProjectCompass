@@ -3365,7 +3365,7 @@ wheels = [
 
 [[package]]
 name = "projectcompass"
-version = "0.1.0"
+version = "2.5.0"
 source = { virtual = "." }
 dependencies = [
     { name = "chromadb" },

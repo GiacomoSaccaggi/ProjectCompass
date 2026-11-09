@@ -226,6 +226,21 @@ def flow_detail_page(name: str) -> Response | tuple[Response, int] | str:
     return _render_flows_view(selected_name=name, message=request.args.get("msg"))
 
 
+@k8s_bp.route("/flows/<name>", methods=["DELETE"])
+def flow_delete_route(name: str) -> Response | tuple[Response, int]:
+    """Delete a Flow and all its version history."""
+    denied = _check_write_permission()
+    if denied is not None:
+        return denied
+
+    webapp = current_app.config["WEBAPP"]
+    if not webapp.delete_flow(name):
+        return jsonify({"error": f"Flow '{name}' not found."}), 404
+
+    log_action("delete_flow", "flow", name)
+    return jsonify({"deleted": True, "name": name})
+
+
 @k8s_bp.route("/flows/new", methods=["GET", "POST"])
 @k8s_bp.route("/flows/save", methods=["POST"])
 def flow_create_route() -> Response | tuple[Response, int] | str:

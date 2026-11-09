@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+    <title>ProjectCompass</title>
+    <link rel = "icon" href="static/img/logo.png" type = "image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+      :root {
+        --pc-primary: #222831;
+        --pc-compass-primary: #2D323A;
+        --pc-accent: #3F51B5;
+        --pc-highlight: #4DFFD6;
+        --pc-hover: #DCD2FF;
+        --pc-font-family: "Raleway", sans-serif;
+      }
+    </style>
+
+    <link rel="stylesheet" href="static/css/w3.css">
+    <script src="static/js/chartjs/chart.js"></script>
+
+    <link rel="stylesheet" href="static/css/css.css">
+    <link rel="stylesheet" href="static/css/dark.css">
+    <link rel="stylesheet" href="static/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="static/js/jquery.min.js" type="text/javascript"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+    <style>
+    /* HTMX loading indicator */
+    .htmx-indicator { display:none; }
+    .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display:inline-block; }
+    .htmx-settling { opacity: .7; }
+    /* Skeleton loading animation */
+    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    .skeleton { background:linear-gradient(90deg,#efeae0 25%,#e2d9c8 50%,#efeae0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; height:1rem; margin:6px 0; }
+    body.dark-mode .skeleton { background:linear-gradient(90deg,#0e192f 25%,#1e3358 50%,#0e192f 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
+    /* Execution running pulse */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .exec-running { animation: pulse 1.5s infinite; color: var(--mariner-gold, #b45309); font-weight: 700; }
+    body.dark-mode .exec-running { color: #fbbf24; }
+    </style>
+    <style>
+    html,body,h1,h2,h3,h4,h5 {font-family: 'Inter', var(--pc-font-family, "Raleway", sans-serif)}
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .w3-main, .w3-main * {
+        visibility: visible;
+      }
+      .w3-main {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+    }
+    .todo:hover{color:#fbbf24!important;background-color:rgba(56,189,248,0.16)!important}
+
+
+    .container {
+     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans,
+      Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+     line-height: 1.5;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 540px;
+      margin: 0 auto;
+      padding-left: 16px;
+      padding-right: 16px;
+      color: var(--mariner-text-primary, #0f172a);
+      height: 90vh;
+      margin-top: 5vh;
+      margin-bottom: 5vh;
+      overflow-y: auto;
+    }
+
+    .app-title {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 64px;
+      font-weight: 800;
+      color: var(--mariner-navy, #0b1629);
+      opacity: 0.85;
+    }
+
+    .container svg {
+      width: 64px;
+      height: 64px;
+    }
+
+    .todo-list {
+      list-style: none;
+      margin-bottom: 20px;
+    }
+
+    .todo-item {
+      margin-bottom: 10px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--mariner-bg-card, #ffffff);
+      border: 1px solid var(--mariner-border-subtle, rgba(15,23,42,0.12));
+      border-radius: 10px;
+      padding: 10px 14px;
+      box-shadow: var(--mariner-shadow-card);
+    }
+
+    .todo-item span {
+      flex-grow: 1;
+      margin-left: 10px;
+      margin-right: 10px;
+      font-size: 18px;
+    }
+
+    .done span {
+      text-decoration: line-through;
+      color: var(--mariner-text-muted, #64748b);
+    }
+
+    .container input[type="checkbox"] {
+      display: none;
+    }
+
+    .tick {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--mariner-cyan, #0284c7);
+      border-radius: 50%;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .tick::before {
+      content: '✓';
+      font-size: 17px;
+      color: var(--mariner-teal, #0d9488);
+      font-weight: 700;
+      display: none;
+    }
+
+    .done .tick::before {
+      display: inline;
+    }
+
+    .delete-todo {
+      border: none;
+      background-color: transparent;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .delete-todo svg {
+      width: 26px;
+      height: 26px;
+      pointer-events: none;
+    }
+
+    .container form {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .container input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 2px solid var(--mariner-border-strong, rgba(2,132,199,0.42));
+    }
+
+    /* Add this below all the other styles */
+
+    .empty-state {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      display: none;
+    }
+
+    .checklist-icon {
+      margin-bottom: 20px;
+    }
+
+    .empty-state__title, .empty-state__description {
+      margin-bottom: 20px;
+    }
+
+    /* Add this below the other styles */
+    .todo-list:empty {
+      display: none;
+    }
+
+    .todo-list:empty + .empty-state {
+      display: flex;
+    }
+
+
+    .accordion {
+        background-color: var(--mariner-bg-card, #FFFFFF);
+        color: var(--mariner-navy, var(--pc-primary, #0b1629));
+        cursor: pointer;
+        padding: 16px 20px;
+        width: 100%;
+        border: 1px solid var(--mariner-border-subtle, rgba(15, 23, 42, 0.14));
+        border-left: 4px solid var(--mariner-cyan, #0284c7);
+        border-radius: 10px;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        box-shadow: var(--mariner-shadow-card);
+        transition: all 0.22s ease;
+    }
+
+
+    .active, .accordion:hover {
+        background-color: rgba(2, 132, 199, 0.10);
+        border-color: var(--mariner-border-strong, rgba(2, 132, 199, 0.42));
+        border-left-color: var(--mariner-gold, #b45309);
+    }
+
+    .panel {
+        padding: 0 18px;
+        display: none;
+        background-color: var(--mariner-bg-card, white);
+        border: 1px solid var(--mariner-border-subtle, rgba(15, 23, 42, 0.1));
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        margin-top: -6px;
+        margin-bottom: 10px;
+        overflow: hidden;
+    }
+
+
+    * {
+      box-sizing: border-box;
+    }
+
+    #myInput {
+      background-position: 12px 12px;
+      background-repeat: no-repeat;
+      width: 100%;
+      font-size: 15px;
+      border-radius: 10px;
+      padding: 12px 20px 12px 40px;
+      border: 1px solid var(--mariner-border-strong, rgba(2, 132, 199, 0.35));
+      background-color: var(--mariner-bg-card, #ffffff);
+      color: var(--mariner-text-primary, #0f172a);
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(11, 22, 41, 0.05);
+      transition: all 0.2s ease;
+    }
+    #myInput:focus {
+      outline: none;
+      border-color: var(--mariner-cyan, #0284c7);
+      box-shadow: 0 0 0 3px var(--mariner-cyan-glow, rgba(2, 132, 199, 0.18));
+    }
+     ul {
+     list-style-type: none;
+     }
+    #myUL {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #myUL li a {
+      margin-top: -1px; /* Prevent double borders */
+      overflow: hidden;
+      white-space:pre;
+      padding: 12px;
+      text-decoration: none;
+      font-size: 17px;
+      color: var(--mariner-text-primary, var(--pc-primary, #0f172a));
+    }
+
+    #myInput li a:hover:not(.header) {
+      background-color: rgba(2, 132, 199, 0.08);
+    }
+
+    .loader {
+      border: 12px solid rgba(2, 132, 199, 0.15);
+      border-radius: 50%;
+      border-top: 12px solid var(--mariner-cyan, var(--pc-accent, #0284c7));
+      border-right: 12px solid var(--mariner-gold, #b45309);
+      width: 110px;
+      height: 110px;
+      -webkit-animation: spin 1.6s linear infinite; /* Safari */
+      animation: spin 1.6s linear infinite;
+    }
+
+    /* Safari */
+    @-webkit-keyframes spin {
+      0% { -webkit-transform: rotate(0deg); }
+      100% { -webkit-transform: rotate(360deg); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    #cmd-results a:hover { background: rgba(2, 132, 199, 0.12) !important; }
+    #cmd-results i { color: var(--mariner-cyan, var(--pc-accent, #0284c7)) !important; }
+    </style>
+</head>
+    
+<link rel="stylesheet" href="static/css/drawflow.min.css">
+<style>
+.pb-wrap{display:flex;height:calc(100vh - 54px)}
+.pb-palette{width:248px;background:var(--mariner-bg-secondary, #f2ede2);border-right:1px solid var(--mariner-border-subtle, #ddd);padding:.9rem;overflow-y:auto;flex-shrink:0}
+.pb-palette h6{margin:0 0 .6rem;color:var(--mariner-navy, #0b1629);font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em}
+.pb-palette h6 i{color:var(--mariner-gold, #b45309);margin-right:4px}
+.pb-block{padding:9px 11px;margin-bottom:7px;background:var(--mariner-bg-card, #fff);border:1px solid var(--mariner-border-subtle, #ddd);border-left:3px solid var(--mariner-cyan, #0284c7);border-radius:8px;cursor:grab;font-size:.79rem;font-weight:600;display:flex;align-items:center;gap:7px;transition:all 0.16s ease}
+.pb-block:hover{border-color:var(--mariner-border-strong);border-left-color:var(--mariner-gold, #b45309);background:rgba(2, 132, 199, 0.08);transform:translateX(2px)}
+.pb-block i{width:18px;text-align:center;color:var(--mariner-cyan, #0284c7)}
+#drawflow{flex:1;background-color:var(--mariner-bg-primary, #fbf9f4);background-image:var(--mariner-chart-graticule);background-size:64px 64px,64px 64px,32px 32px}
+.pb-toolbar{position:absolute;top:14px;right:16px;z-index:10;display:flex;gap:8px}
+.pb-toolbar button{padding:7px 15px;border:1px solid rgba(251, 191, 36, 0.35);border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;color:#fff;box-shadow:0 4px 12px rgba(6, 13, 26, 0.18)}
+.pb-btn-save{background:linear-gradient(135deg, #0d9488 0%, #059669 100%)}.pb-btn-save:hover{background:#0f766e}
+.pb-btn-clear{background:linear-gradient(135deg, #dc2626 0%, #991b1b 100%)}.pb-btn-clear:hover{background:#b91c1c}
+.pb-btn-run{background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%)}.pb-btn-run:hover{background:#0b1629;color:#fbbf24}
+
+/* Node styling */
+.drawflow-node{border-radius:10px!important;border:2px solid #64748b!important;min-width:185px;box-shadow:0 6px 18px rgba(11, 22, 41, 0.12)!important}
+.drawflow-node .drawflow_content_node{padding:9px 12px;font-size:.8rem;color:#0f172a}
+.drawflow-node.load_data{border-color:#d97706!important;background:#fffbeb!important}
+.drawflow-node.feature_eng{border-color:#7c3aed!important;background:#f5f3ff!important}
+.drawflow-node.train_model{border-color:#0284c7!important;background:#f0f9ff!important}
+.drawflow-node.predict{border-color:#0891b2!important;background:#ecfeff!important}
+.drawflow-node.anomaly{border-color:#dc2626!important;background:#fef2f2!important}
+.drawflow-node.forecast{border-color:#059669!important;background:#ecfdf5!important}
+.drawflow-node.quality{border-color:#475569!important;background:#f8fafc!important}
+.drawflow-node.save_artifact{border-color:#b45309!important;background:#fefce8!important}
+/* New ML blocks */
+.drawflow-node.drift{border-color:#e11d48!important;background:#fff1f2!important}
+.drawflow-node.explainability{border-color:#6d28d9!important;background:#ede9fe!important}
+.drawflow-node.fairness{border-color:#0d9488!important;background:#f0fdfa!important}
+.drawflow-node.tuning{border-color:#ea580c!important;background:#fff7ed!important}
+.drawflow-node.validation{border-color:#0369a1!important;background:#e0f2fe!important}
+.drawflow-node.text_nlp{border-color:#0f766e!important;background:#ccfbf1!important}
+/* Report blocks */
+.drawflow-node.report{border-color:#92400e!important;background:#fef3c7!important}
+.drawflow-node.report_kpi{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_plotly_grid{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_tabs{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_comparison{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_summary{border-color:#b45309!important;background:#fef3c7!important}
+.drawflow-node.report_dark_mode{border-color:#b45309!important;background:#fef3c7!important}
+.node-title{font-weight:700;margin-bottom:4px;font-size:.82rem;color:#0b1629}
+.node-config{font-size:.7rem;color:#475569;font-style:italic}
+.pb-sep{border:none;border-top:1px solid var(--mariner-border-subtle, #ccc);margin:.8rem 0}
+
+/* Modal */
+.pb-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(6, 13, 26, 0.65);z-index:1000;justify-content:center;align-items:center;backdrop-filter:blur(4px)}
+.pb-modal.active{display:flex}
+.pb-modal-content{background:var(--mariner-bg-card, #fff);border:1px solid var(--mariner-border-strong);border-top:3px solid var(--mariner-gold, #b45309);border-radius:14px;padding:1.5rem;min-width:400px;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.4)}
+.pb-modal-content h5{margin:0 0 1rem;color:var(--mariner-navy, #0b1629);font-weight:700}
+.pb-modal-content label{font-size:.8rem;font-weight:600;display:block;margin-top:.5rem}
+.pb-modal-content input,.pb-modal-content select,.pb-modal-content textarea{width:100%;padding:7px 10px;border:1px solid var(--mariner-border-strong);border-radius:8px;font-size:.82rem;margin-top:3px;font-family:inherit}
+.pb-modal-content button{margin-top:1rem;padding:8px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600}
+body.dark-mode .pb-palette{background:#0b1629;border-right-color:rgba(56,189,248,0.2)}
+body.dark-mode .pb-palette h6{color:#fbbf24}
+body.dark-mode .pb-block{background:#0e192f;color:#f1f5f9;border-color:rgba(148,163,184,0.2)}
+body.dark-mode #drawflow{background-color:#060d1a}
+</style>
+<body class="w3-light-grey">
+<div id="pc-demo-banner" style="
+  position:fixed;top:0;left:0;right:0;z-index:99999;
+  background:linear-gradient(135deg,#0284c7 0%,#0d9488 100%);
+  color:#fff;text-align:center;padding:10px 16px;
+  font-family:Inter,system-ui,sans-serif;font-size:0.9rem;font-weight:600;
+  box-shadow:0 2px 12px rgba(0,0,0,0.25);
+  display:flex;align-items:center;justify-content:center;gap:12px;
+">
+  <span>⛵ This is a static demo snapshot — interactive features are disabled</span>
+  <a href="../index.html" style="color:#fbbf24;text-decoration:underline;font-weight:700;">← Back to Docs</a>
+</div>
+<div style="height:44px;"></div>
+
+
+    <!-- Toast container for notifications -->
+    <div id="toast-container" style="position:fixed;top:60px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
+
+    <!-- Command Palette (Ctrl/Cmd+K) -->
+    <div id="cmd-palette" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:10000;justify-content:center;align-items:flex-start;padding-top:15vh;">
+      <div style="background:#fff;border-radius:12px;width:500px;max-width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+        <input id="cmd-input" type="text" placeholder="Type a command..." style="width:100%;padding:16px 20px;border:none;font-size:1rem;outline:none;border-bottom:1px solid #eee;">
+        <div id="cmd-results" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <div class="w3-bar w3-top w3-theme-d2 w3-large w3-color-projectcompass" style="z-index:4">
+      <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_nav_open();"><i class="fa fa-bars"></i>  Menu</button>
+      <span class="w3-bar-item w3-padding-large w3-theme-d4">
+          <a href="index.html">
+              <!--<i class="fa fa-home w3-margin-right"></i>
+              <span id='date-time'></span>-->
+                  <img src="static/img/logo_icon.png" height="30" width="auto">
+          </a>
+      </span>
+      <a href="todo.html" class="todo"><span class="w3-bar-item w3-padding-large w3-theme-d4 w3-center"><i class="fa fa-pencil w3-margin-right"></i>Todo</span></a>
+    <!-- Global Search -->
+      <div class="topbar-search-wrap" style="position:relative;display:inline-flex;align-items:center;margin-left:12px;">
+        <input type="text" id="global-search" placeholder="Search analyses..." 
+          hx-get="/api/search_html" hx-trigger="keyup changed delay:300ms" hx-target="#search-dropdown" hx-indicator="#search-spinner"
+          name="q" style="padding:6px 14px;border-radius:999px;border:1px solid rgba(56,189,248,0.38);font-size:.84rem;width:220px;">
+        <span id="search-spinner" class="htmx-indicator" style="margin-left:6px;"><i class="fa fa-spinner fa-spin" style="color:var(--pc-accent);"></i></span>
+        <div id="search-dropdown" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:280px;background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);z-index:1000;display:none;"></div>
+      </div>
+      <div class="topbar-right-actions" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;">
+        <button type="button" onclick="openCmdPalette()" class="w3-bar-item w3-button" title="Command Palette (Ctrl+K)" style="font-size:0.82rem;padding:6px 12px;border-radius:8px;border:1px solid rgba(56,189,248,0.28);background:rgba(14,25,47,0.75);">
+          <i class="fa fa-terminal"></i> <span class="w3-hide-small">Ctrl+K</span>
+        </button>
+        <button type="button" onclick="toggleDarkMode()" class="w3-bar-item w3-button" title="Toggle Day Sail / Night Watch theme" style="padding:6px 12px;border-radius:8px;">
+          <i id="dark-mode-icon" class="fa fa-moon-o"></i>
+        </button>
+        <span class="w3-bar-item w3-theme-d4" style="padding:4px 8px;"><img src="static/img/logo_text.png" height="26" width="auto" style="display:block;border-radius:5px;"></span>
+      </div>
+    </div>
+    <script>
+    // Search dropdown show/hide
+    document.body.addEventListener('htmx:afterSwap', function(e){
+      if(e.target.id==='search-dropdown'){
+        var dd=document.getElementById('search-dropdown');
+        dd.style.display=dd.innerHTML.trim()?'block':'none';
+      }
+    });
+    document.addEventListener('click',function(e){
+      if(!e.target.closest('#global-search,#search-dropdown')){
+        var dd=document.getElementById('search-dropdown');
+        if(dd)dd.style.display='none';
+      }
+    });
+    </script>
+    <script>
+    /* ===== Dark Mode Toggle ===== */
+    function toggleDarkMode(){
+      document.body.classList.toggle('dark-mode');
+      var icon=document.getElementById('dark-mode-icon');
+      if(document.body.classList.contains('dark-mode')){
+        icon.className='fa fa-sun-o';
+        localStorage.setItem('darkMode','true');
+      }else{
+        icon.className='fa fa-moon-o';
+        localStorage.setItem('darkMode','false');
+      }
+    }
+    // Apply saved preference on page load, falling back to the configured default.
+    var storedDarkMode=localStorage.getItem('darkMode');
+    var defaultDarkMode=false;
+    if(storedDarkMode==='true'||(storedDarkMode===null&&defaultDarkMode)){
+      document.body.classList.add('dark-mode');
+      var darkModeIcon=document.getElementById('dark-mode-icon');
+      if(darkModeIcon)darkModeIcon.className='fa fa-sun-o';
+    }
+
+    /* ===== Toast Notifications ===== */
+    function showToast(msg, type, duration){
+      type=type||'info'; duration=duration||3000;
+      var colors={success:'#4CAF50',error:'#f44336',info:'#2196F3',warning:'#FF9800'};
+      var toast=document.createElement('div');
+      toast.style.cssText='padding:12px 20px;border-radius:6px;color:#fff;font-size:.85rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.2);opacity:0;transform:translateX(100%);transition:all .3s ease;background:'+colors[type];
+      toast.textContent=msg;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(function(){toast.style.opacity='1';toast.style.transform='translateX(0)';},10);
+      setTimeout(function(){toast.style.opacity='0';toast.style.transform='translateX(100%)';setTimeout(function(){toast.remove();},300);},duration);
+    }
+
+    /* ===== Command Palette (Ctrl/Cmd+K) ===== */
+    var CMD_ITEMS=[
+      {label:'Go to Analyses',icon:'fa-line-chart',url:'/analysis'},
+      {label:'Go to Data',icon:'fa-database',url:'/all_data/'},
+      {label:'Go to Chat',icon:'fa-comment',url:'/chat'},
+      {label:'New Analysis',icon:'fa-plus',url:'/load_analysis/'},
+      {label:'Pipeline Builder',icon:'fa-puzzle-piece',url:'/pipeline_builder'},
+      {label:'Query Runner',icon:'fa-search',url:'/query_runner/'},
+      {label:'DB Connections',icon:'fa-database',url:'/connections/'},
+      {label:'Upload Data',icon:'fa-upload',url:'/list_of_data/'},
+      {label:'Schedules',icon:'fa-clock-o',url:'/schedules/'},
+      {label:'RAWGraphs',icon:'fa-bar-chart',url:'/rawgraphs'},
+      {label:'Admin Users',icon:'fa-users',url:'/admin/users'},
+      
+      {label:'Todo',icon:'fa-pencil',url:'/todo'},
+    ];
+    function openCmdPalette(){
+      var el=document.getElementById('cmd-palette');
+      el.style.display='flex';
+      var input=document.getElementById('cmd-input');
+      input.value='';input.focus();
+      renderCmdResults('');
+    }
+    function closeCmdPalette(){document.getElementById('cmd-palette').style.display='none';}
+    function renderCmdResults(q){
+      var results=CMD_ITEMS.filter(function(c){return c.label.toLowerCase().includes(q.toLowerCase());});
+      var html=results.map(function(c){return '<a href="'+c.url+'" style="display:flex;align-items:center;gap:10px;padding:10px 20px;text-decoration:none;color:#333;border-bottom:1px solid #f5f5f5;" onmouseover="this.style.background=\'var(--pc-hover)\'" onmouseout="this.style.background=\'\'"><i class="fa '+c.icon+'" style="width:20px;text-align:center;color:var(--pc-accent);"></i>'+c.label+'</a>';}).join('');
+      document.getElementById('cmd-results').innerHTML=html||'<div style="padding:20px;color:#999;text-align:center;">No results</div>';
+    }
+    document.addEventListener('keydown',function(e){
+      if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();openCmdPalette();}
+      if(e.key==='Escape')closeCmdPalette();
+    });
+    document.getElementById('cmd-palette').addEventListener('click',function(e){if(e.target===this)closeCmdPalette();});
+    document.getElementById('cmd-input').addEventListener('input',function(){renderCmdResults(this.value);});
+    </script>
+    
+
+    <nav class="w3-sidebar w3-collapse w3-white" style="z-index:3;width:260px;" id="mySidebar">
+        <div class="w3-container w3-row sidebar-brand-box">
+          <a href="index.html" class="sidebar-brand-link">
+                <div class="sidebar-brand-icon w3-text-projectcompass">
+                  
+                  <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100" height="100" rx="20" fill="#0b1629"/>
+                  <circle cx="50" cy="50" r="35" fill="#0e2240" stroke="#38bdf8" stroke-width="4"/>
+                  <path d="M50 22L68 58L50 58Z" fill="#38bdf8" fill-opacity="0.85"/>
+                  <path d="M47 28L33 58L47 58Z" fill="#fbbf24" fill-opacity="0.9"/>
+                  <path d="M30 63L70 63L63 72L37 72Z" fill="#2dd4bf"/>
+                  </svg>
+                  
+                </div>
+                <div class="sidebar-brand-text w3-text-projectcompass">
+                    <h2>Analysis</h2>
+                    <span class="sidebar-brand-sub">ProjectCompass</span>
+                </div>
+          </a>
+      </div>
+      <div class="w3-container sidebar-section-label">
+        <h5>NAVIGATION</h5>
+      </div>
+      <div class="w3-bar-block sidebar-nav-list">
+        <a href="#" class="w3-bar-item w3-button w3-padding-16 w3-hide-large w3-dark-grey w3-hover-black" onclick="w3_nav_close()" title="close menu"><i class="fa fa-remove fa-fw"></i>  Close Menu</a>
+        <a href="index.html" class="w3-bar-item w3-button"><h5><i class="fa fa-compass fa-fw w3-margin-right"></i>Dashboard</h5></a>
+        
+
+        <a id="myBtn3" onclick="myFuncdownbar('analyses')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-map-signs fa-fw w3-margin-right"></i>Analyses <i id="analyses_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
+        <div id="analyses" class="w3-hide w3-show sidebar-subnav">
+          <a href="/analysis" class="w3-bar-item w3-button test w3-hover-light-grey">
+            <i class="fa fa-folder-open-o fa-fw"></i> <span>Catalog Explorer</span>
+          </a>
+          <a href="/load_analysis?=" class="w3-bar-item w3-button test w3-hover-light-grey">
+            <i class="fa fa-plus-circle fa-fw"></i> <span>New / Upload</span>
+          </a>
+        </div>
+
+        <a id="myBtn2" onclick="myFuncdownbar('datatools')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-database fa-fw w3-margin-right"></i>Data Tools <i id="datatools_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
+        <div id="datatools" class="w3-hide w3-show sidebar-subnav">
+          <a href="/all_data" class="w3-bar-item w3-button test w3-hover-light-grey">
+            <i class="fa fa-table fa-fw"></i> <span>Data Explorer</span>
+          </a>
+          <a href="query_runner.html" class="w3-bar-item w3-button test w3-hover-light-grey">
+            <i class="fa fa-terminal fa-fw"></i> <span>SQL Query Runner</span>
+          </a>
+          <a href="connections.html" class="w3-bar-item w3-button test w3-hover-light-grey">
+            <i class="fa fa-plug fa-fw"></i> <span>DB Connections</span>
+          </a>
+          <a href="rawgraphs.html" class="w3-bar-item w3-button test w3-hover-light-grey">
+            <i class="fa fa-bar-chart fa-fw"></i> <span>RAWGraphs</span>
+          </a>
+        </div>
+
+        
+        <div class="w3-container sidebar-section-label">
+          <h5>K0S CLUSTER</h5>
+        </div>
+        <a href="workers.html" class="w3-bar-item w3-button"><h5><i class="fa fa-server fa-fw w3-margin-right"></i>Workers</h5></a>
+        
+
+        
+        <div class="w3-container sidebar-section-label">
+          <h5>WORKFLOWS &amp; AI</h5>
+        </div>
+        
+        <a href="chat.html" class="w3-bar-item w3-button"><h5><i class="fa fa-comments fa-fw w3-margin-right"></i>AI Chat</h5></a>
+        <a href="pipeline_builder.html" class="w3-bar-item w3-button"><h5><i class="fa fa-sitemap fa-fw w3-margin-right"></i>Pipeline Builder</h5></a>
+        <a href="schedules.html" class="w3-bar-item w3-button"><h5><i class="fa fa-calendar fa-fw w3-margin-right"></i>Schedules</h5></a>
+        <a href="executions.html" class="w3-bar-item w3-button"><h5><i class="fa fa-history fa-fw w3-margin-right"></i>Executions</h5></a>
+
+        <div class="w3-container sidebar-section-label">
+          <h5>ADMIN &amp; SYSTEM</h5>
+        </div>
+        <a href="settings.html" class="w3-bar-item w3-button"><h5><i class="fa fa-key fa-fw w3-margin-right"></i>API &amp; Settings</h5></a>
+        <a href="admin_users.html" class="w3-bar-item w3-button"><h5><i class="fa fa-users fa-fw w3-margin-right"></i>Users &amp; Roles</h5></a>
+        <a href="admin_metrics.html" class="w3-bar-item w3-button"><h5><i class="fa fa-line-chart fa-fw w3-margin-right"></i>Observability</h5></a>
+
+        
+
+        <script>
+
+        function w3_nav_open() {
+          document.getElementById("mySidebar").style.display = "block";
+          document.getElementById("myOverlay").style.display = "block";
+        }
+
+        function w3_nav_close() {
+          document.getElementById("mySidebar").style.display = "none";
+          document.getElementById("myOverlay").style.display = "none";
+        }
+
+        function myFuncdownbar(id) {
+          var x = document.getElementById(id);
+          var x_arrow = document.getElementById(id+'_arrow');
+          if (x.className.indexOf("w3-show") == -1) {
+            x.className += " w3-show";
+            x_arrow.style.display = "none";
+
+          } else {
+            x.className = x.className.replace(" w3-show", "");
+            x.previousElementSibling.className.replace(" w3-red", "");
+            x_arrow.style.display = "inline";
+          }
+        }
+
+        </script>
+      </div>
+    </nav>
+    <!-- Overlay effect when opening sidebar on small screens x.previousElementSibling.className += " w3-color-projectcompass"; -->
+    <div class="w3-overlay w3-hide-large w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" title="close side menu" id="myOverlay"></div>
+
+    <script>
+    // Get the Sidebar
+    var mySidebar = document.getElementById("mySidebar");
+
+    // Get the DIV with overlay effect
+    var overlayBg = document.getElementById("myOverlay");
+
+    // Toggle between showing and hiding the sidebar, and add overlay effect
+    function w3_open() {
+      if (mySidebar.style.display === 'block') {
+        mySidebar.style.display = 'none';
+        overlayBg.style.display = "none";
+      } else {
+        mySidebar.style.display = 'block';
+        overlayBg.style.display = "block";
+      }
+    }
+
+    // Close the sidebar with the close button
+    function w3_close() {
+      mySidebar.style.display = "none";
+      overlayBg.style.display = "none";
+    }
+    </script>
+
+
+    <div id="loader" class="w3-main" style="margin-left:400px;margin-top:60px;display: None;">
+        <i class="fa fa-gears w3-margin-right"></i> Ongoing process, please wait.
+        <br><br>
+        <div class="loader"></div>
+    </div>
+    
+
+<div class="w3-main" style="margin-left:260px;margin-top:54px;position:relative;">
+<div class="pb-toolbar">
+  <div style="position:relative;display:inline-block;">
+    <button class="pb-btn-save" style="background:linear-gradient(135deg, #b45309 0%, #d97706 100%);" onclick="document.getElementById('tpl-dropdown').style.display=document.getElementById('tpl-dropdown').style.display==='block'?'none':'block'"><i class="fa fa-folder-open"></i> Templates</button>
+    <div id="tpl-dropdown" style="display:none;position:absolute;top:100%;left:0;background:#fff;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;min-width:220px;">
+      <a onclick="loadTemplate('classification_explainability')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Classification + Explainability</a>
+      <a onclick="loadTemplate('anomaly_detection')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Anomaly Detection</a>
+      <a onclick="loadTemplate('forecasting')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #eee;">Forecasting</a>
+      <a onclick="loadTemplate('full_ml')" style="display:block;padding:8px 14px;cursor:pointer;font-size:.8rem;">Full ML Pipeline</a>
+    </div>
+  </div>
+  <button class="pb-btn-save" onclick="savePipeline()"><i class="fa fa-save"></i> Save as Analysis</button>
+  <button class="pb-btn-run" onclick="saveAndRun()"><i class="fa fa-play"></i> Save & Run</button>
+  <button class="pb-btn-clear" onclick="editor.clear()"><i class="fa fa-trash"></i> Clear</button>
+</div>
+<div class="pb-wrap">
+  <!-- Palette -->
+  <div class="pb-palette">
+    <h6><i class="fa fa-plug"></i> Connectors</h6>
+    
+    
+    <div class="pb-block pb-connector-block" draggable="true" ondragstart="drag(event)" data-node="python_script" data-type="python_script" data-image="python:3.12-slim" title="Run custom Python script (python:3.12-slim)">
+      <i class="fa fa-code"></i>
+      <div style="display:flex;flex-direction:column;line-height:1.2;overflow:hidden;">
+        <span>python_script</span>
+        <small style="font-size:.66rem;color:#64748b;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">python:3.12-slim</small>
+      </div>
+    </div>
+    
+    <div class="pb-block pb-connector-block" draggable="true" ondragstart="drag(event)" data-node="sql_query" data-type="sql_query" data-image="python:3.12-slim" title="Execute SQL query against a connection (python:3.12-slim)">
+      <i class="fa fa-database"></i>
+      <div style="display:flex;flex-direction:column;line-height:1.2;overflow:hidden;">
+        <span>sql_query</span>
+        <small style="font-size:.66rem;color:#64748b;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">python:3.12-slim</small>
+      </div>
+    </div>
+    
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-database"></i> Data</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="load_data">
+      <i class="fa fa-database"></i> Load Data
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="feature_eng">
+      <i class="fa fa-magic"></i> Feature Engineering
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="quality">
+      <i class="fa fa-check-circle"></i> Data Quality
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-cogs"></i> ML Pipeline</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="train_model">
+      <i class="fa fa-cogs"></i> Train Model
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="tuning">
+      <i class="fa fa-sliders"></i> Tuning
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="validation">
+      <i class="fa fa-check-square-o"></i> Validation
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="predict">
+      <i class="fa fa-bolt"></i> Predict
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="explainability">
+      <i class="fa fa-lightbulb-o"></i> Explainability
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="fairness">
+      <i class="fa fa-balance-scale"></i> Fairness
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="drift">
+      <i class="fa fa-exchange"></i> Drift Detection
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-area-chart"></i> Specialized</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="anomaly">
+      <i class="fa fa-exclamation-triangle"></i> Anomaly Detection
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="forecast">
+      <i class="fa fa-line-chart"></i> Forecast
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="text_nlp">
+      <i class="fa fa-font"></i> Text / NLP
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-file-text"></i> Report</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report">
+      <i class="fa fa-file-text"></i> Quick Report
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_kpi">
+      <i class="fa fa-dashboard"></i> KPI Cards
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_plotly_grid">
+      <i class="fa fa-th"></i> Plotly Grid
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_tabs">
+      <i class="fa fa-folder-o"></i> Tabs
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_comparison">
+      <i class="fa fa-columns"></i> Comparison Table
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_summary">
+      <i class="fa fa-table"></i> Summary Stats
+    </div>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="report_dark_mode">
+      <i class="fa fa-moon-o"></i> Dark Mode
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-download"></i> Output</h6>
+    <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="save_artifact">
+      <i class="fa fa-download"></i> Save Artifact
+    </div>
+
+    <hr class="pb-sep">
+    <h6><i class="fa fa-info-circle"></i> How to use</h6>
+    <p style="font-size:.72rem;color:#666;line-height:1.4">
+      1. Drag blocks onto the canvas<br>
+      2. Connect outputs → inputs<br>
+      3. Double-click to configure<br>
+      4. Save as Analysis to run/schedule
+    </p>
+  </div>
+
+  <!-- Canvas -->
+  <div id="drawflow" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+</div>
+</div>
+
+<!-- Config Modal -->
+<div class="pb-modal" id="configModal">
+  <div class="pb-modal-content">
+    <h5 id="modalTitle">Configure Node</h5>
+    <div id="modalBody"></div>
+    <button onclick="saveNodeConfig()" style="background:linear-gradient(135deg, #0284c7 0%, #0d9488 100%);color:#fff">Save</button>
+    <button onclick="closeModal()" style="background:#64748b;color:#fff;margin-left:6px">Cancel</button>
+  </div>
+</div>
+
+<!-- Save Pipeline Modal -->
+<div class="pb-modal" id="saveModal">
+  <div class="pb-modal-content">
+    <h5>Save Pipeline as Structured Analysis</h5>
+    <label>Analysis Name *</label>
+    <input type="text" id="pipeline_name" placeholder="My ML Pipeline" required>
+    <label>Description</label>
+    <input type="text" id="pipeline_desc" placeholder="Description of what this pipeline does">
+    <label>Product</label>
+    <input type="text" id="pipeline_product" value="Machine Learning">
+    <label>Owner</label>
+    <input type="text" id="pipeline_owner" value="admin">
+    <button onclick="submitPipeline(false)" style="background:linear-gradient(135deg, #0d9488 0%, #059669 100%);color:#fff">Save</button>
+    <button onclick="submitPipeline(true)" style="background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#fff;margin-left:6px">Save &amp; Run</button>
+    <button onclick="document.getElementById('saveModal').classList.remove('active')" style="background:#64748b;color:#fff;margin-left:6px">Cancel</button>
+  </div>
+</div>
+
+<script src="static/js/drawflow.min.js"></script>
+<script>
+var editor = new Drawflow(document.getElementById('drawflow'));
+editor.reroute = true;
+editor.start();
+var _editingNode = null;
+var _allColumns = [];
+var datasets = ["employees", "relatedEntities", "sales_data", "website_metrics", "wine_quality"];
+var connectors = [{"builtin": true, "description": "Run custom Python script", "image": "python:3.12-slim", "name": "python_script", "parameters": [{"default": "", "name": "code", "options": [], "param_type": "text", "required": true, "source": null, "type": "text"}]}, {"builtin": true, "description": "Execute SQL query against a connection", "image": "python:3.12-slim", "name": "sql_query", "parameters": [{"default": "", "name": "query", "options": [], "param_type": "text", "required": true, "source": null, "type": "text"}, {"default": "", "name": "connection", "options": [], "param_type": "select", "required": false, "source": "connections", "type": "select"}]}];
+var connectionNames = [];
+
+// Node definitions
+var NODE_DEFS = {
+  // --- Data ---
+  load_data: {title:'Load Data', inputs:0, outputs:1, fields:[
+    {id:'dataset',label:'Dataset',type:'select',options:datasets},
+    {id:'limit',label:'Row limit (0=all)',type:'number',default:'0'}
+  ]},
+  feature_eng: {title:'Feature Engineering', inputs:1, outputs:1, fields:[
+    {id:'interactions',label:'Polynomial interactions',type:'checkbox',default:false},
+    {id:'log_transform',label:'Log transform skewed',type:'checkbox',default:true},
+    {id:'date_features',label:'Extract date features',type:'checkbox',default:false},
+    {id:'target_encode',label:'Target encode categoricals',type:'checkbox',default:false}
+  ]},
+  quality: {title:'Data Quality Report', inputs:1, outputs:1, fields:[]},
+  // --- ML Pipeline ---
+  train_model: {title:'Train Model', inputs:1, outputs:1, fields:[
+    {id:'task_type',label:'Task type',type:'select',options:['regression','classification']},
+    {id:'target_col',label:'Target column',type:'columns',default:''},
+    {id:'model_hint',label:'Model hint',type:'select',options:['auto','numerical_prediction','categorical_known','categorical_unknown']},
+    {id:'test_size',label:'Test size',type:'number',default:'0.2'},
+    {id:'ensemble',label:'Ensemble',type:'select',options:['none','voting','stacking']}
+  ]},
+  tuning: {title:'Tuning', inputs:1, outputs:1, fields:[
+    {id:'method',label:'Method',type:'select',options:['optuna','halving']},
+    {id:'n_trials',label:'Trials / iterations',type:'number',default:'50'},
+    {id:'scoring',label:'Scoring metric',type:'select',options:['r2','accuracy','f1','rmse']}
+  ]},
+  validation: {title:'Validation', inputs:1, outputs:1, fields:[
+    {id:'methods',label:'Method',type:'select',options:['kfold','loocv','bootstrap']},
+    {id:'cv_folds',label:'CV folds',type:'number',default:'5'},
+    {id:'bootstrap_iterations',label:'Bootstrap iterations',type:'number',default:'100'}
+  ]},
+  predict: {title:'Predict', inputs:1, outputs:1, fields:[
+    {id:'artifact_path',label:'Artifact path (.scomp)',type:'text',default:''}
+  ]},
+  explainability: {title:'Explainability', inputs:1, outputs:1, fields:[
+    {id:'method',label:'Method',type:'select',options:['shap','lime']},
+    {id:'num_features',label:'Top N features',type:'number',default:'10'}
+  ]},
+  fairness: {title:'Fairness', inputs:1, outputs:1, fields:[
+    {id:'sensitive_column',label:'Sensitive attribute',type:'columns',default:''},
+    {id:'predicted_col',label:'Predicted column',type:'columns',default:''},
+    {id:'target_col',label:'Target column',type:'columns',default:''}
+  ]},
+  drift: {title:'Drift Detection', inputs:1, outputs:1, fields:[
+    {id:'reference_dataset',label:'Reference dataset',type:'select',options:datasets},
+    {id:'threshold',label:'PSI threshold',type:'number',default:'0.1'}
+  ]},
+  // --- Specialized ---
+  anomaly: {title:'Anomaly Detection', inputs:1, outputs:1, fields:[
+    {id:'methods',label:'Methods (comma-sep)',type:'text',default:'iforest,lof'},
+    {id:'contamination',label:'Contamination',type:'number',default:'0.05'}
+  ]},
+  forecast: {title:'Time Series Forecast', inputs:1, outputs:1, fields:[
+    {id:'column',label:'Value column',type:'columns',default:''},
+    {id:'horizon',label:'Horizon',type:'number',default:'10'},
+    {id:'method',label:'Method',type:'select',options:['auto','arima','sarima','exp_smoothing']}
+  ]},
+  text_nlp: {title:'Text / NLP', inputs:1, outputs:1, fields:[
+    {id:'text_column',label:'Text column',type:'columns',default:''},
+    {id:'method',label:'Method',type:'select',options:['contrastive']},
+    {id:'head',label:'Classifier head',type:'select',options:['auto','logistic','svm','lightgbm']}
+  ]},
+  // --- Report ---
+  report: {title:'Quick Report', inputs:1, outputs:0, fields:[
+    {id:'report_type',label:'Report type',type:'select',options:['model','eda','full']},
+    {id:'include_kpi',label:'Include KPI cards',type:'checkbox',default:true},
+    {id:'include_summary',label:'Include data summary',type:'checkbox',default:true},
+    {id:'dark_mode',label:'Dark mode',type:'checkbox',default:false}
+  ]},
+  report_kpi: {title:'KPI Cards', inputs:1, outputs:1, fields:[
+    {id:'metrics_keys',label:'Metric keys (comma-sep, empty=all)',type:'text',default:''},
+    {id:'cols',label:'Columns',type:'number',default:'3'}
+  ]},
+  report_plotly_grid: {title:'Plotly Grid', inputs:1, outputs:1, fields:[
+    {id:'cols',label:'Grid columns',type:'number',default:'2'},
+    {id:'chart_type',label:'Chart type',type:'select',options:['scatter','bar','histogram','line']}
+  ]},
+  report_tabs: {title:'Tabs', inputs:1, outputs:1, fields:[
+    {id:'tab_labels',label:'Tab labels (comma-sep)',type:'text',default:'Overview,Details'}
+  ]},
+  report_comparison: {title:'Comparison Table', inputs:1, outputs:1, fields:[
+    {id:'baseline_col',label:'Baseline column',type:'columns',default:''},
+    {id:'compare_cols',label:'Compare columns (comma-sep)',type:'text',default:''}
+  ]},
+  report_summary: {title:'Summary Stats', inputs:1, outputs:1, fields:[
+    {id:'title',label:'Section title',type:'text',default:'Data Summary'}
+  ]},
+  report_dark_mode: {title:'Dark Mode Toggle', inputs:1, outputs:1, fields:[]},
+  // --- Output ---
+  save_artifact: {title:'Save Artifact', inputs:1, outputs:0, fields:[
+    {id:'artifact_name',label:'Artifact filename',type:'text',default:'model.scomp'}
+  ]}
+};
+
+// Register configured and built-in connectors
+connectors.forEach(function(conn){
+  var fields = (conn.parameters || []).map(function(p){
+    var fType = p.type || p.param_type || 'text';
+    if((p.name === 'code' || p.name === 'query') && fType === 'text'){
+      fType = 'textarea';
+    }
+    var opts = [];
+    if(fType === 'select'){
+      opts = (p.source === 'connections') ? connectionNames : (p.options || []);
+    }
+    return {
+      id: p.name,
+      label: p.name + (p.required ? ' *' : ''),
+      type: fType,
+      options: opts,
+      source: p.source || null,
+      required: !!p.required,
+      default: (p.default !== undefined && p.default !== null) ? p.default : ''
+    };
+  });
+  NODE_DEFS[conn.name] = {
+    title: conn.name,
+    description: conn.description || '',
+    image: conn.image || 'python:3.12-slim',
+    builtin: !!conn.builtin,
+    isConnector: true,
+    inputs: 1,
+    outputs: 1,
+    fields: fields
+  };
+});
+
+// Drag & drop
+function drag(ev){
+  var block = ev.currentTarget || (ev.target && ev.target.closest ? ev.target.closest('.pb-block') : null) || ev.target;
+  ev.dataTransfer.setData('node', block.dataset.node || block.dataset.type || '');
+}
+function allowDrop(ev){ev.preventDefault()}
+function drop(ev){
+  ev.preventDefault();
+  var type=ev.dataTransfer.getData('node');
+  if(!type||!NODE_DEFS[type])return;
+  var def=NODE_DEFS[type];
+  var imgBadge=def.image?'<div style="font-size:.66rem;color:#0284c7;margin-bottom:2px">'+def.image+'</div>':'';
+  var html='<div class="node-title">'+def.title+'</div>'+imgBadge+'<div class="node-config" id="cfg-{id}">double-click to configure</div>';
+  var posX=ev.clientX-document.getElementById('drawflow').getBoundingClientRect().left;
+  var posY=ev.clientY-document.getElementById('drawflow').getBoundingClientRect().top;
+  var nodeId=editor.addNode(type,def.inputs,def.outputs,posX,posY,type,{config:{}},html.replace('{id}',''));
+  var el=document.querySelector('#node-'+nodeId+' .node-config');
+  if(el)el.id='cfg-'+nodeId;
+}
+
+// Double-click to configure
+editor.on('nodeSelected',function(id){_editingNode=id});
+document.getElementById('drawflow').addEventListener('dblclick',function(){
+  if(!_editingNode)return;
+  openConfig(_editingNode);
+});
+
+function openConfig(nodeId){
+  var node=editor.getNodeFromId(nodeId);
+  var def=NODE_DEFS[node.class];
+  if(!def||(!def.fields.length&&!def.isConnector)){alert('No configuration needed for this block');return}
+  var cfg=node.data.config||{};
+  var html='';
+  if(def.image){
+    html+='<div style="font-size:.76rem;color:#475569;margin-bottom:.6rem;">Container Image: <code>'+def.image+'</code></div>';
+  }
+  def.fields.forEach(function(f){
+    var val=cfg[f.id]!==undefined?cfg[f.id]:(f.default!==undefined?f.default:'');
+    html+='<label>'+f.label+'</label>';
+    if(f.type==='select'){
+      var selectOpts=(f.source==='connections')?connectionNames:(f.options||[]);
+      html+='<select id="cfg_'+f.id+'">';
+      if(f.source==='connections'&&!selectOpts.length){
+        html+='<option value="">-- no configured connections --</option>';
+      }
+      selectOpts.forEach(function(o){html+='<option value="'+o+'"'+(val==o?' selected':'')+'>'+o+'</option>'});
+      html+='</select>';
+    }else if(f.type==='columns'){
+      html+='<select id="cfg_'+f.id+'"><option value="">-- select column --</option>';
+      _allColumns.forEach(function(c){html+='<option value="'+c+'"'+(val==c?' selected':'')+'>'+c+'</option>'});
+      html+='</select>';
+    }else if(f.type==='checkbox'||f.type==='boolean'){
+      html+='<input type="checkbox" id="cfg_'+f.id+'" '+(val?'checked':'')+' style="width:auto">';
+    }else if(f.type==='textarea'||f.type==='code'){
+      html+='<textarea id="cfg_'+f.id+'" rows="4">'+val+'</textarea>';
+    }else{
+      var inputType=(f.type==='number')?'number':'text';
+      html+='<input type="'+inputType+'" id="cfg_'+f.id+'" value="'+val+'">';
+    }
+  });
+  document.getElementById('modalTitle').textContent='Configure: '+def.title;
+  document.getElementById('modalBody').innerHTML=html;
+  document.getElementById('configModal').classList.add('active');
+}
+
+function saveNodeConfig(){
+  var node=editor.getNodeFromId(_editingNode);
+  var def=NODE_DEFS[node.class];
+  if(node.class==='load_data'){
+    var dsEl=document.getElementById('cfg_dataset');
+    if(dsEl&&dsEl.value){fetch('/api/data/'+dsEl.value+'/preview?limit=1').then(function(r){return r.json()}).then(function(d){if(d.columns)_allColumns=d.columns}).catch(function(){});}
+  }
+  var cfg={};
+  def.fields.forEach(function(f){
+    var el=document.getElementById('cfg_'+f.id);
+    if(!el)return;
+    if(f.type==='checkbox'||f.type==='boolean')cfg[f.id]=el.checked;
+    else cfg[f.id]=el.value;
+  });
+  node.data.config=cfg;
+  editor.updateNodeDataFromId(_editingNode,node.data);
+  var cfgEl=document.querySelector('#node-'+_editingNode+' .node-config');
+  if(cfgEl){
+    var summary=Object.entries(cfg).filter(function(e){return e[1]&&e[1]!=='0'&&e[1]!=='none'&&e[1]!==false}).map(function(e){return e[0]+'='+e[1]}).join(', ');
+    cfgEl.textContent=summary||'configured';
+  }
+  closeModal();
+}
+function closeModal(){document.getElementById('configModal').classList.remove('active')}
+
+// Save pipeline
+function savePipeline(){document.getElementById('saveModal').classList.add('active')}
+function saveAndRun(){document.getElementById('saveModal').classList.add('active')}
+function saveAndRunPipeline(){saveAndRun()}
+
+function submitPipeline(andRun){
+  var name=document.getElementById('pipeline_name').value.trim();
+  if(!name){alert('Name is required');return}
+  var exportData=editor.export();
+  var payload={
+    name:name,
+    description:document.getElementById('pipeline_desc').value,
+    product:document.getElementById('pipeline_product').value,
+    owner:document.getElementById('pipeline_owner').value,
+    graph:exportData,
+    run_after_save:andRun
+  };
+  fetch('/save_pipeline/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.success){
+      document.getElementById('saveModal').classList.remove('active');
+      if(andRun)window.location='/create_investigations?name='+d.name.replace(/ /g,'512');
+      else window.location='/analysis';
+    }else{alert('Error: '+d.error)}
+  });
+}
+
+function loadTemplate(name){
+  fetch('/static/pipeline_templates/'+name+'.json').then(function(r){return r.json()}).then(function(data){
+    editor.clear();
+    editor.import(data);
+    document.getElementById('tpl-dropdown').style.display='none';
+    alert('Template loaded: '+name.replace(/_/g,' '));
+  }).catch(function(){alert('Failed to load template');});
+}
+
+// Close template dropdown on outside click
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#tpl-dropdown')&&!e.target.closest('[onclick*="tpl-dropdown"]')){
+    var dd=document.getElementById('tpl-dropdown');
+    if(dd)dd.style.display='none';
+  }
+});
+</script>
+</body>
+</html>

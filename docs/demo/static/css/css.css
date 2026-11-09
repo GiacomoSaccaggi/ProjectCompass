@@ -1,0 +1,638 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/raleway/v19/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVvaorCFPrEHJA.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/raleway/v19/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVvaorCMPrEHJA.woff2) format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/raleway/v19/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVvaorCHPrEHJA.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/raleway/v19/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVvaorCGPrEHJA.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.gstatic.com/s/raleway/v19/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVvaorCIPrE.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ============================================================================
+ * ProjectCompass — Mariner & Sailboat Command Deck ("Day Sail" Light Theme)
+ * Global W3.CSS reskin matching the documentation portal aesthetic
+ * ============================================================================ */
+
+:root {
+  --mariner-bg-primary: #fbf9f4;
+  --mariner-bg-secondary: #f2ede2;
+  --mariner-bg-elevated: rgba(255, 255, 255, 0.94);
+  --mariner-bg-card: rgba(255, 253, 248, 0.96);
+  --mariner-bg-card-hover: #ffffff;
+  --mariner-bg-code: #0b1629;
+  --mariner-bg-inline-code: rgba(2, 132, 199, 0.11);
+  --mariner-bg-table-head: #e6dfd1;
+  --mariner-bg-table-row-alt: #f6f2e9;
+
+  --mariner-navy: #0b1629;
+  --mariner-navy-deep: #060d1a;
+  --mariner-navy-surface: #0e192f;
+
+  --mariner-cyan: #0284c7;
+  --mariner-cyan-bright: #38bdf8;
+  --mariner-cyan-glow: rgba(2, 132, 199, 0.16);
+  --mariner-teal: #0d9488;
+  --mariner-teal-bright: #2dd4bf;
+  --mariner-gold: #b45309;
+  --mariner-gold-bright: #fbbf24;
+  --mariner-gold-glow: rgba(180, 83, 9, 0.15);
+  --mariner-emerald: #059669;
+  --mariner-purple: #7c3aed;
+  --mariner-crimson: #dc2626;
+
+  --mariner-text-primary: #0f172a;
+  --mariner-text-secondary: #334155;
+  --mariner-text-muted: #64748b;
+
+  --mariner-border-subtle: rgba(15, 23, 42, 0.12);
+  --mariner-border-strong: rgba(2, 132, 199, 0.42);
+  --mariner-border-gold: rgba(180, 83, 9, 0.38);
+
+  --mariner-shadow-card: 0 10px 26px -8px rgba(11, 22, 41, 0.10), 0 4px 12px -4px rgba(11, 22, 41, 0.05);
+  --mariner-shadow-hover: 0 14px 32px -8px rgba(2, 132, 199, 0.18), 0 6px 16px -4px rgba(11, 22, 41, 0.08);
+  --mariner-shadow-topbar: 0 4px 20px rgba(6, 13, 26, 0.32);
+
+  --mariner-chart-graticule:
+    linear-gradient(to right, rgba(2, 132, 199, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(2, 132, 199, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(180, 83, 9, 0.10) 1px, transparent 1px);
+
+  --mariner-wave-overlay: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 54' preserveAspectRatio='none'%3E%3Cpath fill='rgba(56,189,248,0.18)' d='M0,18 C240,48 480,-6 720,20 C960,46 1200,2 1440,24 L1440,54 L0,54 Z'/%3E%3Cpath fill='rgba(45,212,191,0.14)' d='M0,30 C300,4 600,50 900,22 C1140,2 1320,38 1440,28 L1440,54 L0,54 Z'/%3E%3C/svg%3E");
+  --mariner-sailboat-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Cpath d='M32 10 L48 42 L32 42 Z' fill='rgba(2,132,199,0.07)' stroke='rgba(2,132,199,0.16)' stroke-width='1.5'/%3E%3Cpath d='M29 16 L17 42 L29 42 Z' fill='rgba(180,83,9,0.07)' stroke='rgba(180,83,9,0.16)' stroke-width='1.5'/%3E%3Cpath d='M14 46 L50 46 L44 53 L20 53 Z' fill='rgba(11,22,41,0.08)'/%3E%3C/svg%3E");
+}
+
+/* ── Base Typography & Nautical Chartroom Canvas ────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+body,
+body.w3-light-grey {
+  font-family: 'Inter', var(--pc-font-family, 'Raleway', sans-serif);
+  background-color: var(--mariner-bg-primary) !important;
+  background-image: var(--mariner-chart-graticule);
+  background-size: 64px 64px, 64px 64px, 32px 32px;
+  color: var(--mariner-text-primary);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', var(--pc-font-family, 'Raleway', sans-serif);
+  color: var(--mariner-text-primary);
+  letter-spacing: -0.015em;
+}
+
+code, pre, .w3-code, .w3-codespan {
+  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+}
+
+.w3-codespan, code {
+  background-color: var(--mariner-bg-inline-code);
+  color: var(--mariner-cyan);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 0.9em;
+}
+
+pre, .w3-code {
+  background-color: var(--mariner-bg-code);
+  color: #e2e8f0;
+  border-left: 4px solid var(--mariner-cyan-bright);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--mariner-border-subtle);
+  margin: 20px 0;
+}
+
+a {
+  color: var(--mariner-cyan);
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+a:hover {
+  color: var(--mariner-teal);
+}
+
+/* ── Top Offshore Command Bar (.w3-bar.w3-top) ──────────────────────────── */
+.w3-bar.w3-top,
+.w3-bar.w3-color-projectcompass {
+  background: linear-gradient(90deg, #060d1a 0%, var(--mariner-navy) 55%, #0e2240 100%) !important;
+  color: #f1f5f9 !important;
+  border-bottom: 2px solid rgba(251, 191, 36, 0.42);
+  box-shadow: var(--mariner-shadow-topbar);
+  backdrop-filter: blur(12px);
+  display: flex !important;
+  align-items: center !important;
+  height: 54px !important;
+  padding: 0 16px !important;
+  gap: 6px;
+  overflow: visible !important;
+}
+
+.w3-bar.w3-top .w3-bar-item,
+.w3-bar.w3-top a {
+  color: #f1f5f9 !important;
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  text-decoration: none;
+}
+
+.w3-bar.w3-top .w3-padding-large {
+  padding: 6px 12px !important;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.w3-bar.w3-top img {
+  border-radius: 6px;
+  display: block;
+}
+
+.w3-bar.w3-top .w3-button:hover {
+  background-color: rgba(56, 189, 248, 0.16) !important;
+  color: var(--mariner-gold-bright) !important;
+}
+
+#global-search {
+  background-color: rgba(14, 25, 47, 0.85) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(56, 189, 248, 0.38) !important;
+  border-radius: 999px !important;
+  padding: 6px 14px !important;
+  font-family: 'Inter', sans-serif;
+  text-align: left !important;
+  margin: 0 !important;
+  width: 220px !important;
+  transition: all 0.2s ease;
+}
+
+#global-search::placeholder {
+  color: #94a3b8;
+}
+
+#global-search:focus {
+  outline: none;
+  border-color: var(--mariner-gold-bright) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+  width: 260px !important;
+}
+
+#search-dropdown {
+  background: var(--mariner-bg-card) !important;
+  border: 1px solid var(--mariner-border-strong);
+  border-radius: 10px !important;
+  box-shadow: var(--mariner-shadow-hover) !important;
+  overflow: hidden;
+}
+
+/* ── Nautical Chartroom Sidebar (#mySidebar) ────────────────────────────── */
+#mySidebar.w3-sidebar {
+  background: linear-gradient(180deg, #fdfbf7 0%, #f3ede0 100%) !important;
+  border-right: 1px solid var(--mariner-border-subtle);
+  box-shadow: 4px 0 24px rgba(11, 22, 41, 0.06);
+  color: var(--mariner-text-primary) !important;
+  top: 54px !important;
+  height: calc(100vh - 54px) !important;
+  width: 260px !important;
+  left: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  animation: none !important;
+  padding-bottom: 24px;
+}
+
+.sidebar-brand-box {
+  padding: 14px 16px 12px !important;
+  border-bottom: 1px solid var(--mariner-border-subtle);
+  margin-bottom: 4px;
+}
+
+.sidebar-brand-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px;
+  text-decoration: none !important;
+}
+
+.sidebar-brand-icon svg,
+.sidebar-brand-icon img {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 10px;
+  display: block;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(6, 13, 26, 0.16);
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-brand-text h2 {
+  font-size: 1.06rem !important;
+  font-weight: 800 !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+  color: var(--mariner-navy) !important;
+}
+
+.sidebar-brand-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--mariner-cyan);
+  letter-spacing: 0.02em;
+}
+
+#mySidebar .w3-text-projectcompass,
+#mySidebar h2,
+#mySidebar h5 {
+  color: var(--mariner-navy) !important;
+}
+
+#mySidebar > .w3-container > h5,
+#mySidebar .sidebar-section-label h5 {
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.11em !important;
+  text-transform: uppercase !important;
+  color: var(--mariner-gold) !important;
+  margin: 10px 0 4px 0 !important;
+}
+
+#mySidebar .sidebar-section-label {
+  padding: 2px 16px !important;
+}
+
+#mySidebar .w3-bar-block .w3-bar-item.w3-button {
+  border-radius: 9px;
+  margin: 1px 10px;
+  width: calc(100% - 20px);
+  padding: 7px 12px !important;
+  font-size: 0.88rem !important;
+  font-weight: 600;
+  color: var(--mariner-text-secondary) !important;
+  border: none !important;
+  border-left: 3px solid transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px;
+  transition: all 0.16s ease;
+}
+
+#mySidebar .w3-bar-block .w3-bar-item.w3-button h5 {
+  margin: 0 !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  color: inherit !important;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+#mySidebar .w3-bar-block .w3-bar-item.w3-button i.fa {
+  color: var(--mariner-cyan);
+  width: 18px;
+  text-align: center;
+  transition: transform 0.16s ease, color 0.16s ease;
+}
+
+#mySidebar .w3-bar-block .w3-bar-item.w3-button:hover,
+#mySidebar .w3-hover-light-grey:hover {
+  background: rgba(2, 132, 199, 0.10) !important;
+  color: var(--mariner-navy) !important;
+  border-left-color: var(--mariner-gold) !important;
+}
+
+#mySidebar .w3-bar-block .w3-bar-item.w3-button:hover i.fa {
+  color: var(--mariner-gold);
+  transform: translateX(2px);
+}
+
+#analyses .w3-bar-item,
+#datatools .w3-bar-item,
+#mySidebar .sidebar-subnav .w3-bar-item.w3-button {
+  padding: 6px 12px 6px 26px !important;
+  font-size: 0.83rem !important;
+  font-weight: 500 !important;
+}
+
+.sidebar-demo-notice {
+  font-size: 0.68rem !important;
+  line-height: 1.35 !important;
+  color: var(--mariner-text-muted) !important;
+  background: rgba(180, 83, 9, 0.06);
+  border: 1px solid rgba(180, 83, 9, 0.18);
+  border-radius: 8px;
+  margin: 14px 12px 6px !important;
+  padding: 8px 10px !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Main Content Container & Page Header Banners ───────────────────────── */
+.w3-main {
+  background-color: transparent !important;
+}
+
+@media (min-width: 993px) {
+  .w3-main {
+    margin-left: 260px !important;
+    margin-top: 54px !important;
+    min-height: calc(100vh - 54px);
+  }
+}
+
+@media (max-width: 992px) {
+  .w3-main {
+    margin-left: 0 !important;
+    margin-top: 54px !important;
+  }
+}
+
+.w3-main > header.w3-container,
+.w3-main > header.w3-display-container,
+header.w3-display-container.w3-content {
+  position: relative;
+  border-bottom: 1px solid var(--mariner-border-subtle);
+  overflow: hidden;
+}
+
+.w3-main > header.w3-container:before,
+.w3-main > header.w3-container:after {
+  display: none !important;
+  content: none !important;
+}
+
+/* ── Glassmorphic Mariner Cards (.w3-card, .w3-card-1, .w3-card-4) ──────── */
+.w3-card,
+.w3-card-1,
+.w3-card-2,
+.w3-card-4 {
+  background-color: var(--mariner-bg-card) !important;
+  background-image:
+    linear-gradient(90deg, var(--mariner-cyan) 0%, var(--mariner-teal) 52%, var(--mariner-gold) 100%),
+    var(--mariner-sailboat-watermark);
+  background-size: 100% 3px, 56px 56px;
+  background-position: top left, calc(100% - 14px) 12px;
+  background-repeat: no-repeat, no-repeat;
+  border: 1px solid var(--mariner-border-subtle);
+  border-radius: 14px;
+  box-shadow: var(--mariner-shadow-card) !important;
+  color: var(--mariner-text-primary);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.w3-card:hover,
+.w3-card-1:hover,
+.w3-card-4:hover {
+  border-color: var(--mariner-border-strong);
+  box-shadow: var(--mariner-shadow-hover) !important;
+}
+
+.w3-white {
+  background-color: var(--mariner-bg-card) !important;
+  color: var(--mariner-text-primary) !important;
+}
+
+.w3-panel {
+  border-radius: 10px;
+  border: 1px solid var(--mariner-border-subtle);
+  box-shadow: 0 4px 14px rgba(11, 22, 41, 0.05);
+}
+
+/* ── Dashboard Regatta Telemetry KPI Tiles (.w3-quarter) ────────────────── */
+.w3-quarter > .w3-container {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-top: 3px solid var(--mariner-gold-bright);
+  box-shadow: 0 12px 28px -8px rgba(6, 13, 26, 0.28);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-image: var(--mariner-wave-overlay);
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: 100% 38px;
+}
+
+.w3-quarter > .w3-container:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px -8px rgba(2, 132, 199, 0.32);
+}
+
+.w3-quarter > .w3-container.w3-red {
+  background-color: #0b1930 !important;
+  background-image: var(--mariner-wave-overlay), linear-gradient(135deg, #0b1629 0%, #0369a1 100%) !important;
+  color: #f8fafc !important;
+}
+
+.w3-quarter > .w3-container.w3-blue {
+  background-color: #0284c7 !important;
+  background-image: var(--mariner-wave-overlay), linear-gradient(135deg, #0369a1 0%, #0284c7 60%, #38bdf8 100%) !important;
+  color: #f8fafc !important;
+}
+
+.w3-quarter > .w3-container.w3-teal {
+  background-color: #0d9488 !important;
+  background-image: var(--mariner-wave-overlay), linear-gradient(135deg, #0f766e 0%, #0d9488 65%, #14b8a6 100%) !important;
+  color: #f8fafc !important;
+}
+
+.w3-quarter > .w3-container.w3-orange {
+  background-color: #b45309 !important;
+  background-image: var(--mariner-wave-overlay), linear-gradient(135deg, #92400e 0%, #b45309 60%, #d97706 100%) !important;
+  color: #ffffff !important;
+}
+
+.w3-quarter > .w3-container h3,
+.w3-quarter > .w3-container h4,
+.w3-quarter > .w3-container i {
+  color: #ffffff !important;
+}
+
+/* ── Nautical Tables (.w3-table, .w3-table-all) ─────────────────────────── */
+.w3-table,
+.w3-table-all {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  background: var(--mariner-bg-card);
+  border: 1px solid var(--mariner-border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(11, 22, 41, 0.05);
+}
+
+.w3-table th,
+.w3-table-all th,
+table thead th {
+  background-color: var(--mariner-bg-table-head) !important;
+  color: var(--mariner-navy) !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--mariner-border-gold) !important;
+}
+
+.w3-table td,
+.w3-table-all td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--mariner-border-subtle);
+  color: var(--mariner-text-secondary);
+  vertical-align: middle;
+}
+
+.w3-striped tbody tr:nth-child(even),
+.w3-table-all tr:nth-child(even) {
+  background-color: var(--mariner-bg-table-row-alt) !important;
+}
+
+.w3-table-all tr:nth-child(odd) {
+  background-color: var(--mariner-bg-card) !important;
+}
+
+.w3-hoverable tbody tr:hover,
+.w3-table tbody tr:hover,
+.w3-table-all tbody tr:hover {
+  background-color: rgba(2, 132, 199, 0.08) !important;
+}
+
+/* ── Buttons, Inputs, Selects & Badges ──────────────────────────────────── */
+.w3-button,
+.w3-btn,
+button,
+input[type="submit"],
+input[type="button"] {
+  border-radius: 8px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: all 0.18s ease;
+}
+
+.w3-indigo,
+.w3-blue {
+  background: linear-gradient(135deg, var(--mariner-cyan) 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+}
+
+.w3-indigo:hover,
+.w3-blue:hover {
+  background: linear-gradient(135deg, #0369a1 0%, var(--mariner-navy) 100%) !important;
+  color: var(--mariner-gold-bright) !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.w3-teal,
+.w3-green {
+  background: linear-gradient(135deg, var(--mariner-teal) 0%, var(--mariner-emerald) 100%) !important;
+  color: #ffffff !important;
+}
+
+.w3-input,
+.w3-select,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="url"],
+select,
+textarea {
+  background-color: #ffffff;
+  color: var(--mariner-text-primary);
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 8px;
+  padding: 9px 12px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.w3-input:focus,
+.w3-select:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="url"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--mariner-cyan) !important;
+  box-shadow: 0 0 0 3px var(--mariner-cyan-glow);
+}
+
+.w3-tag,
+.w3-badge {
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.w3-modal-content {
+  border-radius: 14px;
+  border: 1px solid var(--mariner-border-strong);
+  box-shadow: 0 20px 50px rgba(6, 13, 26, 0.35);
+  overflow: hidden;
+}
+
+@media (min-width: 993px) {
+  .w3-hide-large,
+  .w3-bar.w3-top .w3-bar-item.w3-hide-large,
+  #mySidebar .w3-bar-block .w3-bar-item.w3-button.w3-hide-large {
+    display: none !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .w3-hide-small {
+    display: none !important;
+  }
+}

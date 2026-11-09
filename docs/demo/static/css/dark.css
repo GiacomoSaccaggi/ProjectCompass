@@ -1,0 +1,252 @@
+/* ============================================================================
+ * ProjectCompass — Mariner & Sailboat Command Deck ("Night Watch" Dark Theme)
+ * Scoped to body.dark-mode — Deep Ocean Navy, Sea-Spray Cyan & Brass Gold
+ * ============================================================================ */
+
+body.dark-mode {
+  --mariner-bg-primary: #060d1a;
+  --mariner-bg-secondary: #0b1629;
+  --mariner-bg-elevated: rgba(13, 24, 44, 0.90);
+  --mariner-bg-card: rgba(14, 25, 47, 0.88);
+  --mariner-bg-card-hover: rgba(20, 36, 66, 0.96);
+  --mariner-bg-code: #040811;
+  --mariner-bg-inline-code: rgba(56, 189, 248, 0.14);
+  --mariner-bg-table-head: rgba(24, 39, 68, 0.94);
+  --mariner-bg-table-row-alt: rgba(11, 22, 41, 0.65);
+
+  --mariner-cyan: #38bdf8;
+  --mariner-cyan-glow: rgba(56, 189, 248, 0.25);
+  --mariner-teal: #2dd4bf;
+  --mariner-gold: #fbbf24;
+  --mariner-gold-glow: rgba(251, 191, 36, 0.22);
+  --mariner-emerald: #34d399;
+  --mariner-purple: #a78bfa;
+  --mariner-crimson: #f87171;
+
+  --mariner-text-primary: #f1f5f9;
+  --mariner-text-secondary: #cbd5e1;
+  --mariner-text-muted: #94a3b8;
+
+  --mariner-border-subtle: rgba(148, 163, 184, 0.18);
+  --mariner-border-strong: rgba(56, 189, 248, 0.44);
+  --mariner-border-gold: rgba(251, 191, 36, 0.42);
+
+  --mariner-shadow-card: 0 12px 32px -10px rgba(0, 0, 0, 0.72);
+  --mariner-shadow-hover: 0 14px 36px -8px rgba(56, 189, 248, 0.22), 0 8px 20px rgba(0, 0, 0, 0.65);
+
+  --mariner-chart-graticule:
+    linear-gradient(to right, rgba(56, 189, 248, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.045) 1px, transparent 1px),
+    radial-gradient(rgba(251, 191, 36, 0.12) 1px, transparent 1px);
+
+  --mariner-sailboat-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Cpath d='M32 10 L48 42 L32 42 Z' fill='rgba(56,189,248,0.08)' stroke='rgba(56,189,248,0.18)' stroke-width='1.5'/%3E%3Cpath d='M29 16 L17 42 L29 42 Z' fill='rgba(251,191,36,0.08)' stroke='rgba(251,191,36,0.18)' stroke-width='1.5'/%3E%3Cpath d='M14 46 L50 46 L44 53 L20 53 Z' fill='rgba(241,245,249,0.08)'/%3E%3C/svg%3E");
+
+  background-color: #060d1a !important;
+  background-image: var(--mariner-chart-graticule) !important;
+  background-size: 64px 64px, 64px 64px, 32px 32px !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode .w3-light-grey {
+  background-color: #060d1a !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6 {
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode .w3-white,
+body.dark-mode .w3-card,
+body.dark-mode .w3-card-1,
+body.dark-mode .w3-card-2,
+body.dark-mode .w3-card-4,
+body.dark-mode .w3-modal-content {
+  background-color: rgba(14, 25, 47, 0.88) !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+body.dark-mode #mySidebar.w3-sidebar,
+body.dark-mode .w3-sidebar {
+  background: linear-gradient(180deg, #060d1a 0%, #0b1629 100%) !important;
+  border-right: 1px solid rgba(56, 189, 248, 0.22) !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode #mySidebar .w3-text-projectcompass,
+body.dark-mode #mySidebar h2,
+body.dark-mode #mySidebar h5 {
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode #mySidebar > .w3-container > h5,
+body.dark-mode #mySidebar .sidebar-section-label h5 {
+  color: #fbbf24 !important;
+}
+
+body.dark-mode .sidebar-brand-sub {
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .sidebar-demo-notice {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #94a3b8 !important;
+}
+
+body.dark-mode #mySidebar .w3-bar-block .w3-bar-item.w3-button {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode #mySidebar .w3-bar-block .w3-bar-item.w3-button i.fa {
+  color: #38bdf8 !important;
+}
+
+body.dark-mode #mySidebar .w3-bar-block .w3-bar-item.w3-button:hover,
+body.dark-mode #mySidebar .w3-hover-light-grey:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #ffffff !important;
+  border-left-color: #fbbf24 !important;
+}
+
+body.dark-mode #mySidebar .w3-bar-block .w3-bar-item.w3-button:hover i.fa {
+  color: #fbbf24 !important;
+}
+
+body.dark-mode .w3-bar {
+  background: linear-gradient(90deg, #040914 0%, #0b1629 60%, #0e2240 100%) !important;
+}
+
+body.dark-mode .w3-main {
+  background-color: transparent !important;
+}
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode .w3-input,
+body.dark-mode .w3-select {
+  background-color: #0b1629 !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(56, 189, 248, 0.28) !important;
+}
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22) !important;
+}
+
+body.dark-mode table,
+body.dark-mode th,
+body.dark-mode td,
+body.dark-mode .w3-table,
+body.dark-mode .w3-table-all {
+  background-color: rgba(14, 25, 47, 0.86) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode th,
+body.dark-mode .w3-table th,
+body.dark-mode .w3-table-all th {
+  background-color: #132340 !important;
+  color: #fbbf24 !important;
+  border-bottom: 2px solid rgba(251, 191, 36, 0.4) !important;
+}
+
+body.dark-mode .w3-striped tbody tr:nth-child(even),
+body.dark-mode .w3-table-all tr:nth-child(even) {
+  background-color: rgba(11, 22, 41, 0.72) !important;
+}
+
+body.dark-mode .w3-table-all tr:nth-child(odd) {
+  background-color: rgba(14, 25, 47, 0.88) !important;
+}
+
+body.dark-mode .w3-hoverable tbody tr:hover,
+body.dark-mode .w3-table tbody tr:hover,
+body.dark-mode .w3-table-all tbody tr:hover {
+  background-color: rgba(56, 189, 248, 0.14) !important;
+}
+
+body.dark-mode a {
+  color: #38bdf8 !important;
+}
+
+body.dark-mode a:hover {
+  color: #fbbf24 !important;
+}
+
+body.dark-mode .w3-text-grey,
+body.dark-mode .w3-text-dark-grey,
+body.dark-mode .w3-text-projectcompass {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .w3-border,
+body.dark-mode .w3-border-bottom,
+body.dark-mode .w3-border-top {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+body.dark-mode code,
+body.dark-mode pre,
+body.dark-mode .w3-code,
+body.dark-mode .w3-codespan {
+  background-color: #040811 !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .accordion {
+  background-color: #0e192f !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(56, 189, 248, 0.32) !important;
+}
+
+body.dark-mode .accordion:hover,
+body.dark-mode .accordion.active {
+  background-color: #162847 !important;
+  border-color: #fbbf24 !important;
+}
+
+body.dark-mode .panel {
+  background-color: rgba(11, 22, 41, 0.92) !important;
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode #search-dropdown {
+  background-color: #0e192f !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  color: #f1f5f9 !important;
+}
+
+/* Command palette dark mode ("Night Watch" Bridge Telegraph) */
+body.dark-mode #cmd-palette > div {
+  background-color: #0e192f !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75) !important;
+}
+
+body.dark-mode #cmd-palette input {
+  background-color: #060d1a !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(56, 189, 248, 0.25) !important;
+}
+
+body.dark-mode #cmd-palette a {
+  color: #f1f5f9 !important;
+  border-color: rgba(148, 163, 184, 0.15) !important;
+}
+
+body.dark-mode #cmd-palette a:hover {
+  background-color: rgba(56, 189, 248, 0.16) !important;
+  color: #fbbf24 !important;
+}

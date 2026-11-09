@@ -41,7 +41,12 @@ def _resolve_connection_id(connection: int | str | None) -> int | None:
 
 @api_bp.route('/health')
 def health():
-    return jsonify({'status': 'ok'})
+    try:
+        from importlib.metadata import version
+        ver = version("projectcompass")
+    except Exception:
+        ver = "unknown"
+    return jsonify({'status': 'ok', 'version': ver})
 
 
 @api_bp.route('/search')

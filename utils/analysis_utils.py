@@ -905,6 +905,35 @@ class AnalysisUtils(GitSyncUtils):
                 flows.append(flow_data)
         return flows
 
+    def delete_flow(self, name: str) -> bool:
+        """Delete a Flow from the filesystem and its FlowVersion records from the database."""
+        try:
+            flow_name = self._validate_flow_name(name)
+        except ValueError:
+            return False
+
+        flow_dir = os.path.join(self.save_folder_path, flow_name)
+        if not os.path.isdir(flow_dir):
+            return False
+
+        from flask import has_app_context
+        if has_app_context():
+            from models import FlowVersion, db
+            try:
+                FlowVersion.query.filter_by(flow_name=flow_name).delete()
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        shutil.rmtree(flow_dir)
+
+        if self._is_git_sync_on_save_enabled():
+            self.git_commit_and_push(
+                target_dir=self.save_folder_path,
+                message=f"Delete flow {flow_name}",
+            )
+        return True
+
     def _resolve_connector_spec(
         self,
         step_type: str,
