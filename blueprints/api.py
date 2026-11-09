@@ -84,7 +84,10 @@ def api_search_html():
     except Exception:
         return '<div style="padding:10px;color:#999;">Search error</div>'
     if not results:
-        return '<div style="padding:10px 14px;color:var(--mariner-text-muted, #94a3b8);font-size:0.84rem;">No results</div>'
+        return (
+            '<div style="padding:10px 14px;color:var(--mariner-text-muted, #94a3b8);'
+            'font-size:0.84rem;">No results</div>'
+        )
     html = ''
     for r in results:
         name, title = r[0], r[1] or r[0]
@@ -92,7 +95,8 @@ def api_search_html():
         html += (
             f'<a href="/open_version?name={safe_name}" style="display:block;padding:9px 14px;'
             f'text-decoration:none;color:var(--mariner-text-primary, #0f172a);'
-            f'border-bottom:1px solid var(--mariner-border-subtle, rgba(148,163,184,0.18));font-size:0.86rem;font-weight:600;">'
+            f'border-bottom:1px solid var(--mariner-border-subtle, rgba(148,163,184,0.18));'
+            f'font-size:0.86rem;font-weight:600;">'
             f'<i class="fa fa-compass" style="color:var(--mariner-cyan, #0284c7);margin-right:6px;"></i>{title}</a>'
         )
     return html
@@ -314,9 +318,12 @@ def api_activity_html():
         }
         icon = icon_map.get(e.action, 'fa-circle')
         html += (
-            f'<div style="padding:7px 2px;border-bottom:1px solid var(--mariner-border-subtle, rgba(15,23,42,0.1));font-size:.84rem;">'
+            f'<div style="padding:7px 2px;border-bottom:1px solid '
+            f'var(--mariner-border-subtle, rgba(15,23,42,0.1));font-size:.84rem;">'
             f'<i class="fa {icon}" style="width:22px;color:var(--mariner-cyan, #0284c7);"></i> '
-            f'<b>{username}</b> <span style="color:var(--mariner-teal, #0d9488);font-weight:600;">{e.action}</span> '
-            f'<span style="color:var(--mariner-text-muted, #64748b);">{e.target_type}: {e.target_name}</span></div>'
+            f'<b>{username}</b> '
+            f'<span style="color:var(--mariner-teal, #0d9488);font-weight:600;">{e.action}</span> '
+            f'<span style="color:var(--mariner-text-muted, #64748b);">'
+            f'{e.target_type}: {e.target_name}</span></div>'
         )
     return html or '<div style="padding:10px;color:var(--mariner-text-muted, #94a3b8);">No activity yet</div>'

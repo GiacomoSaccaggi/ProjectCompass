@@ -94,7 +94,9 @@ def create_app(config_class: type = Config) -> Flask:
     # Probe Mithril: if unreachable, force AI features off regardless of config
     if settings.features.ai_chat or settings.features.rag:
         import dataclasses
+
         import httpx
+
         mithril_url = app.config.get('MITHRIL_HOST', os.environ.get('MITHRIL_HOST', ''))
         mithril_live = False
         if mithril_url:
@@ -108,7 +110,9 @@ def create_app(config_class: type = Config) -> Flask:
             settings = dataclasses.replace(settings, features=patched_features)
             app.config['PC_SETTINGS'] = settings
             template_settings = settings.for_templates()
-            app.logger.info('Mithril not reachable at %s — AI Chat and RAG disabled.', mithril_url)
+            app.logger.info(
+                'Mithril not reachable at %s — AI Chat and RAG disabled.', mithril_url,
+            )
 
     FeatureGate(settings.features).install(app)
 

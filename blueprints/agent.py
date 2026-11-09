@@ -469,7 +469,10 @@ def _build_metadata_context(analysis: dict) -> str:
     if not analysis:
         return ''
     parts = []
-    for key in ('title', 'product', 'owner', 'collaborators', 'countries', 'description', 'output_type', 'output description', 'start_date'):
+    for key in (
+        'title', 'product', 'owner', 'collaborators', 'countries',
+        'description', 'output_type', 'output description', 'start_date',
+    ):
         val = analysis.get(key, '')
         if val:
             parts.append(f'{key}: {val}')
