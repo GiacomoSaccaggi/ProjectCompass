@@ -145,7 +145,7 @@ def test_schedule_create_pause_resume_and_k8s_execution(
                 "items": [
                     {
                         "metadata": {"name": "pc-flow-sched-pod"},
-                        "spec": {"nodeName": "worker-gcp-2"},
+                        "spec": {"nodeName": "worker-node-2"},
                         "status": {
                             "phase": "Succeeded",
                             "containerStatuses": [
@@ -176,7 +176,7 @@ def test_schedule_create_pause_resume_and_k8s_execution(
         assert exe is not None
         assert exe.trigger_type == "scheduled"
         assert exe.status == "success"
-        assert exe.node_name == "worker-gcp-2"
+        assert exe.node_name == "worker-node-2"
         assert "scheduled hello world" in (exe.log_text or "")
 
 

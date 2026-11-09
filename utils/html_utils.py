@@ -68,6 +68,9 @@ class HTMLUtils:
         )
         rendered_header = environment.get_template('header.html').render(pc=settings)
         self._split_header(rendered_header)
+        self._settings = settings
+        if hasattr(self, 'configure_worker_provider') and getattr(settings, 'workers', None) is not None:
+            self.configure_worker_provider(settings.workers)
 
     def _split_header(self, text: str) -> None:
         """Split rendered header markup into the legacy shared page fragments."""

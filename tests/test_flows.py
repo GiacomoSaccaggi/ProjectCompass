@@ -35,8 +35,8 @@ def test_save_and_read_hello_world_flow(app: Any, isolated_analyses_dir: Path) -
         code='print("hello world")',
         description="Minimal hello world flow",
         parameters={"greeting": "hello", "count": 1},
-        pip_requirements=["requests==2.31.0", "boto3"],
-        env_vars={"AWS_SECRET_ACCESS_KEY": "super-secret-value", "API_TOKEN": "tok-123"},
+        pip_requirements=["requests==2.31.0", "httpx"],
+        env_vars={"API_SECRET_TOKEN": "super-secret-value", "API_TOKEN": "tok-123"},
         image="python:3.11-slim",
         owner="alice",
     )
@@ -44,8 +44,8 @@ def test_save_and_read_hello_world_flow(app: Any, isolated_analyses_dir: Path) -
     assert flow["name"] == "HelloFlow"
     assert 'print("hello world")' in flow["code"]
     assert flow["parameters"] == {"greeting": "hello", "count": 1}
-    assert flow["pip_requirements"] == ["requests==2.31.0", "boto3"]
-    assert sorted(flow["env_keys"]) == ["API_TOKEN", "AWS_SECRET_ACCESS_KEY"]
+    assert flow["pip_requirements"] == ["requests==2.31.0", "httpx"]
+    assert sorted(flow["env_keys"]) == ["API_SECRET_TOKEN", "API_TOKEN"]
     assert flow["image"] == "python:3.11-slim"
 
     flow_dir = isolated_analyses_dir / "HelloFlow"
@@ -59,7 +59,7 @@ def test_save_and_read_hello_world_flow(app: Any, isolated_analyses_dir: Path) -
     assert "super-secret-value" not in raw_cfg_text
     assert "tok-123" not in raw_cfg_text
     cfg_data = yaml.safe_load(raw_cfg_text)
-    assert cfg_data["env_keys"] == ["API_TOKEN", "AWS_SECRET_ACCESS_KEY"]
+    assert cfg_data["env_keys"] == ["API_SECRET_TOKEN", "API_TOKEN"]
 
     # Verify backwards-compatibility with read_single_analysis
     single = webapp.read_single_analysis(str(isolated_analyses_dir), "HelloFlow")

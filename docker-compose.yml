@@ -31,6 +31,7 @@ services:
       - ./blueprints:/app/blueprints
       - ./app.py:/app/app.py
       - ./logs:/app/log
+      - /var/run/docker.sock:/var/run/docker.sock
       # - ./projectcompass.yaml:/app/data/projectcompass.yaml:ro
     restart: unless-stopped
     container_name: projectcompass_app

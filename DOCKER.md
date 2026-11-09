@@ -55,6 +55,25 @@ docker compose build --no-cache
 |------|---------|
 | `docker-compose.public.yml` | End users — pulls pre-built image from ghcr.io |
 | `docker-compose.yml` | Developers — builds from local source |
+| `docker-compose.k0s.yml` | k0s controller host — mounts kubeconfig, Docker socket and worker join token |
+
+### k0s Docker workers
+
+To run isolated Flow Jobs with auto-provisioned Docker workers, generate a worker token on the k0s controller and start the application with the k0s overlay:
+
+```bash
+mkdir -p data
+sudo k0s token create --role=worker > ./data/k0s-worker.token
+chmod 600 ./data/k0s-worker.token
+K0S_WORKER_TOKEN_FILE=./data/k0s-worker.token \
+  docker compose -f docker-compose.yml -f docker-compose.k0s.yml up -d
+```
+
+The overlay mounts `/var/run/docker.sock` for the Docker-based `WorkerProvider` and mounts the token read-only at `/run/secrets/k0s-worker.token`, setting `PC_K0S_TOKEN_FILE` for the app. A Docker socket grants powerful host control; only enable this overlay for a trusted deployment. Ensure the API endpoint encoded in the token is reachable from the worker container network.
+
+`workers.docker.network` defaults to `bridge` and allows multiple managed workers. `host` networking can be selected in `projectcompass.yaml`, but is limited to one managed worker to avoid kubelet port collisions. The `workers.auto_provision`, `workers.auto_cleanup`, image, CPU, memory, join-token and readiness timeout settings are documented in [`projectcompass.example.yaml`](projectcompass.example.yaml). The legacy `workers.docker.auto_cleanup` key remains supported. Set `workers.provider: external` to use lifecycle scripts instead of Docker.
+
+Pipeline Builder connectors are configured under `connectors:` in the same YAML file. For connector examples and the `PC_ARTIFACT_INLINE_MAX_BYTES`, `PC_SHARED_ARTIFACT_DIR` and Saved_data ConfigMap size limits, see the [Workers & Execution section in README](README.md#workers--execution).
 
 ---
 

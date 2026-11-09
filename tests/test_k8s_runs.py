@@ -69,7 +69,7 @@ def test_hello_world_k8s_job_and_sse_idempotency(
                 "items": [
                     {
                         "metadata": {"name": "pc-flow-job-1-podxyz"},
-                        "spec": {"nodeName": "worker-aws-1"},
+                        "spec": {"nodeName": "worker-node-1"},
                         "status": {
                             "phase": "Succeeded",
                             "containerStatuses": [
@@ -140,7 +140,7 @@ def test_hello_world_k8s_job_and_sse_idempotency(
             exe = db.session.get(Execution, run_id)
             assert exe is not None
             assert exe.status == "success"
-            assert exe.node_name == "worker-aws-1"
+            assert exe.node_name == "worker-node-1"
             assert exe.exit_code == 0
             assert "hello world" in (exe.log_text or "")
             assert "secret123" not in (exe.inputs_json or "")
@@ -162,7 +162,7 @@ def test_hello_world_k8s_job_and_sse_idempotency(
         assert b"data: hello world" in sse_resp_2.data
         assert b"event: done" in sse_resp_1.data
         assert b"hello world" in detail_resp.data
-        assert b"worker-aws-1" in exec_list_resp.data
+        assert b"worker-node-1" in exec_list_resp.data
 
 
 def test_failed_flow_captures_stderr_and_never_retries(
@@ -226,6 +226,96 @@ def test_failed_flow_captures_stderr_and_never_retries(
         assert exe.exit_code == 1
         assert "boom error" in (exe.error_message or "")
         assert "RuntimeError: boom error" in (exe.log_text or "")
+
+
+def test_worker_provisioning_failure_returns_failed_runs_from_flow_and_api_routes(
+    app: Any,
+    client: Any,
+    isolated_analyses_dir: Path,
+) -> None:
+    """Return a readable failed Execution instead of an HTTP 500 on provisioning errors."""
+    from utils.worker_provider import WorkerProvisioningError
+
+    webapp = app.config["WEBAPP"]
+    webapp.save_flow(name="ProvisionFailureFlow", code='print("never submitted")')
+    provider = webapp.worker_provider
+
+    with (
+        patch.object(webapp, "_should_manage_workers", return_value=True),
+        patch.object(webapp, "_count_ready_workers", return_value=0),
+        patch.object(
+            provider,
+            "ensure_workers",
+            side_effect=WorkerProvisioningError("worker token is missing"),
+        ),
+        patch.object(webapp, "_k8s_post") as post_resource,
+    ):
+        html_response = client.post("/flows/ProvisionFailureFlow/run", data={})
+        assert html_response.status_code == 302
+        assert html_response.headers["Location"].startswith("/runs/")
+
+        json_response = client.post("/flows/ProvisionFailureFlow/run", json={})
+        api_response = client.post("/api/analyses/ProvisionFailureFlow/run", json={})
+
+    for response in (json_response, api_response):
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["status"] == "failed"
+        assert "worker token is missing" in payload["error_message"]
+        assert payload["run_id"]
+    post_resource.assert_not_called()
+
+
+def test_oversized_saved_data_dataset_adds_execution_warning(
+    app: Any,
+    isolated_analyses_dir: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Explain when a CSV is omitted because it exceeds the ConfigMap dataset cap."""
+    webapp = app.config["WEBAPP"]
+    saved_data_dir = tmp_path / "Saved_data"
+    saved_data_dir.mkdir()
+    (saved_data_dir / "oversized.csv").write_bytes(b"x" * (512 * 1024 + 1))
+    monkeypatch.setattr(webapp, "save_data_path", str(saved_data_dir))
+    webapp.save_flow(
+        name="OversizedDatasetFlow",
+        code='print("Saved_data/oversized.csv")',
+    )
+
+    def fake_get(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        if path.endswith("/pods"):
+            return {
+                "items": [{
+                    "metadata": {"name": "oversized-dataset-pod"},
+                    "spec": {"nodeName": "worker-node-1"},
+                    "status": {
+                        "phase": "Succeeded",
+                        "containerStatuses": [
+                            {"state": {"terminated": {"exitCode": 0, "reason": "Completed"}}}
+                        ],
+                    },
+                }]
+            }
+        if "/jobs/" in path:
+            return {"status": {"succeeded": 1, "failed": 0}}
+        return {}
+
+    with (
+        patch.object(webapp, "_k8s_post", side_effect=lambda path, payload: payload),
+        patch.object(webapp, "_k8s_get", side_effect=fake_get),
+        patch.object(webapp, "_k8s_get_text", return_value="done\n"),
+        patch.object(webapp, "_k8s_delete", return_value={}),
+    ):
+        execution = webapp.launch_flow_run(
+            flow_name="OversizedDatasetFlow",
+            app=app,
+            wait_for_watcher=True,
+        )
+
+    assert execution.status == "success"
+    assert "[ProjectCompass] WARNING" in (execution.log_text or "")
+    assert "Saved_data/oversized.csv skipped" in (execution.log_text or "")
 
 
 def test_job_manifest_resource_limits_and_secret_refs(
@@ -294,3 +384,97 @@ def test_job_manifest_resource_limits_and_secret_refs(
         {"secretRef": {"name": "flow-api-creds"}},
         {"secretRef": {"name": "pc-flow-sec-99"}},
     ]
+
+
+def test_extract_and_persist_artifacts_and_structured_analysis_flow_run(
+    app: Any,
+    isolated_analyses_dir: Path,
+) -> None:
+    """Verify log-stream artifact extraction persists output.csv and report.html and strips base64 frames."""
+    import base64
+
+    webapp = app.config["WEBAPP"]
+    sa_name = "StructuredArtifactFlow"
+    sa_dir = isolated_analyses_dir / sa_name
+    (sa_dir / "analysis").mkdir(parents=True, exist_ok=True)
+    (sa_dir / "physical_output" / "main").mkdir(parents=True, exist_ok=True)
+    (sa_dir / "metadata.yaml").write_text(
+        "title: StructuredArtifactFlow\nproduct: Analytics\ndescription: Artifact test\n",
+        encoding="utf-8",
+    )
+    (sa_dir / "analysis" / "metadata_automatic_report.yaml").write_text(
+        "title: StructuredArtifactFlow\ninputs:\n  threshold: 10\n",
+        encoding="utf-8",
+    )
+    (sa_dir / "analysis" / "structured_analysis_main.py").write_text(
+        "def run(inputs, output_path):\n"
+        "    with open(output_path, 'w') as fh:\n"
+        "        fh.write('col1,col2\\n1,2\\n')\n"
+        "    return {'ok': True}\n",
+        encoding="utf-8",
+    )
+
+    flow_info = webapp.ensure_flow_from_structured_analysis(sa_name, runtime_inputs={"threshold": 25})
+    assert flow_info["name"] == sa_name
+    assert (sa_dir / "flow.py").is_file()
+
+    csv_payload = b"metric,value\naccuracy,0.98\n"
+    html_payload = b"<!DOCTYPE html><html><body><h2>Summary</h2></body></html>"
+    b64_csv = base64.b64encode(csv_payload).decode("ascii")
+    b64_html = base64.b64encode(html_payload).decode("ascii")
+    raw_pod_logs = (
+        "Running structured analysis step 1...\n"
+        f"[PC_ARTIFACT_BEGIN:output.csv]\n{b64_csv}\n[PC_ARTIFACT_END]\n"
+        f"[PC_ARTIFACT_BEGIN:report.html]\n{b64_html}\n[PC_ARTIFACT_END]\n"
+        "Finished structured analysis.\n"
+    )
+
+    def fake_get(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        if path.endswith("/pods"):
+            return {
+                "items": [
+                    {
+                        "metadata": {"name": "pc-sa-artifact-pod"},
+                        "spec": {"nodeName": "worker-node-1"},
+                        "status": {
+                            "phase": "Succeeded",
+                            "containerStatuses": [
+                                {"state": {"terminated": {"exitCode": 0, "reason": "Completed"}}}
+                            ],
+                        },
+                    }
+                ]
+            }
+        if "/jobs/" in path:
+            return {"status": {"succeeded": 1, "failed": 0}}
+        return {}
+
+    with (
+        patch.object(webapp, "_k8s_post", side_effect=lambda p, m: m),
+        patch.object(webapp, "_k8s_get", side_effect=fake_get),
+        patch.object(webapp, "_k8s_get_text", return_value=raw_pod_logs),
+        patch.object(webapp, "_k8s_delete", return_value={}),
+    ):
+        exe = webapp.launch_flow_run(
+            flow_name=sa_name,
+            parameters={"threshold": 25},
+            app=app,
+            wait_for_watcher=True,
+        )
+        assert exe.status == "success"
+        assert "Running structured analysis step 1..." in (exe.log_text or "")
+        assert "Finished structured analysis." in (exe.log_text or "")
+        assert "[PC_ARTIFACT_BEGIN:" not in (exe.log_text or "")
+        assert b64_csv not in (exe.log_text or "")
+        assert json.loads(exe.outputs_json or "[]") == ["output.csv", "report.html"]
+
+    main_csv = sa_dir / "physical_output" / "main" / "output.csv"
+    main_html = sa_dir / "physical_output" / "main" / "report.html"
+    assert main_csv.read_bytes() == csv_payload
+    assert main_html.read_bytes() == html_payload
+
+    history_files = [
+        p for p in (sa_dir / "physical_output").iterdir()
+        if p.is_file() and p.suffix in (".csv", ".html")
+    ]
+    assert len(history_files) == 2

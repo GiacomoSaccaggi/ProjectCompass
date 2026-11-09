@@ -1,6 +1,17 @@
 
 
-# Import Pkg
+"""
+░█████╗░███╗░░██╗░█████╗░██╗░░░░░██╗░░░██╗░██████╗██╗░██████╗░░░░░░██╗░░░██╗████████╗██╗██╗░░░░░░██████╗
+██╔══██╗████╗░██║██╔══██╗██║░░░░░╚██╗░██╔╝██╔════╝██║██╔════╝░░░░░░██║░░░██║╚══██╔══╝██║██║░░░░░██╔════╝
+███████║██╔██╗██║███████║██║░░░░░░╚████╔╝░╚█████╗░██║╚█████╗░█████╗██║░░░██║░░░██║░░░██║██║░░░░░╚█████╗░
+██╔══██║██║╚████║██╔══██║██║░░░░░░░╚██╔╝░░░╚═══██╗██║░╚═══██╗╚════╝██║░░░██║░░░██║░░░██║██║░░░░░░╚═══██╗
+██║░░██║██║░╚███║██║░░██║███████╗░░░██║░░░██████╔╝██║██████╔╝░░░░░░╚██████╔╝░░░██║░░░██║███████╗██████╔╝
+╚═╝░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚══════╝░░░╚═╝░░░╚═════╝░╚═╝╚═════╝░░░░░░░░╚═════╝░░░░╚═╝░░░╚═╝╚══════╝╚═════╝░
+"""
+
+from __future__ import annotations
+
+import base64
 import datetime
 import json
 import os
@@ -495,10 +506,11 @@ class AnalysisUtils(GitSyncUtils):
         pip_requirements: str | list[str] | None = None,
         env_vars: str | dict[str, str] | None = None,
         secret_refs: str | list[str] | None = None,
-        image: str = "",
+        image: str | None = "",
         owner: str = "flow-author",
         user_id: int | None = None,
         version_message: str = "",
+        product: str = "k0s Flow",
     ) -> dict[str, Any]:
         """Create or update a generic Python Flow inside Analyses/<name>/ and record a FlowVersion."""
         flow_name = self._validate_flow_name(name)
@@ -532,7 +544,11 @@ class AnalysisUtils(GitSyncUtils):
             if parsed_env
             else list(existing_cfg.get("env_keys") or [])
         )
-        resolved_image = (image or "").strip() or os.environ.get("K8S_DEFAULT_IMAGE", "python:3.11-slim")
+        resolved_image = (
+            (image or "").strip()
+            or str(existing_cfg.get("image") or "").strip()
+            or os.environ.get("K8S_DEFAULT_IMAGE", "python:3.11-slim")
+        )
         today_str = datetime.date.today().strftime("%Y-%m-%d")
 
         script_body = code if code.endswith("\n") else f"{code}\n"
@@ -569,7 +585,7 @@ class AnalysisUtils(GitSyncUtils):
             "description": description or "Generic Python flow executed on k0s",
             "owner": owner,
             "collaborators": "",
-            "product": "k0s Flow",
+            "product": product or "k0s Flow",
             "countries": "All",
             "inputs": inputs_meta,
             "links": {},
@@ -840,3 +856,729 @@ class AnalysisUtils(GitSyncUtils):
             if flow_data is not None:
                 flows.append(flow_data)
         return flows
+
+    @staticmethod
+    def _build_structured_analysis_flow_wrapper(
+        flow_name: str,
+        script_source: str,
+        default_inputs: dict[str, Any],
+        referenced_datasets: list[str] | None = None,
+    ) -> str:
+        """Build a standalone Python Flow wrapper around structured_analysis_main.py."""
+        encoded_script = base64.b64encode(script_source.encode("utf-8")).decode("ascii")
+        datasets_list = list(referenced_datasets or [])
+        wrapper_lines = [
+            '"""Auto-generated ProjectCompass Flow wrapper for Structured Analysis."""',
+            "from __future__ import annotations",
+            "",
+            "import base64",
+            "import importlib.util",
+            "import json",
+            "import os",
+            "import shutil",
+            "import sys",
+            "from typing import Any",
+            "",
+            f"ANALYSIS_NAME: str = {flow_name!r}",
+            f"DEFAULT_INPUTS: dict[str, Any] = {json.dumps(default_inputs, sort_keys=True)}",
+            f"REFERENCED_DATASETS: list[str] = {datasets_list!r}",
+            f"STRUCTURED_SCRIPT_B64: str = {encoded_script!r}",
+            "",
+            "",
+            "def _load_runtime_inputs() -> dict[str, Any]:",
+            "    merged: dict[str, Any] = dict(DEFAULT_INPUTS)",
+            '    params_file = os.environ.get("FLOW_PARAMS_FILE", "/workspace/params.json")',
+            "    if params_file and os.path.isfile(params_file):",
+            "        try:",
+            '            with open(params_file, encoding="utf-8") as f_params:',
+            "                loaded = json.load(f_params)",
+            "            if isinstance(loaded, dict):",
+            "                merged.update(loaded)",
+            "        except Exception:",
+            "            pass",
+            '    raw_env_json = os.environ.get("FLOW_PARAMS_JSON", "").strip()',
+            "    if raw_env_json:",
+            "        try:",
+            "            loaded_env = json.loads(raw_env_json)",
+            "            if isinstance(loaded_env, dict):",
+            "                merged.update(loaded_env)",
+            "        except Exception:",
+            "            pass",
+            "    return merged",
+            "",
+            "",
+            "def _setup_workspace() -> tuple[str, str]:",
+            '    work_root = "/tmp/pc_work"',
+            '    saved_data_dir = os.path.join(work_root, "Saved_data")',
+            '    analysis_dir = os.path.join(work_root, "Analyses", ANALYSIS_NAME, "analysis")',
+            '    output_main_dir = "/tmp/pc_output/main"',
+            "    os.makedirs(saved_data_dir, exist_ok=True)",
+            "    os.makedirs(analysis_dir, exist_ok=True)",
+            "    os.makedirs(output_main_dir, exist_ok=True)",
+            "",
+            '    if os.path.isdir("/workspace"):',
+            '        for entry in sorted(os.listdir("/workspace")):',
+            '            if entry.startswith("saved_data__"):',
+            '                dataset_file = entry[len("saved_data__"):]',
+            '                src_path = os.path.join("/workspace", entry)',
+            "                if dataset_file and os.path.isfile(src_path):",
+            "                    shutil.copy2(src_path, os.path.join(saved_data_dir, dataset_file))",
+            '        ws_saved = "/workspace/Saved_data"',
+            "        if os.path.isdir(ws_saved):",
+            "            for entry in sorted(os.listdir(ws_saved)):",
+            "                src_path = os.path.join(ws_saved, entry)",
+            "                if os.path.isfile(src_path):",
+            "                    shutil.copy2(src_path, os.path.join(saved_data_dir, entry))",
+            "",
+            '    env_data_dir = os.environ.get("PC_DATA_DIR", "").strip()',
+            "    if env_data_dir and os.path.isdir(env_data_dir):",
+            "        for entry in sorted(os.listdir(env_data_dir)):",
+            "            src_path = os.path.join(env_data_dir, entry)",
+            "            dst_path = os.path.join(saved_data_dir, entry)",
+            "            if os.path.isfile(src_path) and not os.path.exists(dst_path):",
+            "                shutil.copy2(src_path, dst_path)",
+            "",
+            "    for alias_parent in (",
+            '        os.path.join(work_root, "Analyses"),',
+            '        os.path.join(work_root, "Analyses", ANALYSIS_NAME),',
+            "    ):",
+            '        alias_path = os.path.join(alias_parent, "Saved_data")',
+            "        if not os.path.exists(alias_path):",
+            "            try:",
+            "                os.symlink(saved_data_dir, alias_path)",
+            "            except OSError:",
+            "                shutil.copytree(saved_data_dir, alias_path, dirs_exist_ok=True)",
+            "",
+            '    script_path = os.path.join(analysis_dir, "structured_analysis_main.py")',
+            '    script_bytes = base64.b64decode(STRUCTURED_SCRIPT_B64.encode("ascii"))',
+            '    with open(script_path, "wb") as f_script:',
+            "        f_script.write(script_bytes)",
+            "",
+            '    return script_path, os.path.join(output_main_dir, "output.csv")',
+            "",
+            "",
+            'def _emit_artifacts(output_root: str = "/tmp/pc_output") -> None:',
+            "    emitted: set[str] = set()",
+            '    shared_dir = os.environ.get("PC_SHARED_ARTIFACT_DIR", "").strip()',
+            '    inline_max = int(os.environ.get("PC_ARTIFACT_INLINE_MAX_BYTES", str(5 * 1024 * 1024)))',
+            '    search_dirs = [os.path.join(output_root, "main"), output_root]',
+            "    for folder in search_dirs:",
+            "        if not os.path.isdir(folder):",
+            "            continue",
+            "        for entry in sorted(os.listdir(folder)):",
+            '            if entry.startswith(".") or ".ini" in entry or entry in emitted:',
+            "                continue",
+            "            full_path = os.path.join(folder, entry)",
+            "            if not os.path.isfile(full_path):",
+            "                continue",
+            '            with open(full_path, "rb") as f_art:',
+            "                raw_bytes = f_art.read()",
+            "            if shared_dir and os.path.isdir(shared_dir) and len(raw_bytes) > inline_max:",
+            "                shutil.copy2(full_path, os.path.join(shared_dir, entry))",
+            "            else:",
+            '                encoded = base64.b64encode(raw_bytes).decode("ascii")',
+            '                sys.stdout.write(f"[PC_ARTIFACT_BEGIN:{entry}]\\n{encoded}\\n[PC_ARTIFACT_END]\\n")',
+            "                sys.stdout.flush()",
+            "            emitted.add(entry)",
+            "",
+            "",
+            "def main() -> None:",
+            "    inputs = _load_runtime_inputs()",
+            "    script_path, output_path = _setup_workspace()",
+            "    script_dir = os.path.dirname(script_path)",
+            "    if script_dir not in sys.path:",
+            "        sys.path.insert(0, script_dir)",
+            '    spec = importlib.util.spec_from_file_location("structured_analysis_main", script_path)',
+            "    if spec is None or spec.loader is None:",
+            '        raise RuntimeError(f"Unable to load structured analysis script: {script_path}")',
+            "    module = importlib.util.module_from_spec(spec)",
+            "    spec.loader.exec_module(module)",
+            "    result = module.run(inputs=inputs, output_path=output_path)",
+            '    print(f"[ProjectCompass] Structured analysis \'{ANALYSIS_NAME}\' finished.")',
+            "    if isinstance(result, dict):",
+            "        try:",
+            "            print(json.dumps(result, default=str))",
+            "        except Exception:",
+            "            pass",
+            '    _emit_artifacts("/tmp/pc_output")',
+            "",
+            "",
+            'if __name__ == "__main__":',
+            "    main()",
+            "",
+        ]
+        return "\n".join(wrapper_lines)
+
+    def ensure_flow_from_structured_analysis(
+        self,
+        name: str,
+        runtime_inputs: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Generate or update a Kubernetes Flow wrapper from Analyses/<name>/analysis/structured_analysis_main.py.
+
+        Preserves the original structured_analysis_main.py, metadata_automatic_report.yaml,
+        and catalog metadata.yaml fields so the analysis remains a full catalog entry
+        while executing exclusively as an isolated Kubernetes Job.
+        """
+        flow_name = self._validate_flow_name(name.replace("512", " "))
+        flow_dir = os.path.join(self.save_folder_path, flow_name)
+        analysis_subdir = os.path.join(flow_dir, "analysis")
+        script_path = os.path.join(analysis_subdir, "structured_analysis_main.py")
+
+        if not os.path.isfile(script_path):
+            raise FileNotFoundError(
+                f"Structured analysis script not found for '{flow_name}': {script_path}"
+            )
+
+        with open(script_path, encoding="utf-8", errors="ignore") as f_script:
+            original_script = f_script.read()
+
+        flow_py_path = os.path.join(flow_dir, "flow.py")
+        if (
+            "Backwards-compatible analysis wrapper delegating to ../flow.py" in original_script
+            and os.path.isfile(flow_py_path)
+        ):
+            existing_flow = self.read_flow(flow_name)
+            if existing_flow is not None:
+                return existing_flow
+
+        metadata_path = os.path.join(flow_dir, "metadata.yaml")
+        orig_meta: dict[str, Any] = {}
+        if os.path.isfile(metadata_path):
+            try:
+                with open(metadata_path, encoding="utf-8") as f_meta:
+                    orig_meta = yaml.safe_load(f_meta) or {}
+            except (OSError, yaml.YAMLError):
+                orig_meta = {}
+
+        auto_meta_path = os.path.join(analysis_subdir, "metadata_automatic_report.yaml")
+        orig_auto_meta_raw: str | None = None
+        orig_auto_meta: dict[str, Any] = {}
+        if os.path.isfile(auto_meta_path):
+            try:
+                with open(auto_meta_path, encoding="utf-8") as f_auto:
+                    orig_auto_meta_raw = f_auto.read()
+                orig_auto_meta = yaml.safe_load(orig_auto_meta_raw) or {}
+            except (OSError, yaml.YAMLError):
+                orig_auto_meta = {}
+
+        flow_cfg_path = os.path.join(flow_dir, "flow_config.yaml")
+        existing_cfg: dict[str, Any] = {}
+        if os.path.isfile(flow_cfg_path):
+            try:
+                with open(flow_cfg_path, encoding="utf-8") as f_cfg:
+                    existing_cfg = yaml.safe_load(f_cfg) or {}
+            except (OSError, yaml.YAMLError):
+                existing_cfg = {}
+
+        default_params: dict[str, Any] = {}
+        for meta_source in (orig_meta, orig_auto_meta):
+            if isinstance(meta_source, dict) and isinstance(meta_source.get("inputs"), dict):
+                for param_key, param_spec in meta_source["inputs"].items():
+                    if isinstance(param_spec, dict):
+                        default_params[str(param_key)] = param_spec.get("default", "")
+                    elif param_spec is not None:
+                        default_params[str(param_key)] = param_spec
+
+        merged_params: dict[str, Any] = dict(default_params)
+        if isinstance(runtime_inputs, dict):
+            merged_params.update(runtime_inputs)
+
+        stdlib_modules = {
+            "abc", "base64", "collections", "copy", "csv", "datetime", "functools",
+            "glob", "hashlib", "hmac", "importlib", "io", "itertools", "json",
+            "logging", "math", "os", "pathlib", "pickle", "random", "re", "runpy",
+            "shutil", "signal", "sqlite3", "string", "subprocess", "sys", "tempfile",
+            "threading", "time", "traceback", "typing", "unittest", "uuid", "warnings",
+            "zipfile", "zlib",
+        }
+        req_file = os.path.join(flow_dir, "requirements.txt")
+        pip_reqs: list[str] = list(existing_cfg.get("pip_requirements") or [])
+        if not pip_reqs and os.path.isfile(req_file):
+            try:
+                with open(req_file, encoding="utf-8") as f_req:
+                    raw_req_text = f_req.read()
+                parsed_reqs = self.parse_pip_requirements(raw_req_text)
+                pip_reqs = [
+                    pkg for pkg in parsed_reqs
+                    if pkg.split("==")[0].split(">=")[0].strip() not in stdlib_modules
+                ]
+            except OSError:
+                pip_reqs = []
+
+        lineage_datasets = sorted(
+            {
+                f"{ds}.csv"
+                for ds in re.findall(r'read_csv\(.*?["\']([^"\'/\\]+)\.csv["\']', original_script)
+            }
+            | set(re.findall(r'["\']([A-Za-z0-9_.-]+\.csv)["\']', original_script))
+        )
+
+        wrapper_code = self._build_structured_analysis_flow_wrapper(
+            flow_name=flow_name,
+            script_source=original_script,
+            default_inputs=default_params,
+            referenced_datasets=lineage_datasets,
+        )
+
+        description = str(
+            orig_meta.get("description")
+            or orig_auto_meta.get("description")
+            or existing_cfg.get("description")
+            or f"Structured analysis flow for {flow_name}"
+        ).strip()
+        owner = str(orig_meta.get("owner") or existing_cfg.get("owner") or "flow-author").strip()
+        image = str(
+            existing_cfg.get("image")
+            or orig_auto_meta.get("image")
+            or os.environ.get("K8S_DEFAULT_IMAGE", "python:3.11-slim")
+        ).strip()
+
+        self.save_flow(
+            name=flow_name,
+            code=wrapper_code,
+            description=description,
+            parameters=merged_params,
+            pip_requirements=pip_reqs,
+            secret_refs=existing_cfg.get("secret_refs"),
+            image=image,
+            owner=owner,
+            version_message=f"Sync structured analysis {flow_name}",
+        )
+
+        # Restore original structured_analysis_main.py so catalog structured_analysis=='y' and code remain intact
+        with open(script_path, "w", encoding="utf-8") as f_restore_script:
+            f_restore_script.write(original_script)
+
+        # Restore original metadata_automatic_report.yaml
+        if orig_auto_meta_raw is not None:
+            with open(auto_meta_path, "w", encoding="utf-8") as f_restore_auto:
+                f_restore_auto.write(orig_auto_meta_raw)
+        else:
+            auto_payload = {
+                "title": flow_name,
+                "description": description,
+                "inputs": {
+                    str(k): {"type": "text", "default": str(v), "description": str(k)}
+                    for k, v in default_params.items()
+                },
+                "output": {"type": "csv", "description": "Structured analysis output"},
+            }
+            with open(auto_meta_path, "w", encoding="utf-8") as f_restore_auto:
+                yaml.safe_dump(auto_payload, f_restore_auto, sort_keys=False)
+
+        # Restore/preserve catalog metadata.yaml fields
+        restored_meta: dict[str, Any] = {
+            "title": orig_meta.get("title") or flow_name,
+            "start_date": (
+                orig_meta["start_date"].strftime("%Y-%m-%d")
+                if hasattr(orig_meta.get("start_date"), "strftime")
+                else str(orig_meta.get("start_date") or datetime.date.today().strftime("%Y-%m-%d"))
+            ),
+            "description": orig_meta.get("description") if "description" in orig_meta else description,
+            "owner": orig_meta.get("owner") if "owner" in orig_meta else owner,
+            "collaborators": orig_meta.get("collaborators", ""),
+            "product": orig_meta.get("product") or "Structured Analysis",
+            "countries": orig_meta.get("countries") or "Global",
+            "inputs": (
+                orig_meta["inputs"]
+                if isinstance(orig_meta.get("inputs"), dict) and orig_meta["inputs"]
+                else {
+                    str(k): {"default": str(v), "type": "str"}
+                    for k, v in merged_params.items()
+                }
+            ),
+            "links": orig_meta.get("links") if isinstance(orig_meta.get("links"), dict) else {},
+            "gitlab": orig_meta.get("gitlab", ""),
+            "gdrive": orig_meta.get("gdrive", ""),
+            "dashboard link": orig_meta.get("dashboard link", ""),
+            "output_type": orig_meta.get("output_type") or "CSV",
+            "output description": orig_meta.get(
+                "output description",
+                "Structured analysis output persisted from Kubernetes Job execution",
+            ),
+            "lineage": orig_meta.get("lineage") or [ds.removesuffix(".csv") for ds in lineage_datasets],
+        }
+        with open(metadata_path, "w", encoding="utf-8") as f_restore_meta:
+            yaml.safe_dump(restored_meta, f_restore_meta, sort_keys=False)
+
+        return self.read_flow(flow_name) or {}
+
+    def _resolve_connector_spec(
+        self,
+        step_type: str,
+        connector: Any | None = None,
+        connectors_map: Any | None = None,
+    ) -> dict[str, Any] | None:
+        """Resolve a connector specification dict by step_type from explicit arguments or AppSettings."""
+        clean_type = (step_type or "").strip()
+        if not clean_type:
+            return None
+
+        candidate: Any = connector
+        if candidate is None and isinstance(connectors_map, dict):
+            candidate = connectors_map.get(clean_type)
+        elif candidate is None and isinstance(connectors_map, (list, tuple)):
+            for item in connectors_map:
+                item_name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
+                if item_name == clean_type:
+                    candidate = item
+                    break
+
+        if candidate is None:
+            settings_obj = getattr(self, "_settings", None)
+            if settings_obj is None:
+                from flask import current_app, has_app_context
+
+                if has_app_context():
+                    settings_obj = current_app.config.get("PC_SETTINGS")
+            if settings_obj is not None and hasattr(settings_obj, "connectors"):
+                for conn_item in getattr(settings_obj, "connectors") or ():
+                    if getattr(conn_item, "name", None) == clean_type:
+                        candidate = conn_item
+                        break
+
+        if candidate is None:
+            from utils.app_settings import DefaultsSource
+
+            for raw_conn in DefaultsSource().load().get("connectors") or []:
+                if isinstance(raw_conn, dict) and raw_conn.get("name") == clean_type:
+                    candidate = raw_conn
+                    break
+
+        if candidate is None:
+            return None
+
+        if hasattr(candidate, "to_dict") and callable(candidate.to_dict):
+            return dict(candidate.to_dict())
+
+        if isinstance(candidate, dict):
+            raw_params = candidate.get("parameters") or []
+            norm_params: list[dict[str, Any]] = []
+            if isinstance(raw_params, dict):
+                for p_name, p_spec in raw_params.items():
+                    spec_dict = dict(p_spec) if isinstance(p_spec, dict) else {"type": "text", "default": p_spec}
+                    p_type = str(spec_dict.get("type") or spec_dict.get("param_type") or "text")
+                    norm_params.append(
+                        {
+                            "name": str(p_name),
+                            "type": p_type,
+                            "param_type": p_type,
+                            "required": bool(spec_dict.get("required", False)),
+                            "default": spec_dict.get("default", ""),
+                            "source": spec_dict.get("source"),
+                            "options": list(spec_dict.get("options") or []),
+                        }
+                    )
+            elif isinstance(raw_params, (list, tuple)):
+                for p_item in raw_params:
+                    if hasattr(p_item, "to_dict") and callable(p_item.to_dict):
+                        norm_params.append(dict(p_item.to_dict()))
+                    elif isinstance(p_item, dict) and p_item.get("name"):
+                        p_type = str(p_item.get("type") or p_item.get("param_type") or "text")
+                        norm_params.append(
+                            {
+                                "name": str(p_item["name"]),
+                                "type": p_type,
+                                "param_type": p_type,
+                                "required": bool(p_item.get("required", False)),
+                                "default": p_item.get("default", ""),
+                                "source": p_item.get("source"),
+                                "options": list(p_item.get("options") or []),
+                            }
+                        )
+            return {
+                "name": str(candidate.get("name") or clean_type),
+                "description": str(candidate.get("description") or ""),
+                "image": str(candidate.get("image") or "python:3.12-slim"),
+                "builtin": bool(candidate.get("builtin", False)),
+                "parameters": norm_params,
+            }
+
+        return None
+
+    def _build_connector_step_code(
+        self,
+        pipeline_name: str,
+        step_idx: int,
+        step_type: str,
+        step_config: dict[str, Any],
+        connector_spec: dict[str, Any] | None,
+    ) -> tuple[str, dict[str, Any], str]:
+        """Generate (flow_code, parameters, image) for a Pipeline Builder step."""
+        step_params: dict[str, Any] = {}
+        if connector_spec and isinstance(connector_spec.get("parameters"), list):
+            for p_spec in connector_spec["parameters"]:
+                if isinstance(p_spec, dict) and p_spec.get("name"):
+                    p_name = str(p_spec["name"])
+                    default_val = p_spec.get("default")
+                    step_params[p_name] = "" if default_val is None else default_val
+
+        for cfg_key, cfg_val in (step_config or {}).items():
+            step_params[str(cfg_key)] = cfg_val
+
+        if connector_spec:
+            connector_image = str(connector_spec.get("image") or "python:3.12-slim").strip()
+            is_builtin = bool(connector_spec.get("builtin", False))
+        else:
+            connector_image = str(
+                step_config.get("image") or os.environ.get("K8S_DEFAULT_IMAGE", "python:3.12-slim")
+            ).strip()
+            is_builtin = False
+
+        header_lines = [
+            f'"""Auto-generated ProjectCompass Connector Flow for pipeline {pipeline_name!r} step {step_idx} ({step_type})."""',
+            "from __future__ import annotations",
+            "",
+            "import base64",
+            "import csv",
+            "import json",
+            "import os",
+            "import sys",
+            "from typing import Any",
+            "",
+            f"PIPELINE_NAME: str = {pipeline_name!r}",
+            f"STEP_INDEX: int = {int(step_idx)}",
+            f"STEP_TYPE: str = {step_type!r}",
+            f"CONNECTOR_IMAGE: str = {connector_image!r}",
+            f"DEFAULT_PARAMS: dict[str, Any] = {json.dumps(step_params, sort_keys=True)}",
+            "",
+            "",
+            "def _load_step_params() -> dict[str, Any]:",
+            "    params: dict[str, Any] = dict(DEFAULT_PARAMS)",
+            '    params_file = os.environ.get("FLOW_PARAMS_FILE", "/workspace/params.json")',
+            "    if params_file and os.path.isfile(params_file):",
+            "        try:",
+            '            with open(params_file, encoding="utf-8") as f_p:',
+            "                loaded = json.load(f_p)",
+            "            if isinstance(loaded, dict):",
+            "                params.update(loaded)",
+            "        except Exception:",
+            "            pass",
+            '    raw_env_json = os.environ.get("FLOW_PARAMS_JSON", "").strip()',
+            "    if raw_env_json:",
+            "        try:",
+            "            loaded_env = json.loads(raw_env_json)",
+            "            if isinstance(loaded_env, dict):",
+            "                params.update(loaded_env)",
+            "        except Exception:",
+            "            pass",
+            "    for key in list(params.keys()):",
+            '        env_key = "PC_PARAM_" + "".join(ch if ch.isalnum() else "_" for ch in str(key)).upper()',
+            "        if env_key in os.environ:",
+            "            params[key] = os.environ[env_key]",
+            "    return params",
+            "",
+            "",
+            "def _emit_step_artifacts(output_dir: str) -> None:",
+            "    if not os.path.isdir(output_dir):",
+            "        return",
+            "    for entry in sorted(os.listdir(output_dir)):",
+            "        full_path = os.path.join(output_dir, entry)",
+            "        if not os.path.isfile(full_path):",
+            "            continue",
+            '        with open(full_path, "rb") as f_art:',
+            '            encoded = base64.b64encode(f_art.read()).decode("ascii")',
+            '        print(f"[PC_ARTIFACT_BEGIN:{entry}]", flush=True)',
+            "        print(encoded, flush=True)",
+            '        print("[PC_ARTIFACT_END]", flush=True)',
+            "",
+        ]
+
+        if step_type == "python_script":
+            body_lines = [
+                "def main() -> None:",
+                "    params = _load_step_params()",
+                '    output_dir = "/tmp/pc_output/main"',
+                "    os.makedirs(output_dir, exist_ok=True)",
+                '    output_path = os.path.join(output_dir, "output.csv")',
+                '    user_code = str(params.get("code") or "")',
+                '    print(f"[ProjectCompass] Executing python_script step {STEP_INDEX}...", flush=True)',
+                "    exec_ns: dict[str, Any] = {",
+                '        "__name__": "__main__",',
+                '        "params": params,',
+                '        "inputs": params,',
+                '        "output_path": output_path,',
+                '        "output_dir": output_dir,',
+                '        "os": os,',
+                '        "json": json,',
+                "    }",
+                "    if user_code.strip():",
+                '        exec(compile(user_code, "<python_script>", "exec"), exec_ns)',
+                '        run_fn = exec_ns.get("run")',
+                "        if callable(run_fn):",
+                "            run_fn(params, output_path)",
+                "    _emit_step_artifacts(output_dir)",
+            ]
+        elif step_type == "sql_query":
+            body_lines = [
+                "def main() -> None:",
+                "    params = _load_step_params()",
+                '    output_dir = "/tmp/pc_output/main"',
+                "    os.makedirs(output_dir, exist_ok=True)",
+                '    output_path = os.path.join(output_dir, "output.csv")',
+                '    query = str(params.get("query") or "SELECT 1 AS result")',
+                '    connection = str(params.get("connection") or "default")',
+                '    print(f"[ProjectCompass] Executing sql_query on connection {connection!r}: {query}", flush=True)',
+                '    db_uri = os.environ.get("PC_DB_URI") or os.environ.get("DATABASE_URL") or ""',
+                '    if not db_uri or db_uri.startswith("sqlite"):',
+                "        import sqlite3",
+                '        db_target = db_uri.replace("sqlite:///", "") if db_uri.startswith("sqlite:///") else ":memory:"',
+                "        conn = sqlite3.connect(db_target)",
+                "        try:",
+                "            cur = conn.execute(query)",
+                "            rows = cur.fetchall()",
+                '            headers = [d[0] for d in cur.description] if cur.description else ["result"]',
+                '            with open(output_path, "w", newline="", encoding="utf-8") as f_csv:',
+                "                writer = csv.writer(f_csv)",
+                "                writer.writerow(headers)",
+                "                writer.writerows(rows)",
+                "        finally:",
+                "            conn.close()",
+                "    else:",
+                '        with open(output_path, "w", newline="", encoding="utf-8") as f_csv:',
+                "            writer = csv.writer(f_csv)",
+                '            writer.writerow(["connection", "query", "status"])',
+                '            writer.writerow([connection, query, "executed"])',
+                "    _emit_step_artifacts(output_dir)",
+            ]
+        elif connector_spec is not None and not is_builtin:
+            body_lines = [
+                "def main() -> None:",
+                "    params = _load_step_params()",
+                '    output_dir = "/tmp/pc_output/main"',
+                "    os.makedirs(output_dir, exist_ok=True)",
+                '    output_path = os.path.join(output_dir, "output.csv")',
+                '    print(f"[ProjectCompass] Running connector {STEP_TYPE!r} with image {CONNECTOR_IMAGE!r}", flush=True)',
+                '    print(f"[ProjectCompass] Connector parameters: {json.dumps(params, sort_keys=True)}", flush=True)',
+                '    with open(output_path, "w", newline="", encoding="utf-8") as f_csv:',
+                "        writer = csv.writer(f_csv)",
+                '        writer.writerow(["connector", "image", "parameters_json"])',
+                "        writer.writerow([STEP_TYPE, CONNECTOR_IMAGE, json.dumps(params, sort_keys=True)])",
+                "    _emit_step_artifacts(output_dir)",
+            ]
+        else:
+            body_lines = [
+                "def main() -> None:",
+                "    params = _load_step_params()",
+                '    output_dir = "/tmp/pc_output/main"',
+                "    os.makedirs(output_dir, exist_ok=True)",
+                '    output_path = os.path.join(output_dir, "output.csv")',
+                '    print(f"[ProjectCompass] Running pipeline step {STEP_INDEX} ({STEP_TYPE})", flush=True)',
+                '    with open(output_path, "w", newline="", encoding="utf-8") as f_csv:',
+                "        writer = csv.writer(f_csv)",
+                '        writer.writerow(["step_index", "step_type", "config_json"])',
+                "        writer.writerow([STEP_INDEX, STEP_TYPE, json.dumps(params, sort_keys=True)])",
+                "    _emit_step_artifacts(output_dir)",
+            ]
+
+        footer_lines = [
+            "",
+            "",
+            'if __name__ == "__main__":',
+            "    main()",
+            "",
+        ]
+        full_code = "\n".join(header_lines + body_lines + footer_lines)
+        return full_code, step_params, connector_image
+
+    def compile_connector_step_flow(
+        self,
+        pipeline_name: str,
+        step_idx: int,
+        step_type: str,
+        step_config: dict[str, Any] | None = None,
+        connector: Any | None = None,
+        connectors_map: Any | None = None,
+        owner: str = "Anonymous",
+        product: str = "General",
+    ) -> dict[str, Any]:
+        """Compile a single Pipeline Builder step into a parameterized Flow."""
+        safe_pipe = re.sub(r"[^A-Za-z0-9_-]+", "_", (pipeline_name or "").strip()).strip("_") or "pipeline"
+        safe_type = re.sub(r"[^A-Za-z0-9_-]+", "_", (step_type or "").strip()).strip("_") or "step"
+        step_flow_name = f"{safe_pipe}__step_{int(step_idx)}_{safe_type}"
+
+        connector_spec = self._resolve_connector_spec(
+            step_type=step_type,
+            connector=connector,
+            connectors_map=connectors_map,
+        )
+        step_code, step_params, connector_image = self._build_connector_step_code(
+            pipeline_name=pipeline_name,
+            step_idx=int(step_idx),
+            step_type=step_type,
+            step_config=step_config or {},
+            connector_spec=connector_spec,
+        )
+        conn_desc = str(connector_spec.get("description") or "").strip() if connector_spec else ""
+        description = (
+            f"Pipeline '{pipeline_name}' step {int(step_idx)} ({step_type})"
+            + (f" — {conn_desc}" if conn_desc else "")
+        )
+
+        saved_flow = self.save_flow(
+            name=step_flow_name,
+            code=step_code,
+            description=description,
+            parameters=step_params,
+            image=connector_image,
+            owner=owner or "flow-author",
+            version_message=f"Compile pipeline '{pipeline_name}' step {int(step_idx)} ({step_type})",
+            product=product or "Pipeline Step",
+        )
+        saved_flow["step_idx"] = int(step_idx)
+        saved_flow["step_type"] = step_type
+        return saved_flow
+
+    def compile_pipeline_to_flow_chain(
+        self,
+        name: str,
+        steps: list[dict[str, Any]],
+        description: str = "",
+        owner: str = "Anonymous",
+        product: str = "Machine Learning",
+        connectors_map: Any | None = None,
+        connectors: Any | None = None,
+    ) -> dict[str, Any]:
+        """Compile an ordered list of Pipeline Builder steps into per-step Flows and a FlowChain."""
+        pipeline_name = self._validate_flow_name(name)
+        resolved_connectors = connectors_map if connectors_map is not None else connectors
+        step_flows: list[str] = []
+        compiled_steps: list[dict[str, Any]] = []
+
+        for idx, step in enumerate(steps, start=1):
+            step_type = str(step.get("type") or step.get("connector") or step.get("class") or "python_script")
+            raw_cfg = step.get("config")
+            if not isinstance(raw_cfg, dict):
+                raw_cfg = step.get("parameters") if isinstance(step.get("parameters"), dict) else {}
+            flow_info = self.compile_connector_step_flow(
+                pipeline_name=pipeline_name,
+                step_idx=idx,
+                step_type=step_type,
+                step_config=raw_cfg,
+                connectors_map=resolved_connectors,
+                owner=owner or "flow-author",
+                product=product or "Machine Learning",
+            )
+            step_flows.append(flow_info["name"])
+            compiled_steps.append(flow_info)
+
+        chain_info: dict[str, Any] | None = None
+        if step_flows and hasattr(self, "save_chain"):
+            from flask import has_app_context
+
+            if has_app_context():
+                chain_info = self.save_chain(  # type: ignore[attr-defined]
+                    name=pipeline_name,
+                    flow_names=step_flows,
+                    description=description or f"Pipeline chain for {pipeline_name}",
+                    owner=owner or "flow-author",
+                )
+
+        return {
+            "name": pipeline_name,
+            "chain_name": pipeline_name,
+            "step_flows": step_flows,
+            "steps": compiled_steps,
+            "chain": chain_info,
+        }

@@ -46,13 +46,13 @@
 
         <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
           <button type="submit" class="w3-button w3-blue" onclick="submitRun()"><i class="fa fa-play w3-margin-right"></i> Run Now</button>
-          <button type="button" class="w3-button w3-teal" onclick="startStreamExecution('{{ title }}')"><i class="fa fa-terminal w3-margin-right"></i> Run with Live Log</button>
+          <button type="button" class="w3-button w3-teal" onclick="startStreamExecution('{{ analysis_name or title }}')"><i class="fa fa-terminal w3-margin-right"></i> Run with Live Log</button>
           <button type="button" class="w3-button w3-indigo" id="btn-schedule" style="display:none;" onclick="submitSchedule()"><i class="fa fa-calendar w3-margin-right"></i> Save Schedule</button>
         </div>
     </form>
 
     <!-- Real-time Execution Panel -->
-    <div id="exec-panel" style="display:none;margin-top:1rem;" data-name="">
+    <div id="exec-panel" style="display:none;margin-top:1rem;" data-name="" data-run-id="">
       <div class="w3-card w3-padding-large">
         <h5 style="margin-top:0;font-weight:700;"><i class="fa fa-terminal" style="color:var(--mariner-cyan);"></i> Live Execution Log</h5>
         <div class="w3-light-grey" style="height:8px;margin-bottom:.75rem;border-radius:999px;overflow:hidden;">
@@ -76,15 +76,35 @@
 
     /* SSE Real-time Execution */
     var _execSource = null;
+    var _activeRunId = null;
     function startStreamExecution(name){
-      document.getElementById('exec-panel').style.display='block';
-      document.getElementById('exec-panel').dataset.name=name;
+      var panel=document.getElementById('exec-panel');
+      panel.style.display='block';
+      panel.dataset.name=name;
+      panel.dataset.runId='';
+      _activeRunId=null;
       document.getElementById('exec-log').textContent='';
       document.getElementById('exec-progress').style.width='5%';
-      _execSource = new EventSource('/execute_stream/'+encodeURIComponent(name));
+      var form=document.getElementById('analysis-form');
+      var params=new URLSearchParams();
+      if(form){
+        var fd=new FormData(form);
+        fd.forEach(function(val,key){
+          if(key!=='analysis_name'&&key!=='schedule_type'&&key!=='schedule_time'&&key!=='schedule_cron'){
+            params.append(key,val);
+          }
+        });
+      }
+      var qs=params.toString();
+      var streamUrl='/execute_stream/'+encodeURIComponent(name)+(qs?('?'+qs):'');
+      _execSource = new EventSource(streamUrl);
       var lineCount=0;
       _execSource.onmessage=function(e){
         var d=JSON.parse(e.data);
+        if(d.run_id){
+          _activeRunId=d.run_id;
+          panel.dataset.runId=String(d.run_id);
+        }
         if(d.line){document.getElementById('exec-log').textContent+=d.line+'\n';lineCount++;}
         document.getElementById('exec-progress').style.width=Math.min(5+lineCount*2,95)+'%';
         document.getElementById('exec-log').scrollTop=99999;
@@ -93,6 +113,8 @@
           document.getElementById('exec-progress').style.width='100%';
           if(d.status==='success'){
             if(typeof showToast==='function')showToast('Execution completed!','success');
+          }else if(d.status==='aborted'){
+            if(typeof showToast==='function')showToast('Execution aborted','warning');
           }else{
             if(typeof showToast==='function')showToast('Execution failed','error');
           }
@@ -102,8 +124,11 @@
     }
     function abortExecution(){
       if(_execSource)_execSource.close();
-      var name=document.getElementById('exec-panel').dataset.name;
-      fetch('/execute_abort/'+encodeURIComponent(name),{method:'POST'});
+      var panel=document.getElementById('exec-panel');
+      var name=panel.dataset.name;
+      var runId=panel.dataset.runId||_activeRunId;
+      var abortUrl='/execute_abort/'+encodeURIComponent(name)+(runId?('?run_id='+encodeURIComponent(runId)):'');
+      fetch(abortUrl,{method:'POST'});
       if(typeof showToast==='function')showToast('Execution aborted','warning');
     }
     function myloadershow() {

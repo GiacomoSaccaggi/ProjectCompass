@@ -135,7 +135,7 @@
               <label class="w3-small"><b>Python Dependencies (<code>pip</code> packages, one per line)</b></label>
               <textarea class="w3-input w3-border" name="pip_requirements" rows="4"
                         style="font-family:monospace;font-size:12px;"
-                        placeholder="requests==2.31.0&#10;boto3"
+                        placeholder="requests==2.31.0&#10;httpx"
               >{{ selected_flow.pip_requirements_text if selected_flow else '' }}</textarea>
             </div>
           </div>
@@ -155,7 +155,7 @@
             </label>
             <textarea class="w3-input w3-border" name="env_vars" rows="3"
                       style="font-family:monospace;font-size:12px;"
-                      placeholder="AWS_ACCESS_KEY_ID=...&#10;API_TOKEN=..."
+                      placeholder="API_SECRET_TOKEN=...&#10;API_TOKEN=..."
             ></textarea>
             {% if selected_flow and selected_flow.env_keys %}
             <span class="w3-tiny w3-text-grey">

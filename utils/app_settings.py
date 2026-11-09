@@ -126,6 +126,96 @@ class PresetConnection:
 
 
 @dataclass(frozen=True)
+class DockerWorkerSettings:
+    """Configure local Docker k0s worker container provisioning."""
+
+    image: str = 'docker.io/k0sproject/k0s:latest'
+    cpus: str = '2'
+    memory: str = '4g'
+    auto_cleanup: bool = True
+    network: str = 'bridge'
+    join_token_file: str | None = None
+    controller_container: str | None = None
+    ready_timeout_seconds: int = 120
+
+
+@dataclass(frozen=True)
+class ExternalWorkerSettings:
+    """Configure external lifecycle scripts for custom worker provisioning."""
+
+    ensure_script: str | None = None
+    release_script: str | None = None
+    status_script: str | None = None
+
+
+@dataclass(frozen=True)
+class WorkerSettings:
+    """Hold k0s worker provider selection and provider-specific settings."""
+
+    provider: str = 'docker'
+    docker: DockerWorkerSettings = field(default_factory=DockerWorkerSettings)
+    external: ExternalWorkerSettings = field(default_factory=ExternalWorkerSettings)
+    auto_provision: bool = True
+    auto_cleanup: bool = True
+
+
+@dataclass(frozen=True)
+class ConnectorParameterSpec:
+    """Define a typed parameter for a pipeline connector."""
+
+    name: str
+    param_type: str = 'text'
+    required: bool = False
+    default: Any = ''
+    source: str | None = None
+    options: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'options', tuple(self.options))
+
+    @property
+    def type(self) -> str:
+        """Return the parameter type alias for template and config compatibility."""
+        return self.param_type
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable dictionary representation of the parameter."""
+        return {
+            'name': self.name,
+            'type': self.param_type,
+            'param_type': self.param_type,
+            'required': self.required,
+            'default': self.default,
+            'source': self.source,
+            'options': list(self.options),
+        }
+
+
+@dataclass(frozen=True)
+class ConnectorSettings:
+    """Define a built-in or custom pipeline step connector."""
+
+    name: str
+    description: str = ''
+    image: str = 'python:3.12-slim'
+    builtin: bool = False
+    parameters: tuple[ConnectorParameterSpec, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'parameters', tuple(self.parameters))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable dictionary representation of the connector."""
+        return {
+            'name': self.name,
+            'description': self.description,
+            'image': self.image,
+            'builtin': self.builtin,
+            'parameters': [param.to_dict() for param in self.parameters],
+        }
+
+
+@dataclass(frozen=True)
 class AppSettings:
     """Expose the validated settings used by startup and templates."""
 
@@ -135,10 +225,19 @@ class AppSettings:
     features: FeatureSettings
     connections: tuple[PresetConnection, ...]
     connection_errors: tuple[str, ...]
+    workers: WorkerSettings = field(default_factory=WorkerSettings)
+    connectors: tuple[ConnectorSettings, ...] = ()
 
     def for_templates(self) -> PublicAppSettings:
         """Return the non-secret settings exposed to Jinja templates."""
-        return PublicAppSettings(self.branding, self.theme, self.demo, self.features)
+        return PublicAppSettings(
+            self.branding,
+            self.theme,
+            self.demo,
+            self.features,
+            self.workers,
+            self.connectors,
+        )
 
 
 @dataclass(frozen=True)
@@ -149,6 +248,8 @@ class PublicAppSettings:
     theme: ThemeSettings
     demo: DemoSettings
     features: FeatureSettings
+    workers: WorkerSettings = field(default_factory=WorkerSettings)
+    connectors: tuple[ConnectorSettings, ...] = ()
 
 
 class BaseSettingsSource(ABC):
@@ -215,6 +316,47 @@ class DefaultsSource(BaseSettingsSource):
                 'todo': True,
             },
             'connections': [],
+            'workers': {
+                'provider': 'docker',
+                'auto_provision': True,
+                'auto_cleanup': None,
+                'docker': {
+                    'image': 'docker.io/k0sproject/k0s:latest',
+                    'cpus': '2',
+                    'memory': '4g',
+                    'auto_cleanup': True,
+                    'network': 'bridge',
+                    'join_token_file': None,
+                    'controller_container': None,
+                    'ready_timeout_seconds': 120,
+                },
+                'external': {
+                    'ensure_script': None,
+                    'release_script': None,
+                    'status_script': None,
+                },
+            },
+            'connectors': [
+                {
+                    'name': 'python_script',
+                    'description': 'Run custom Python script',
+                    'builtin': True,
+                    'image': 'python:3.12-slim',
+                    'parameters': {
+                        'code': {'type': 'text', 'required': True},
+                    },
+                },
+                {
+                    'name': 'sql_query',
+                    'description': 'Execute SQL query against a connection',
+                    'builtin': True,
+                    'image': 'python:3.12-slim',
+                    'parameters': {
+                        'query': {'type': 'text', 'required': True},
+                        'connection': {'type': 'select', 'source': 'connections'},
+                    },
+                },
+            ],
         }
 
 
@@ -332,7 +474,7 @@ class EnvOverrideSource(BaseSettingsSource):
 
     def _parse_value(self, value: str, expected: Any, key: str) -> Any:
         """Parse an environment value using its built-in setting type."""
-        if isinstance(expected, bool):
+        if isinstance(expected, bool) or key in {'workers.auto_provision', 'workers.auto_cleanup'}:
             parsed = self._BOOLEAN_VALUES.get(value.strip().lower())
             if parsed is None:
                 raise SettingsValidationError(f'{key}: expected a boolean value (true/false/1/0/yes/no).')
@@ -364,6 +506,12 @@ class SettingsLoader:
     _SENSITIVE_EXTRA_KEYS = {
         'password', 'passwd', 'pwd', 'secret', 'token', 'key', 'api_key', 'access_key',
     }
+    _WORKER_PROVIDERS = {'docker', 'external'}
+    _CONNECTOR_PARAM_TYPES = {
+        'text', 'number', 'checkbox', 'select', 'textarea',
+        'code', 'boolean', 'int', 'float', 'string', 'columns',
+    }
+    _BUILTIN_CONNECTOR_NAMES = {'python_script', 'sql_query'}
 
     def __init__(self, sources: Sequence[BaseSettingsSource]) -> None:
         """Create a loader for a precedence-ordered source sequence."""
@@ -534,7 +682,265 @@ class SettingsLoader:
             for key in FeatureSettings._FEATURE_KEYS
         })
         connections, connection_errors = self._parse_connections(values.get('connections', []))
-        return AppSettings(branding, theme, demo, features, connections, connection_errors)
+        workers = self._parse_workers(values.get('workers'))
+        connectors = self._parse_connectors(values.get('connectors'))
+        return AppSettings(
+            branding,
+            theme,
+            demo,
+            features,
+            connections,
+            connection_errors,
+            workers,
+            connectors,
+        )
+
+    def _parse_workers(self, raw_workers: Any) -> WorkerSettings:
+        """Validate worker provider configuration and provider-specific sub-blocks."""
+        if raw_workers is None:
+            raw_workers = self._defaults.get('workers', {})
+        if not isinstance(raw_workers, Mapping):
+            raise SettingsValidationError('workers: expected a mapping.')
+
+        provider = self._required_string(raw_workers, 'provider', 'workers').strip().lower()
+        if provider not in self._WORKER_PROVIDERS:
+            raise SettingsValidationError(
+                'workers.provider: expected "docker" or "external".',
+            )
+
+        docker_values = self._require_mapping(raw_workers, 'docker', 'workers')
+        image = self._required_string(docker_values, 'image', 'workers.docker').strip()
+        raw_cpus = docker_values.get('cpus')
+        if isinstance(raw_cpus, bool) or not isinstance(raw_cpus, (str, int, float)) or not str(raw_cpus).strip():
+            raise SettingsValidationError('workers.docker.cpus: expected a non-empty string.')
+        cpus = str(raw_cpus).strip()
+        memory = self._required_string(docker_values, 'memory', 'workers.docker').strip()
+        docker_auto_cleanup = self._boolean_value(
+            docker_values.get('auto_cleanup'), 'workers.docker.auto_cleanup',
+        )
+        network = self._required_string(docker_values, 'network', 'workers.docker').strip().lower()
+        if network not in {'bridge', 'host'}:
+            raise SettingsValidationError('workers.docker.network: expected "bridge" or "host".')
+        join_token_file = self._optional_string(
+            docker_values.get('join_token_file'), 'workers.docker.join_token_file',
+        )
+        controller_container = self._optional_string(
+            docker_values.get('controller_container'), 'workers.docker.controller_container',
+        )
+        raw_ready_timeout = docker_values.get('ready_timeout_seconds')
+        if isinstance(raw_ready_timeout, bool) or not isinstance(raw_ready_timeout, int) or raw_ready_timeout <= 0:
+            raise SettingsValidationError('workers.docker.ready_timeout_seconds: expected a positive integer.')
+        auto_provision = self._boolean_value(
+            raw_workers.get('auto_provision'), 'workers.auto_provision',
+        )
+        top_level_auto_cleanup = raw_workers.get('auto_cleanup')
+        auto_cleanup = docker_auto_cleanup if top_level_auto_cleanup is None else self._boolean_value(
+            top_level_auto_cleanup, 'workers.auto_cleanup',
+        )
+        docker_settings = DockerWorkerSettings(
+            image=image,
+            cpus=cpus,
+            memory=memory,
+            auto_cleanup=docker_auto_cleanup,
+            network=network,
+            join_token_file=join_token_file,
+            controller_container=controller_container,
+            ready_timeout_seconds=raw_ready_timeout,
+        )
+
+        external_values = self._require_mapping(raw_workers, 'external', 'workers')
+        external_settings = ExternalWorkerSettings(
+            ensure_script=self._optional_script_path(
+                external_values.get('ensure_script'), 'workers.external.ensure_script',
+            ),
+            release_script=self._optional_script_path(
+                external_values.get('release_script'), 'workers.external.release_script',
+            ),
+            status_script=self._optional_script_path(
+                external_values.get('status_script'), 'workers.external.status_script',
+            ),
+        )
+        return WorkerSettings(
+            provider=provider,
+            docker=docker_settings,
+            external=external_settings,
+            auto_provision=auto_provision,
+            auto_cleanup=auto_cleanup,
+        )
+
+    def _optional_script_path(self, value: Any, key: str) -> str | None:
+        """Validate an optional script path string, treating blank strings as None."""
+        if value is None:
+            return None
+        text = self._string_value(value, key).strip()
+        return text or None
+
+    def _parse_connectors(self, raw_connectors: Any) -> tuple[ConnectorSettings, ...]:
+        """Validate built-in and custom pipeline connectors, preserving built-in defaults."""
+        if raw_connectors is None:
+            raw_connectors = []
+        if not isinstance(raw_connectors, list):
+            raise SettingsValidationError('connectors: expected a list of connector definitions.')
+
+        by_name: dict[str, ConnectorSettings] = {}
+        default_connectors = self._defaults.get('connectors', [])
+        if isinstance(default_connectors, list):
+            for idx, default_raw in enumerate(default_connectors):
+                default_conn = self._parse_connector(idx, default_raw)
+                by_name[default_conn.name.casefold()] = default_conn
+
+        seen_in_source: set[str] = set()
+        for index, raw_connector in enumerate(raw_connectors):
+            connector = self._parse_connector(index, raw_connector)
+            normalized_name = connector.name.casefold()
+            if normalized_name in seen_in_source:
+                raise SettingsValidationError(
+                    f'connectors[{index}].name: duplicate connector name {connector.name!r}.',
+                )
+            seen_in_source.add(normalized_name)
+            by_name[normalized_name] = connector
+
+        return tuple(by_name.values())
+
+    def _parse_connector(self, index: int, raw_connector: Any) -> ConnectorSettings:
+        """Validate and normalize a single connector entry."""
+        prefix = f'connectors[{index}]'
+        if not isinstance(raw_connector, Mapping):
+            raise SettingsValidationError(f'{prefix}: expected a mapping.')
+
+        allowed_keys = {'name', 'description', 'image', 'builtin', 'parameters'}
+        for key in raw_connector:
+            if key not in allowed_keys:
+                self._logger.warning('Unknown application settings key: %s.%s', prefix, key)
+
+        name = self._required_string(raw_connector, 'name', prefix).strip()
+        raw_description = raw_connector.get('description')
+        description = (
+            name
+            if raw_description is None
+            else self._string_value(raw_description, f'{prefix}.description')
+        )
+        raw_image = raw_connector.get('image', 'python:3.12-slim')
+        image = (
+            'python:3.12-slim'
+            if raw_image is None
+            else self._string_value(raw_image, f'{prefix}.image', allow_empty=False).strip()
+        )
+        raw_builtin = raw_connector.get('builtin')
+        builtin = (
+            name in self._BUILTIN_CONNECTOR_NAMES
+            if raw_builtin is None
+            else self._boolean_value(raw_builtin, f'{prefix}.builtin')
+        )
+        parameters = self._parse_connector_parameters(
+            raw_connector.get('parameters'), f'{prefix}.parameters',
+        )
+        return ConnectorSettings(
+            name=name,
+            description=description,
+            image=image,
+            builtin=builtin,
+            parameters=parameters,
+        )
+
+    def _parse_connector_parameters(
+        self, raw_params: Any, prefix: str,
+    ) -> tuple[ConnectorParameterSpec, ...]:
+        """Validate connector parameters supplied as either a mapping or a list."""
+        if raw_params is None:
+            return ()
+
+        specs: list[ConnectorParameterSpec] = []
+        seen_names: set[str] = set()
+
+        if isinstance(raw_params, Mapping):
+            for param_name, raw_spec in raw_params.items():
+                if not isinstance(param_name, str) or not param_name.strip():
+                    raise SettingsValidationError(
+                        f'{prefix}: parameter name must be a non-empty string.',
+                    )
+                clean_name = param_name.strip()
+                spec = self._parse_connector_parameter(
+                    clean_name, raw_spec, f'{prefix}.{clean_name}',
+                )
+                normalized = spec.name.casefold()
+                if normalized in seen_names:
+                    raise SettingsValidationError(
+                        f'{prefix}.{clean_name}: duplicate parameter name.',
+                    )
+                seen_names.add(normalized)
+                specs.append(spec)
+        elif isinstance(raw_params, (list, tuple)):
+            for idx, raw_spec in enumerate(raw_params):
+                param_prefix = f'{prefix}[{idx}]'
+                if isinstance(raw_spec, ConnectorParameterSpec):
+                    spec = raw_spec
+                else:
+                    if not isinstance(raw_spec, Mapping):
+                        raise SettingsValidationError(f'{param_prefix}: expected a mapping.')
+                    param_name = self._required_string(raw_spec, 'name', param_prefix).strip()
+                    spec = self._parse_connector_parameter(param_name, raw_spec, param_prefix)
+                normalized = spec.name.casefold()
+                if normalized in seen_names:
+                    raise SettingsValidationError(
+                        f'{param_prefix}.name: duplicate parameter name.',
+                    )
+                seen_names.add(normalized)
+                specs.append(spec)
+        else:
+            raise SettingsValidationError(
+                f'{prefix}: expected a mapping or list of parameters.',
+            )
+
+        return tuple(specs)
+
+    def _parse_connector_parameter(
+        self, name: str, raw_spec: Any, prefix: str,
+    ) -> ConnectorParameterSpec:
+        """Validate a single connector parameter specification."""
+        if not isinstance(raw_spec, Mapping):
+            raise SettingsValidationError(f'{prefix}: expected a mapping.')
+
+        raw_type = raw_spec.get('type', raw_spec.get('param_type', 'text'))
+        param_type = (
+            'text'
+            if raw_type is None
+            else self._string_value(raw_type, f'{prefix}.type', allow_empty=False).strip().lower()
+        )
+        if param_type not in self._CONNECTOR_PARAM_TYPES:
+            raise SettingsValidationError(
+                f'{prefix}.type: unsupported parameter type {param_type!r}.',
+            )
+
+        raw_required = raw_spec.get('required', False)
+        required = (
+            False
+            if raw_required is None
+            else self._boolean_value(raw_required, f'{prefix}.required')
+        )
+        default = '' if raw_spec.get('default') is None else raw_spec.get('default')
+        source = self._optional_string(raw_spec.get('source'), f'{prefix}.source')
+
+        raw_options = raw_spec.get('options')
+        if raw_options is None:
+            options: tuple[str, ...] = ()
+        elif isinstance(raw_options, (list, tuple)) and all(
+            self._is_scalar(opt) for opt in raw_options
+        ):
+            options = tuple(str(opt) for opt in raw_options)
+        else:
+            raise SettingsValidationError(
+                f'{prefix}.options: expected a list of scalar option values.',
+            )
+
+        return ConnectorParameterSpec(
+            name=name,
+            param_type=param_type,
+            required=required,
+            default=default,
+            source=source,
+            options=options,
+        )
 
     def _parse_connections(self, raw_connections: Any) -> tuple[tuple[PresetConnection, ...], tuple[str, ...]]:
         """Validate preset connections individually while retaining safe diagnostics."""

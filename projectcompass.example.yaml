@@ -62,3 +62,52 @@ features:
 #   extra_params:
 #     sslmode: require
 connections: []
+
+# Kubernetes worker provisioning settings for isolated Flow execution.
+# Override via PC_WORKERS__PROVIDER, PC_WORKERS__DOCKER__IMAGE, etc.
+workers:
+  provider: docker  # "docker" | "external"
+  auto_provision: true
+  auto_cleanup: true
+  docker:
+    image: docker.io/k0sproject/k0s:latest
+    cpus: "2"
+    memory: "4g"
+    network: bridge  # bridge supports multiple managed workers; host is limited to one
+    auto_cleanup: true
+    join_token_file: null  # or set PC_K0S_TOKEN_FILE to a mounted token file
+    controller_container: null  # optional fallback for generating a token with docker exec
+    ready_timeout_seconds: 120
+  external:
+    ensure_script: null
+    release_script: null
+    status_script: null
+
+# Pipeline Builder step connectors. Built-in connectors (python_script, sql_query)
+# are available by default. Add custom container-based connectors below:
+# - name: trino_etl
+#   description: "Run Trino ETL job"
+#   image: "custom-trino-runner:latest"
+#   parameters:
+#     query: {type: text, required: true}
+#     connection: {type: select, source: connections}
+connectors:
+  - name: python_script
+    description: "Run custom Python script"
+    builtin: true
+    image: "python:3.12-slim"
+    parameters:
+      code:
+        type: text
+        required: true
+  - name: sql_query
+    description: "Execute SQL query against a connection"
+    builtin: true
+    image: "python:3.12-slim"
+    parameters:
+      query:
+        type: text
+        required: true
+      connection:
+        type: select
+        source: connections

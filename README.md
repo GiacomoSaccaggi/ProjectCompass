@@ -121,6 +121,54 @@ See [DOCKER.md](DOCKER.md) for volumes, environment variables, health checks, an
 
 ---
 
+## Workers & Execution
+
+ProjectCompass is the orchestrator and UI: structured analyses and Flow steps run as isolated Kubernetes Jobs on k0s workers, not as user scripts inside the web application container. The cloud-agnostic `WorkerProvider` abstraction can use existing Ready nodes, provision Docker k0s worker containers for a local/demo cluster, or delegate worker lifecycle to configured external scripts.
+
+### Docker k0s workers
+
+The Docker provider requires Docker CLI access and the host Docker socket. The `docker-compose.k0s.yml` overlay mounts `/var/run/docker.sock` and a read-only worker join token. Generate the token on the k0s controller and start the overlay:
+
+```bash
+mkdir -p data
+sudo k0s token create --role=worker > ./data/k0s-worker.token
+chmod 600 ./data/k0s-worker.token
+K0S_WORKER_TOKEN_FILE=./data/k0s-worker.token \
+  docker compose -f docker-compose.yml -f docker-compose.k0s.yml up -d
+```
+
+The overlay passes the token as `PC_K0S_TOKEN_FILE`. Alternatively, configure `workers.docker.join_token_file` or `PC_K0S_JOIN_TOKEN`; `workers.docker.controller_container` can be used to create a token with `docker exec` when the controller is a container. The configured token must identify an API endpoint reachable from the worker container network.
+
+Docker worker settings live under `workers` in `projectcompass.yaml` (see [`projectcompass.example.yaml`](projectcompass.example.yaml)). `workers.docker.network` defaults to `bridge`, which permits multiple managed workers; `host` networking is available but limited to one managed worker. Workers use `workers.docker.ready_timeout_seconds` (default `120`) to wait for Kubernetes readiness. `workers.auto_provision` enables provisioning and `workers.auto_cleanup` releases managed Docker or external workers only when no Flow or FlowChain is active. The old `workers.docker.auto_cleanup` key remains a compatibility alias.
+
+For infrastructure-managed workers, set `workers.provider: external` and configure `ensure_script`, `release_script`, and optionally `status_script`. Scripts receive worker count or node names through `PC_WORKER_COUNT` and `PC_WORKER_NODES`; their output is parsed as JSON or newline-delimited node names. Compass does not include provider-specific infrastructure integrations.
+
+### Connectors and data/artifact limits
+
+Pipeline Builder connectors are configured in the top-level `connectors:` list. Each connector defines a `name`, `description`, container `image`, `builtin` flag, and typed `parameters`; a `select` parameter can use `source: connections` to populate saved connection names. Every saved step runs as its own Flow in a sequential FlowChain. For example:
+
+```yaml
+connectors:
+  - name: python_script
+    description: Run Python code
+    builtin: true
+    image: python:3.12-slim
+    parameters:
+      code: {type: code, required: true}
+  - name: team_runner
+    description: Run a team container
+    image: team-runner:latest
+    parameters:
+      query: {type: text, required: true}
+      connection: {type: select, source: connections}
+```
+
+Structured-analysis artifacts are sent inline through Pod logs by default. `PC_ARTIFACT_INLINE_MAX_BYTES` sets the per-file inline threshold (default `5242880`, 5 MiB); base64 log framing adds roughly one-third to the transferred data. Larger artifacts can use `PC_SHARED_ARTIFACT_DIR` only when the same shared volume is mounted into both the worker Job and Compass at that path. ProjectCompass does not provision that volume automatically; without it, artifacts remain inline. Saved CSV datasets mounted through the per-run ConfigMap are limited to `512 KiB` per file and `800 KiB` total; skipped files are recorded as warnings in the run log.
+
+See [DOCKER.md](DOCKER.md) and [k0s setup](docs/k0s_setup.html) for the full setup and networking notes.
+
+---
+
 ## Architecture
 
 ```

@@ -53,7 +53,7 @@
 .pb-modal-content{background:var(--mariner-bg-card, #fff);border:1px solid var(--mariner-border-strong);border-top:3px solid var(--mariner-gold, #b45309);border-radius:14px;padding:1.5rem;min-width:400px;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.4)}
 .pb-modal-content h5{margin:0 0 1rem;color:var(--mariner-navy, #0b1629);font-weight:700}
 .pb-modal-content label{font-size:.8rem;font-weight:600;display:block;margin-top:.5rem}
-.pb-modal-content input,.pb-modal-content select{width:100%;padding:7px 10px;border:1px solid var(--mariner-border-strong);border-radius:8px;font-size:.82rem;margin-top:3px}
+.pb-modal-content input,.pb-modal-content select,.pb-modal-content textarea{width:100%;padding:7px 10px;border:1px solid var(--mariner-border-strong);border-radius:8px;font-size:.82rem;margin-top:3px;font-family:inherit}
 .pb-modal-content button{margin-top:1rem;padding:8px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600}
 body.dark-mode .pb-palette{background:#0b1629;border-right-color:rgba(56,189,248,0.2)}
 body.dark-mode .pb-palette h6{color:#fbbf24}
@@ -82,6 +82,19 @@ body.dark-mode #drawflow{background-color:#060d1a}
 <div class="pb-wrap">
   <!-- Palette -->
   <div class="pb-palette">
+    <h6><i class="fa fa-plug"></i> Connectors</h6>
+    {% set palette_connectors = connectors if connectors is defined else [] %}
+    {% for conn in palette_connectors %}
+    <div class="pb-block pb-connector-block" draggable="true" ondragstart="drag(event)" data-node="{{ conn.name }}" data-type="{{ conn.name }}" data-image="{{ conn.image }}" title="{{ conn.description }} ({{ conn.image }})">
+      <i class="fa {{ 'fa-code' if conn.name == 'python_script' else ('fa-database' if conn.name == 'sql_query' else 'fa-cube') }}"></i>
+      <div style="display:flex;flex-direction:column;line-height:1.2;overflow:hidden;">
+        <span>{{ conn.name }}</span>
+        <small style="font-size:.66rem;color:#64748b;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ conn.image }}</small>
+      </div>
+    </div>
+    {% endfor %}
+
+    <hr class="pb-sep">
     <h6><i class="fa fa-database"></i> Data</h6>
     <div class="pb-block" draggable="true" ondragstart="drag(event)" data-node="load_data">
       <i class="fa fa-database"></i> Load Data
@@ -210,6 +223,8 @@ editor.start();
 var _editingNode = null;
 var _allColumns = [];
 var datasets = {{ datasets|tojson }};
+var connectors = {{ (connectors if connectors is defined else [])|tojson }};
+var connectionNames = {{ (connection_names if connection_names is defined else [])|tojson }};
 
 // Node definitions
 var NODE_DEFS = {
@@ -306,15 +321,52 @@ var NODE_DEFS = {
   ]}
 };
 
+// Register configured and built-in connectors
+connectors.forEach(function(conn){
+  var fields = (conn.parameters || []).map(function(p){
+    var fType = p.type || p.param_type || 'text';
+    if((p.name === 'code' || p.name === 'query') && fType === 'text'){
+      fType = 'textarea';
+    }
+    var opts = [];
+    if(fType === 'select'){
+      opts = (p.source === 'connections') ? connectionNames : (p.options || []);
+    }
+    return {
+      id: p.name,
+      label: p.name + (p.required ? ' *' : ''),
+      type: fType,
+      options: opts,
+      source: p.source || null,
+      required: !!p.required,
+      default: (p.default !== undefined && p.default !== null) ? p.default : ''
+    };
+  });
+  NODE_DEFS[conn.name] = {
+    title: conn.name,
+    description: conn.description || '',
+    image: conn.image || 'python:3.12-slim',
+    builtin: !!conn.builtin,
+    isConnector: true,
+    inputs: 1,
+    outputs: 1,
+    fields: fields
+  };
+});
+
 // Drag & drop
-function drag(ev){ev.dataTransfer.setData('node',ev.target.dataset.node)}
+function drag(ev){
+  var block = ev.currentTarget || (ev.target && ev.target.closest ? ev.target.closest('.pb-block') : null) || ev.target;
+  ev.dataTransfer.setData('node', block.dataset.node || block.dataset.type || '');
+}
 function allowDrop(ev){ev.preventDefault()}
 function drop(ev){
   ev.preventDefault();
   var type=ev.dataTransfer.getData('node');
   if(!type||!NODE_DEFS[type])return;
   var def=NODE_DEFS[type];
-  var html='<div class="node-title">'+def.title+'</div><div class="node-config" id="cfg-{id}">double-click to configure</div>';
+  var imgBadge=def.image?'<div style="font-size:.66rem;color:#0284c7;margin-bottom:2px">'+def.image+'</div>':'';
+  var html='<div class="node-title">'+def.title+'</div>'+imgBadge+'<div class="node-config" id="cfg-{id}">double-click to configure</div>';
   var posX=ev.clientX-document.getElementById('drawflow').getBoundingClientRect().left;
   var posY=ev.clientY-document.getElementById('drawflow').getBoundingClientRect().top;
   var nodeId=editor.addNode(type,def.inputs,def.outputs,posX,posY,type,{config:{}},html.replace('{id}',''));
@@ -332,24 +384,34 @@ document.getElementById('drawflow').addEventListener('dblclick',function(){
 function openConfig(nodeId){
   var node=editor.getNodeFromId(nodeId);
   var def=NODE_DEFS[node.class];
-  if(!def||!def.fields.length){alert('No configuration needed for this block');return}
+  if(!def||(!def.fields.length&&!def.isConnector)){alert('No configuration needed for this block');return}
   var cfg=node.data.config||{};
   var html='';
+  if(def.image){
+    html+='<div style="font-size:.76rem;color:#475569;margin-bottom:.6rem;">Container Image: <code>'+def.image+'</code></div>';
+  }
   def.fields.forEach(function(f){
-    var val=cfg[f.id]!==undefined?cfg[f.id]:(f.default||'');
+    var val=cfg[f.id]!==undefined?cfg[f.id]:(f.default!==undefined?f.default:'');
     html+='<label>'+f.label+'</label>';
     if(f.type==='select'){
+      var selectOpts=(f.source==='connections')?connectionNames:(f.options||[]);
       html+='<select id="cfg_'+f.id+'">';
-      f.options.forEach(function(o){html+='<option value="'+o+'"'+(val==o?' selected':'')+'>'+o+'</option>'});
+      if(f.source==='connections'&&!selectOpts.length){
+        html+='<option value="">-- no configured connections --</option>';
+      }
+      selectOpts.forEach(function(o){html+='<option value="'+o+'"'+(val==o?' selected':'')+'>'+o+'</option>'});
       html+='</select>';
     }else if(f.type==='columns'){
       html+='<select id="cfg_'+f.id+'"><option value="">-- select column --</option>';
       _allColumns.forEach(function(c){html+='<option value="'+c+'"'+(val==c?' selected':'')+'>'+c+'</option>'});
       html+='</select>';
-    }else if(f.type==='checkbox'){
+    }else if(f.type==='checkbox'||f.type==='boolean'){
       html+='<input type="checkbox" id="cfg_'+f.id+'" '+(val?'checked':'')+' style="width:auto">';
+    }else if(f.type==='textarea'||f.type==='code'){
+      html+='<textarea id="cfg_'+f.id+'" rows="4">'+val+'</textarea>';
     }else{
-      html+='<input type="'+f.type+'" id="cfg_'+f.id+'" value="'+val+'">';
+      var inputType=(f.type==='number')?'number':'text';
+      html+='<input type="'+inputType+'" id="cfg_'+f.id+'" value="'+val+'">';
     }
   });
   document.getElementById('modalTitle').textContent='Configure: '+def.title;
@@ -367,7 +429,8 @@ function saveNodeConfig(){
   var cfg={};
   def.fields.forEach(function(f){
     var el=document.getElementById('cfg_'+f.id);
-    if(f.type==='checkbox')cfg[f.id]=el.checked;
+    if(!el)return;
+    if(f.type==='checkbox'||f.type==='boolean')cfg[f.id]=el.checked;
     else cfg[f.id]=el.value;
   });
   node.data.config=cfg;
@@ -384,6 +447,7 @@ function closeModal(){document.getElementById('configModal').classList.remove('a
 // Save pipeline
 function savePipeline(){document.getElementById('saveModal').classList.add('active')}
 function saveAndRun(){document.getElementById('saveModal').classList.add('active')}
+function saveAndRunPipeline(){saveAndRun()}
 
 function submitPipeline(andRun){
   var name=document.getElementById('pipeline_name').value.trim();

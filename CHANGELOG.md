@@ -2,6 +2,14 @@
 
 All notable changes to ProjectCompass will be documented in this file.
 
+## [Unreleased] - 2026-11-09
+
+### Added
+- Unified structured analysis, Flow and Pipeline Builder execution on isolated k0s Jobs with per-step FlowChains and log-stream artifact extraction.
+- Added cloud-agnostic `WorkerProvider` implementations for Docker k0s workers and configured external lifecycle scripts, including token-based joining, readiness checks and ownership-safe idle cleanup.
+- Added configurable Pipeline Builder connectors, worker networking/readiness settings, readable provisioning failures, and oversized dataset warnings.
+- Documented Docker worker setup, join-token mounting, connector configuration, and artifact/dataset transport limits.
+
 ## [2.0.0] - 2026-08-19
 
 ### Added

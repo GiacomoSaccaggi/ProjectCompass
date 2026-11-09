@@ -266,9 +266,17 @@ def test_save_pipeline_full_flow(client, app):
         # Clean up
         with app.app_context():
             webapp = app.config['WEBAPP']
-            analysis_dir = f"{webapp.extract_main_folder()}/{name}"
-            if os.path.isdir(analysis_dir):
-                shutil.rmtree(analysis_dir)
+            main_folder = webapp.extract_main_folder()
+            for entry in os.listdir(main_folder):
+                if entry == name or entry.startswith(f"{name}__step_"):
+                    target_dir = os.path.join(main_folder, entry)
+                    if os.path.isdir(target_dir):
+                        shutil.rmtree(target_dir)
+            webapp.delete_chain(name)
+            from models import FlowVersion, PipelineVersion, db
+            PipelineVersion.query.filter_by(analysis_name=name).delete()
+            FlowVersion.query.filter(FlowVersion.flow_name.like(f"{name}%")).delete(synchronize_session=False)
+            db.session.commit()
 
 
 def test_save_pipeline_missing_name(client):
@@ -527,11 +535,488 @@ def test_restore_version(client, app):
             db.session.commit()
 
 
-# --- Execute abort tests ---
+# --- Execute abort & Unified K8s Structured Analysis tests ---
 
 def test_execute_abort_no_process(client):
-    """Test POST /execute_abort/<name> when no process is running."""
+    """Test POST /execute_abort/<name> when no K8s Job execution is running."""
     resp = client.post('/execute_abort/NonExistentAnalysis')
-    assert resp.status_code == 200
+    assert resp.status_code == 404
     data = resp.get_json()
     assert data['success'] is False
+    assert data['status'] == 'not_found'
+
+
+def test_run_investigation_creates_k8s_flow_and_extracts_artifacts(client, app, tmp_path, monkeypatch):
+    """Verify POST /run_investigation/ creates a Flow, runs a K8s Job, and extracts physical_output artifacts."""
+    import base64
+    from unittest.mock import patch
+    from models import Execution, db
+
+    webapp = app.config['WEBAPP']
+    analyses_dir = tmp_path / 'Analyses'
+    analyses_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
+
+    sa_name = 'Sales Summary K8s'
+    sa_dir = analyses_dir / sa_name
+    (sa_dir / 'analysis').mkdir(parents=True)
+    (sa_dir / 'physical_output' / 'main').mkdir(parents=True)
+
+    (sa_dir / 'metadata.yaml').write_text(
+        'title: Sales Summary K8s\n'
+        'description: Sales analysis\n'
+        'product: BI\n'
+        'owner: alice\n'
+        'collaborators: ""\n'
+        'countries: Global\n'
+        'start_date: "2024-01-15"\n'
+        'output_type: CSV\n'
+        'output description: Sales table\n'
+        'dashboard link: ""\n'
+        'gitlab: ""\n'
+        'gdrive: ""\n'
+        'inputs: {}\n'
+        'links: {}\n',
+        encoding='utf-8',
+    )
+    (sa_dir / 'analysis' / 'metadata_automatic_report.yaml').write_text(
+        'title: Sales Summary K8s\n'
+        'inputs:\n'
+        '  region:\n'
+        '    type: text\n'
+        '    default: "all"\n',
+        encoding='utf-8',
+    )
+    (sa_dir / 'analysis' / 'structured_analysis_main.py').write_text(
+        'import os\n'
+        'import pandas as pd\n'
+        'def run(inputs, output_path):\n'
+        '    df = pd.read_csv(os.path.join(os.path.dirname(__file__), "..", "..", "..", "Saved_data", "sales_data.csv"))\n'
+        '    os.makedirs(os.path.dirname(output_path), exist_ok=True)\n'
+        '    df.head(2).to_csv(output_path, index=False)\n'
+        '    return {"rows": 2, "region": inputs.get("region", "all")}\n',
+        encoding='utf-8',
+    )
+
+    csv_bytes = b'product,revenue\nWidget,100\n'
+    html_bytes = b'<html><body><h1>Sales Report</h1></body></html>'
+    b64_csv = base64.b64encode(csv_bytes).decode('ascii')
+    b64_html = base64.b64encode(html_bytes).decode('ascii')
+    pod_log_output = (
+        "Starting structured analysis...\n"
+        f"[PC_ARTIFACT_BEGIN:output.csv]\n{b64_csv}\n[PC_ARTIFACT_END]\n"
+        f"[PC_ARTIFACT_BEGIN:report.html]\n{b64_html}\n[PC_ARTIFACT_END]\n"
+        "Analysis complete.\n"
+    )
+
+    posted_manifests = []
+
+    def fake_post(path, payload):
+        posted_manifests.append((path, payload))
+        return payload
+
+    def fake_get(path, params=None):
+        if path.endswith('/pods'):
+            return {
+                'items': [{
+                    'metadata': {'name': 'pc-flow-job-sa-pod'},
+                    'spec': {'nodeName': 'k0s-worker-1'},
+                    'status': {
+                        'phase': 'Succeeded',
+                        'containerStatuses': [{'state': {'terminated': {'exitCode': 0, 'reason': 'Completed'}}}],
+                    },
+                }]
+            }
+        if '/jobs/' in path:
+            return {'status': {'succeeded': 1, 'failed': 0}}
+        return {}
+
+    with (
+        patch.object(webapp, '_k8s_post', side_effect=fake_post),
+        patch.object(webapp, '_k8s_get', side_effect=fake_get),
+        patch.object(webapp, '_k8s_get_text', return_value=pod_log_output),
+        patch.object(webapp, '_k8s_delete', return_value={}),
+    ):
+        resp = client.post(
+            '/run_investigation/',
+            data={'analysis_name': sa_name, 'region': 'North'},
+        )
+        assert resp.status_code == 302
+        assert '/outputs/?name=Sales512Summary512K8s' in resp.headers['Location']
+
+    # Verify Flow wrapper and ConfigMap with bundled Saved_data were created
+    assert (sa_dir / 'flow.py').is_file()
+    cm_manifest = next(m for p, m in posted_manifests if p.endswith('/configmaps'))
+    assert 'saved_data__sales_data.csv' in cm_manifest['data']
+
+    # Verify decoded artifacts written to physical_output/main/ and timestamped copies in physical_output/
+    assert (sa_dir / 'physical_output' / 'main' / 'output.csv').read_bytes() == csv_bytes
+    assert (sa_dir / 'physical_output' / 'main' / 'report.html').read_bytes() == html_bytes
+    versioned_files = [
+        f for f in (sa_dir / 'physical_output').iterdir()
+        if f.is_file() and f.suffix in ('.csv', '.html')
+    ]
+    assert len(versioned_files) == 2
+
+    # Verify Execution log_text stripped out the base64 artifact blocks
+    with app.app_context():
+        exe = Execution.query.filter_by(analysis_name=sa_name).order_by(Execution.id.desc()).first()
+        assert exe is not None
+        assert exe.status == 'success'
+        assert 'Starting structured analysis...' in (exe.log_text or '')
+        assert '[PC_ARTIFACT_BEGIN:' not in (exe.log_text or '')
+        assert b64_csv not in (exe.log_text or '')
+        db.session.delete(exe)
+        db.session.commit()
+
+
+def test_catalog_run_returns_failed_run_when_worker_provisioning_fails(
+    client, app, tmp_path, monkeypatch
+):
+    """Return a failed run and readable error for catalog form and JSON requests."""
+    from unittest.mock import patch
+
+    from utils.worker_provider import WorkerProvisioningError
+
+    webapp = app.config['WEBAPP']
+    analyses_dir = tmp_path / 'Analyses'
+    analysis_dir = analyses_dir / 'Provision Failure Analysis'
+    (analysis_dir / 'analysis').mkdir(parents=True)
+    (analysis_dir / 'analysis' / 'structured_analysis_main.py').write_text(
+        'def run(inputs, output_path):\n    return {}\n',
+        encoding='utf-8',
+    )
+    monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
+    webapp.save_flow(name='Provision Failure Analysis', code='print("not run")')
+    provider = webapp.worker_provider
+
+    with (
+        patch.object(webapp, 'ensure_flow_from_structured_analysis', return_value={}),
+        patch.object(webapp, '_should_manage_workers', return_value=True),
+        patch.object(webapp, '_count_ready_workers', return_value=0),
+        patch.object(
+            provider,
+            'ensure_workers',
+            side_effect=WorkerProvisioningError('Docker daemon is unavailable'),
+        ),
+        patch.object(webapp, '_k8s_post') as post_resource,
+    ):
+        html_response = client.post(
+            '/run_investigation/',
+            data={'analysis_name': 'Provision Failure Analysis'},
+        )
+        json_response = client.post(
+            '/run_investigation/',
+            json={'analysis_name': 'Provision Failure Analysis', 'inputs': {}},
+        )
+
+    assert html_response.status_code == 302
+    assert html_response.headers['Location'].startswith('/runs/')
+    assert json_response.status_code == 200
+    payload = json_response.get_json()
+    assert payload['status'] == 'failed'
+    assert payload['error_message'] == 'Docker daemon is unavailable'
+    assert payload['detail_url'].startswith('/runs/')
+    post_resource.assert_not_called()
+
+
+def test_execute_stream_and_abort_via_k8s_job(client, app, tmp_path, monkeypatch):
+    """Verify GET /execute_stream/<name> and POST /execute_abort/<name> operate via K8s Jobs without subprocess."""
+    import json
+    from unittest.mock import patch
+    from models import Execution, db
+
+    webapp = app.config['WEBAPP']
+    analyses_dir = tmp_path / 'Analyses'
+    analyses_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
+
+    sa_name = 'Streamed Analysis'
+    sa_dir = analyses_dir / sa_name
+    (sa_dir / 'analysis').mkdir(parents=True)
+    (sa_dir / 'physical_output' / 'main').mkdir(parents=True)
+    (sa_dir / 'metadata.yaml').write_text('title: Streamed Analysis\nproduct: ML\n', encoding='utf-8')
+    (sa_dir / 'analysis' / 'metadata_automatic_report.yaml').write_text('title: Streamed Analysis\ninputs: {}\n', encoding='utf-8')
+    (sa_dir / 'analysis' / 'structured_analysis_main.py').write_text(
+        'def run(inputs, output_path):\n    print("hello from k8s pod")\n    return {}\n',
+        encoding='utf-8',
+    )
+
+    def fake_get_succeeded(path, params=None):
+        if path.endswith('/pods'):
+            return {
+                'items': [{
+                    'metadata': {'name': 'pc-flow-job-stream-pod'},
+                    'spec': {'nodeName': 'k0s-worker-1'},
+                    'status': {
+                        'phase': 'Succeeded',
+                        'containerStatuses': [{'state': {'terminated': {'exitCode': 0, 'reason': 'Completed'}}}],
+                    },
+                }]
+            }
+        if '/jobs/' in path:
+            return {'status': {'succeeded': 1, 'failed': 0}}
+        return {}
+
+    with (
+        patch.object(webapp, '_k8s_post', side_effect=lambda p, m: m),
+        patch.object(webapp, '_k8s_get', side_effect=fake_get_succeeded),
+        patch.object(webapp, '_k8s_get_text', return_value='hello from k8s pod\n'),
+        patch.object(webapp, '_k8s_delete', return_value={}),
+    ):
+        stream_resp = client.get('/execute_stream/Streamed512Analysis?param1=val1')
+        assert stream_resp.status_code == 200
+        raw_sse = stream_resp.data.decode('utf-8')
+        events = [
+            json.loads(line[len('data: '):])
+            for line in raw_sse.splitlines()
+            if line.startswith('data: ')
+        ]
+        assert any('hello from k8s pod' in ev.get('line', '') for ev in events)
+        assert events[-1]['done'] is True
+        assert events[-1]['status'] == 'success'
+        assert 'run_id' in events[-1]
+
+    # Test aborting an active running Execution via POST /execute_abort/<name>
+    with app.app_context():
+        running_exe = Execution(
+            analysis_name=sa_name,
+            status='running',
+            job_name='pc-flow-job-999',
+            namespace='default',
+        )
+        db.session.add(running_exe)
+        db.session.commit()
+        running_id = running_exe.id
+
+    with patch.object(webapp, '_k8s_delete', return_value={}) as mock_del:
+        abort_resp = client.post('/execute_abort/Streamed512Analysis')
+        assert abort_resp.status_code == 200
+        abort_data = abort_resp.get_json()
+        assert abort_data['status'] == 'aborted'
+        assert abort_data['run_id'] == running_id
+        assert mock_del.called
+
+    with app.app_context():
+        Execution.query.filter_by(analysis_name=sa_name).delete()
+        db.session.commit()
+
+
+def test_pipeline_builder_renders_connectors_and_compiles_flow_chain(client, app, tmp_path, monkeypatch):
+    """Verify /pipeline_builder renders connectors and /save_pipeline/ compiles per-step Flows and a FlowChain."""
+    from dataclasses import replace
+    from unittest.mock import patch
+    from models import DbConnection, Execution, db
+    from utils.app_settings import ConnectorParameterSpec, ConnectorSettings
+
+    webapp = app.config['WEBAPP']
+    analyses_dir = tmp_path / 'Analyses'
+    analyses_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
+
+    custom_trino = ConnectorSettings(
+        name='trino_etl',
+        description='Run SQL on Trino and export CSV',
+        image='custom-trino-runner:latest',
+        builtin=False,
+        parameters=(
+            ConnectorParameterSpec(name='query', param_type='text', required=True),
+            ConnectorParameterSpec(name='connection', param_type='select', source='connections'),
+        ),
+    )
+    orig_settings = app.config['PC_SETTINGS']
+    updated_settings = replace(orig_settings, connectors=(*orig_settings.connectors, custom_trino))
+    monkeypatch.setitem(app.config, 'PC_SETTINGS', updated_settings)
+    monkeypatch.setattr(webapp, '_settings', updated_settings.for_templates())
+
+    with app.app_context():
+        conn_row = DbConnection(name='warehouse_trino', db_type='trino', host='trino.local', port=8080)
+        db.session.add(conn_row)
+        db.session.commit()
+
+    try:
+        # 1. GET /pipeline_builder renders built-in and custom connectors plus saved connection names
+        pb_resp = client.get('/pipeline_builder')
+        assert pb_resp.status_code == 200
+        pb_html = pb_resp.data.decode('utf-8')
+        assert 'Connectors' in pb_html
+        assert 'python_script' in pb_html
+        assert 'sql_query' in pb_html
+        assert 'trino_etl' in pb_html
+        assert 'custom-trino-runner:latest' in pb_html
+        assert 'warehouse_trino' in pb_html
+
+        # 2. POST /save_pipeline/ with a 2-step connector graph (trino_etl -> python_script)
+        pipeline_name = 'TrinoToPythonPipeline'
+        graph = {
+            'drawflow': {
+                'Home': {
+                    'data': {
+                        '1': {
+                            'id': 1,
+                            'class': 'trino_etl',
+                            'data': {'config': {'query': 'SELECT * FROM events', 'connection': 'warehouse_trino'}},
+                            'inputs': {},
+                            'outputs': {'output_1': {'connections': [{'node': '2', 'output': 'input_1'}]}},
+                        },
+                        '2': {
+                            'id': 2,
+                            'class': 'python_script',
+                            'data': {'config': {'code': 'print("processing events")'}},
+                            'inputs': {'input_1': {'connections': [{'node': '1', 'input': 'output_1'}]}},
+                            'outputs': {},
+                        },
+                    }
+                }
+            }
+        }
+        save_resp = client.post(
+            '/save_pipeline/',
+            json={
+                'name': pipeline_name,
+                'description': 'Two-step connector pipeline',
+                'product': 'Data Engineering',
+                'owner': 'alice',
+                'graph': graph,
+            },
+        )
+        assert save_resp.status_code == 200
+        save_data = save_resp.get_json()
+        assert save_data['success'] is True
+        assert save_data['status'] == 'ok'
+        assert save_data['chain_name'] == pipeline_name
+        expected_steps = [
+            f'{pipeline_name}__step_1_trino_etl',
+            f'{pipeline_name}__step_2_python_script',
+        ]
+        assert save_data['step_flows'] == expected_steps
+
+        # 3. Verify step Flows have their connector container images and parameters
+        with app.app_context():
+            flow1 = webapp.read_flow(expected_steps[0])
+            flow2 = webapp.read_flow(expected_steps[1])
+            assert flow1 is not None
+            assert flow1['image'] == 'custom-trino-runner:latest'
+            assert flow1['parameters']['query'] == 'SELECT * FROM events'
+            assert flow1['parameters']['connection'] == 'warehouse_trino'
+
+            assert flow2 is not None
+            assert flow2['image'] == 'python:3.12-slim'
+            assert flow2['parameters']['code'] == 'print("processing events")'
+
+            chain_info = webapp.read_chain(pipeline_name)
+            assert chain_info is not None
+            assert chain_info['flow_names'] == expected_steps
+
+        # 4. Run the compiled FlowChain and verify each step submits a K8s Job with its connector image
+        posted_jobs = []
+
+        def fake_post(path, payload):
+            if path.endswith('/jobs'):
+                posted_jobs.append(payload)
+            return payload
+
+        def fake_get(path, params=None):
+            if path.endswith('/pods'):
+                return {
+                    'items': [{
+                        'metadata': {'name': 'pc-step-pod'},
+                        'spec': {'nodeName': 'worker-1'},
+                        'status': {
+                            'phase': 'Succeeded',
+                            'containerStatuses': [{'state': {'terminated': {'exitCode': 0, 'reason': 'Completed'}}}],
+                        },
+                    }]
+                }
+            if '/jobs/' in path:
+                return {'status': {'succeeded': 1, 'failed': 0}}
+            return {}
+
+        with (
+            patch.object(webapp, '_k8s_post', side_effect=fake_post),
+            patch.object(webapp, '_k8s_get', side_effect=fake_get),
+            patch.object(webapp, '_k8s_get_text', return_value='step completed\n'),
+            patch.object(webapp, '_k8s_delete', return_value={}),
+        ):
+            run_resp = client.post(f'/chains/{pipeline_name}/run', json={'wait': True})
+            assert run_resp.status_code == 200
+            run_data = run_resp.get_json()
+            assert run_data['status'] == 'success'
+            assert len(posted_jobs) == 2
+            job1_container = posted_jobs[0]['spec']['template']['spec']['containers'][0]
+            job2_container = posted_jobs[1]['spec']['template']['spec']['containers'][0]
+            assert job1_container['image'] == 'custom-trino-runner:latest'
+            assert job2_container['image'] == 'python:3.12-slim'
+    finally:
+        with app.app_context():
+            DbConnection.query.filter_by(name='warehouse_trino').delete()
+            Execution.query.filter(Execution.analysis_name.like('TrinoToPythonPipeline%')).delete(synchronize_session=False)
+            webapp.delete_chain('TrinoToPythonPipeline')
+            db.session.commit()
+
+
+def test_static_catalog_entries_and_no_in_process_execution_in_catalog(client, app, tmp_path, monkeypatch):
+    """Verify static catalog entries without structured_analysis_main.py remain structured_analysis == 'n' and catalog.py has no local execution."""
+    from pathlib import Path
+
+    webapp = app.config['WEBAPP']
+    analyses_dir = tmp_path / 'Analyses'
+    analyses_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
+
+    static_name = 'Static Survey Report'
+    static_dir = analyses_dir / static_name
+    static_dir.mkdir(parents=True)
+    (static_dir / 'metadata.yaml').write_text(
+        'title: Static Survey Report\n'
+        'start_date: 2025-01-01\n'
+        'owner: alice\n'
+        'collaborators: bob\n'
+        'product: HR\n'
+        'countries: Global\n'
+        'description: Static entry without Python runner\n'
+        'output description: Static slides\n'
+        'gitlab: ""\n'
+        'gdrive: ""\n'
+        'links: {}\n'
+        'dashboard link: ""\n',
+        encoding='utf-8',
+    )
+
+    info = webapp.read_single_analysis(str(analyses_dir), static_name)
+    assert info['title'] == static_name
+    assert info['structured_analysis'] == 'n'
+
+    catalog_source = (Path(__file__).resolve().parent.parent / 'blueprints' / 'catalog.py').read_text(encoding='utf-8')
+    assert 'spec_from_file_location' not in catalog_source
+    assert 'subprocess.Popen' not in catalog_source
+    assert '_running_processes' not in catalog_source
+
+
+def test_execution_template_targets_resolve_to_registered_routes(app):
+    """Verify action and fetch targets used by the execution templates are registered."""
+    adapter = app.url_map.bind('localhost')
+    template_targets = (
+        ('/analysis', 'GET'),
+        ('/run_investigation/', 'POST'),
+        ('/schedule_analysis/', 'POST'),
+        ('/execute_stream/SampleAnalysis', 'GET'),
+        ('/execute_abort/SampleAnalysis', 'POST'),
+        ('/static/logging_page.html', 'GET'),
+        ('/api/data/sample-dataset/preview', 'GET'),
+        ('/save_pipeline/', 'POST'),
+        ('/create_investigations', 'GET'),
+        ('/flows', 'GET'),
+        ('/flows/SampleFlow', 'GET'),
+        ('/flows/new', 'POST'),
+        ('/flows/SampleFlow/save', 'POST'),
+        ('/flows/SampleFlow/run', 'POST'),
+        ('/flows/SampleFlow/versions/1', 'GET'),
+        ('/flows/SampleFlow/versions/1/restore', 'POST'),
+        ('/runs/1', 'GET'),
+        ('/static/pipeline_templates/sample.json', 'GET'),
+    )
+
+    for path, method in template_targets:
+        endpoint, _ = adapter.match(path, method=method)
+        assert endpoint

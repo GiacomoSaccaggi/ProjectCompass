@@ -17,13 +17,21 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import yaml
 
 from logging_config import logger
 from models import ChainExecution, Execution, FlowChain, K8sWorkerNode, db, fire_webhooks
+from utils.worker_provider import (
+    DockerWorkerProvider,
+    WorkerProvider,
+    WorkerProviderError,
+)
+
+if TYPE_CHECKING:
+    from utils.app_settings import WorkerSettings
 
 
 class K8sClientError(Exception):
@@ -314,8 +322,61 @@ class K8sClusterUtils(BaseK8sClient):
     """
 
     def __init__(self, dir_path: str = "", **kwargs: Any) -> None:
-        """Initialize cluster node monitor state."""
+        """Initialize cluster node monitor state and default worker provider."""
+        self._settings: Any = None
+        self._worker_provider_customized: bool = False
+        self._worker_provider: WorkerProvider = self._build_worker_provider(None)
         super().__init__(dir_path=dir_path, **kwargs)
+
+    def _fetch_raw_nodes(self) -> dict[str, Any]:
+        """Query `/api/v1/nodes` and return the raw payload or an empty dict on error."""
+        try:
+            payload = self._k8s_get("/api/v1/nodes")
+            return payload if isinstance(payload, dict) else {}
+        except K8sClientError:
+            return {}
+
+    def _delete_k8s_node(self, node_name: str) -> None:
+        """Delete a Kubernetes Node object by name, ignoring errors if already absent."""
+        try:
+            self._k8s_delete(f"/api/v1/nodes/{node_name}")
+        except K8sClientError:
+            pass
+
+    def _build_worker_provider(self, worker_settings: WorkerSettings | None) -> WorkerProvider:
+        """Create a WorkerProvider instance bound to this cluster's node callbacks."""
+        return WorkerProvider.from_settings(
+            settings=worker_settings,
+            k8s_nodes_callback=self._fetch_raw_nodes,
+            k8s_delete_node_callback=self._delete_k8s_node,
+        )
+
+    def configure_worker_provider(self, worker_settings: WorkerSettings | None = None) -> WorkerProvider:
+        """Reconfigure the active WorkerProvider from application settings."""
+        self._worker_provider = self._build_worker_provider(worker_settings)
+        self._worker_provider_customized = False
+        return self._worker_provider
+
+    @property
+    def worker_provider(self) -> WorkerProvider:
+        """Return the active WorkerProvider managing k0s worker nodes."""
+        return self._worker_provider
+
+    @worker_provider.setter
+    def worker_provider(self, provider: WorkerProvider) -> None:
+        """Assign a custom or mock WorkerProvider instance."""
+        self._worker_provider = provider
+        self._worker_provider_customized = True
+
+    def _should_manage_workers(self) -> bool:
+        """Determine whether automatic worker provisioning/cleanup should execute."""
+        worker_settings = getattr(self._settings, "workers", None)
+        return bool(getattr(worker_settings, "auto_provision", False))
+
+    def _count_ready_workers(self) -> int:
+        """Return the number of Ready worker nodes reported by `/api/v1/nodes`."""
+        payload = self._fetch_raw_nodes()
+        return len(DockerWorkerProvider.extract_ready_worker_names(payload))
 
     @staticmethod
     def _parse_node_status(node_item: dict[str, Any]) -> str:
@@ -526,6 +587,15 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
     `automountServiceAccountToken: false`), and streams Pod stdout/stderr into SQLite.
     """
 
+    ARTIFACT_BLOCK_RE = re.compile(
+        r"\[PC_ARTIFACT_BEGIN:([^\]]+)\]\r?\n?(.*?)\r?\n?\[PC_ARTIFACT_END\]\r?\n?",
+        re.DOTALL,
+    )
+    INCOMPLETE_ARTIFACT_RE = re.compile(
+        r"\[PC_ARTIFACT_BEGIN:[^\]]*\].*\Z",
+        re.DOTALL,
+    )
+
     def __init__(self, dir_path: str = "", **kwargs: Any) -> None:
         """Initialize Flow runner state and watcher synchronization Settings."""
         self._watcher_poll_interval: float = 0.5
@@ -548,6 +618,13 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             "export HOME=/tmp",
             "export PATH=\"/tmp/.local/bin:$PATH\"",
             "export PYTHONPATH=\"/tmp/.local/lib/python/site-packages:$PYTHONPATH\"",
+            "export PC_DATA_DIR=\"/tmp/pc_work/Saved_data\"",
+            "mkdir -p /tmp/pc_work/Saved_data /tmp/pc_output/main",
+            "for f in /workspace/saved_data__*; do",
+            "  if [ -f \"$f\" ]; then",
+            "    cp \"$f\" \"/tmp/pc_work/Saved_data/${f#/workspace/saved_data__}\"",
+            "  fi",
+            "done",
         ]
         if pip_requirements:
             lines.extend(
@@ -561,6 +638,98 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         lines.append("exec python -u /workspace/flow.py")
         return "\n".join(lines) + "\n"
 
+    def _collect_saved_data_for_configmap(
+        self,
+        flow_name: str,
+        code: str,
+        skipped_warnings: list[str] | None = None,
+    ) -> dict[str, str]:
+        """Bundle referenced Saved_data/*.csv files into ConfigMap keys (saved_data__<file>)."""
+        save_data_dir = getattr(self, "save_data_path", "") or os.path.join(
+            self.data_dir or self.dir_path or "",
+            "Saved_data",
+        )
+        if not save_data_dir or not os.path.isdir(save_data_dir):
+            return {}
+
+        base_analyses_dir = getattr(self, "save_folder_path", "") or os.path.join(
+            self.data_dir or self.dir_path or "",
+            "Analyses",
+        )
+        struct_script_path = os.path.join(
+            base_analyses_dir,
+            flow_name,
+            "analysis",
+            "structured_analysis_main.py",
+        )
+        combined_source = code or ""
+        if os.path.isfile(struct_script_path):
+            try:
+                with open(struct_script_path, encoding="utf-8", errors="ignore") as f_src:
+                    combined_source = combined_source + "\n" + f_src.read()
+            except OSError:
+                pass
+
+        referenced_csvs = {
+            f"{ds}.csv"
+            for ds in re.findall(r'read_csv\(.*?["\']([^"\'/\\]+)\.csv["\']', combined_source)
+        } | set(re.findall(r'["\']([A-Za-z0-9_.-]+\.csv)["\']', combined_source))
+
+        include_all_small = (
+            "Saved_data" in combined_source
+            or "STRUCTURED_SCRIPT_B64" in combined_source
+            or bool(referenced_csvs)
+        )
+        if not include_all_small:
+            return {}
+
+        try:
+            all_csvs = sorted(
+                f for f in os.listdir(save_data_dir)
+                if f.endswith(".csv") and not f.startswith(".")
+            )
+        except OSError:
+            return {}
+
+        ordered_candidates = [f for f in all_csvs if f in referenced_csvs] + [
+            f for f in all_csvs if f not in referenced_csvs
+        ]
+
+        bundled: dict[str, str] = {}
+        total_bytes = 0
+        max_single_bytes = 512 * 1024
+        max_total_bytes = 800 * 1024
+
+        for csv_name in ordered_candidates:
+            if csv_name not in referenced_csvs and not ("Saved_data" in combined_source or "STRUCTURED_SCRIPT_B64" in combined_source):
+                continue
+            full_csv_path = os.path.join(save_data_dir, csv_name)
+            if not os.path.isfile(full_csv_path):
+                continue
+            try:
+                size = os.path.getsize(full_csv_path)
+                if size > max_single_bytes:
+                    if skipped_warnings is not None:
+                        skipped_warnings.append(
+                            f"[ProjectCompass] WARNING: Saved_data/{csv_name} skipped; "
+                            "file exceeds the 512 KB ConfigMap dataset limit."
+                        )
+                    continue
+                if (total_bytes + size) > max_total_bytes:
+                    if skipped_warnings is not None:
+                        skipped_warnings.append(
+                            f"[ProjectCompass] WARNING: Saved_data/{csv_name} skipped; "
+                            "bundled datasets would exceed the 800 KB ConfigMap limit."
+                        )
+                    continue
+                with open(full_csv_path, encoding="utf-8", errors="ignore") as f_csv:
+                    bundled[f"saved_data__{csv_name}"] = f_csv.read()
+                total_bytes += size
+            except OSError:
+                continue
+
+        return bundled
+
     def build_configmap_manifest(
         self,
         run_id: int,
@@ -569,10 +738,18 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         parameters: dict[str, Any],
         pip_requirements: list[str],
         namespace: str,
+        skipped_warnings: list[str] | None = None,
     ) -> dict[str, Any]:
         """Construct the per-run Kubernetes ConfigMap manifest containing flow.py and entrypoint."""
         cm_name = f"pc-flow-cfg-{run_id}"
         reqs_text = "\n".join(pip_requirements) + ("\n" if pip_requirements else "")
+        cm_data: dict[str, str] = {
+            "flow.py": code if code.endswith("\n") else f"{code}\n",
+            "params.json": json.dumps(parameters, indent=2),
+            "requirements.txt": reqs_text,
+            "entrypoint.sh": self._build_entrypoint_script(pip_requirements),
+        }
+        cm_data.update(self._collect_saved_data_for_configmap(flow_name, code, skipped_warnings))
         return {
             "apiVersion": "v1",
             "kind": "ConfigMap",
@@ -585,12 +762,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     "projectcompass/flow": self._sanitize_k8s_label(flow_name),
                 },
             },
-            "data": {
-                "flow.py": code if code.endswith("\n") else f"{code}\n",
-                "params.json": json.dumps(parameters, indent=2),
-                "requirements.txt": reqs_text,
-                "entrypoint.sh": self._build_entrypoint_script(pip_requirements),
-            },
+            "data": cm_data,
         }
 
     def build_secret_manifest(
@@ -749,6 +921,10 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         trigger_type: str = "manual",
         app: Any | None = None,
         wait_for_watcher: bool = False,
+        triggered_by: str | None = None,
+        poll_interval: float | None = None,
+        max_wait_seconds: float | None = None,
+        **kwargs: Any,
     ) -> Execution:
         """Create a unique Execution record, submit a Kubernetes Job, and start log watching."""
         flow_data = self.read_flow(flow_name)  # type: ignore[attr-defined]
@@ -778,7 +954,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         ttl_seconds = int(os.environ.get("K8S_JOB_TTL_SECONDS", 300))
 
         # Store only secret KEYS in inputs_json — never store secret values in plaintext
-        safe_inputs_metadata = {
+        safe_inputs_metadata: dict[str, Any] = {
             "parameters": merged_params,
             "pip_requirements": resolved_reqs,
             "image": resolved_image,
@@ -786,6 +962,8 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             "secret_refs": resolved_secret_refs,
             "trigger_type": trigger_type,
         }
+        if triggered_by:
+            safe_inputs_metadata["triggered_by"] = triggered_by
 
         exe = Execution(
             analysis_name=flow_data["name"],
@@ -807,6 +985,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         exe.job_name = job_name
         db.session.commit()
 
+        skipped_data_warnings: list[str] = []
         cm_manifest = self.build_configmap_manifest(
             run_id=run_id,
             flow_name=flow_data["name"],
@@ -814,7 +993,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             parameters=merged_params,
             pip_requirements=resolved_reqs,
             namespace=namespace,
+            skipped_warnings=skipped_data_warnings,
         )
+        warning_log = "".join(f"{warning}\n" for warning in skipped_data_warnings)
         job_manifest = self.build_job_manifest(
             run_id=run_id,
             flow_name=flow_data["name"],
@@ -829,6 +1010,10 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         created_cm = False
         created_secret = False
         try:
+            if self._should_manage_workers() and self._count_ready_workers() == 0:
+                self.worker_provider.reset_tracking()
+                self.worker_provider.ensure_workers(1, require_ready=True)
+
             self._k8s_post(f"/api/v1/namespaces/{namespace}/configmaps", cm_manifest)
             created_cm = True
             if parsed_env:
@@ -842,10 +1027,17 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 created_secret = True
 
             self._k8s_post(f"/apis/batch/v1/namespaces/{namespace}/jobs", job_manifest)
-            exe.log_text = (
+            exe.log_text = warning_log + (
                 f"[ProjectCompass] Submitted Kubernetes Job '{job_name}' (image: {resolved_image}).\n"
             )
             db.session.commit()
+        except WorkerProviderError as exc:
+            exe.status = "failed"
+            exe.finished_at = datetime.utcnow()
+            exe.error_message = str(exc)
+            exe.log_text = warning_log + f"[ProjectCompass] ERROR provisioning worker: {exc}\n"
+            db.session.commit()
+            return exe
         except K8sClientError as exc:
             if created_secret and sec_name:
                 self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/{sec_name}")
@@ -855,7 +1047,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             exe.status = "failed"
             exe.finished_at = datetime.utcnow()
             exe.error_message = str(exc)
-            exe.log_text = (exe.log_text or "") + f"[ProjectCompass] ERROR launching Kubernetes Job: {exc}\n"
+            exe.log_text = warning_log + (exe.log_text or "") + (
+                f"[ProjectCompass] ERROR launching Kubernetes Job: {exc}\n"
+            )
             db.session.commit()
             return exe
 
@@ -867,7 +1061,12 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             except RuntimeError:
                 flask_app = None
 
-        if wait_for_watcher:
+        is_in_memory_db = bool(
+            flask_app is not None
+            and ":memory:" in str(flask_app.config.get("SQLALCHEMY_DATABASE_URI", ""))
+        )
+
+        if wait_for_watcher or is_in_memory_db:
             self._watch_k8s_job(
                 app=flask_app,
                 run_id=run_id,
@@ -875,6 +1074,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 job_name=job_name,
                 cm_name=cm_name,
                 secret_name=sec_name,
+                poll_interval=poll_interval,
+                max_wait_seconds=max_wait_seconds,
+                stop_if_still_running=bool(not wait_for_watcher and is_in_memory_db),
             )
             db.session.refresh(exe)
         else:
@@ -887,6 +1089,8 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     "job_name": job_name,
                     "cm_name": cm_name,
                     "secret_name": sec_name,
+                    "poll_interval": poll_interval,
+                    "max_wait_seconds": max_wait_seconds,
                 },
                 daemon=True,
                 name=f"k8s-watcher-run-{run_id}",
@@ -903,6 +1107,71 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         except K8sClientError as exc:
             logger.debug(f"Cleanup of Kubernetes resource {path} skipped or failed: {exc}")
 
+    def _extract_and_persist_artifacts(
+        self,
+        flow_name: str,
+        raw_logs: str,
+        persisted_files: set[str] | None = None,
+        run_timestamp: str | None = None,
+    ) -> str:
+        """Decode base64 artifact frames from Pod stdout, persist to physical_output/, and return clean logs."""
+        if not raw_logs:
+            return ""
+
+        seen_files = persisted_files if persisted_files is not None else set()
+        ts = run_timestamp or datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        base_analyses_dir = (
+            getattr(self, "save_folder_path", "")
+            or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
+        )
+        phys_dir = os.path.join(base_analyses_dir, flow_name, "physical_output")
+        main_dir = os.path.join(phys_dir, "main")
+
+        used_exts_in_batch: set[str] = set()
+        for existing_f in seen_files:
+            _, existing_ext = os.path.splitext(existing_f)
+            if existing_ext:
+                used_exts_in_batch.add(existing_ext.lower())
+
+        for match in self.ARTIFACT_BLOCK_RE.finditer(raw_logs):
+            raw_fname = match.group(1).strip()
+            b64_payload = re.sub(r"\s+", "", match.group(2) or "")
+            filename = os.path.basename(raw_fname)
+            if not filename or filename in (".", "..") or filename in seen_files:
+                continue
+
+            try:
+                file_bytes = base64.b64decode(b64_payload) if b64_payload else b""
+            except Exception as exc:
+                logger.warning(f"Failed decoding artifact '{filename}' for flow '{flow_name}': {exc}")
+                continue
+
+            try:
+                os.makedirs(main_dir, exist_ok=True)
+                main_path = os.path.join(main_dir, filename)
+                with open(main_path, "wb") as f_main:
+                    f_main.write(file_bytes)
+
+                stem, ext = os.path.splitext(filename)
+                ext_lower = ext.lower()
+                if ext_lower and ext_lower not in used_exts_in_batch:
+                    versioned_name = f"{ts}{ext}"
+                    used_exts_in_batch.add(ext_lower)
+                else:
+                    versioned_name = f"{ts}_{stem}{ext}"
+
+                versioned_path = os.path.join(phys_dir, versioned_name)
+                with open(versioned_path, "wb") as f_ver:
+                    f_ver.write(file_bytes)
+
+                seen_files.add(filename)
+            except OSError as exc:
+                logger.warning(f"Failed writing artifact '{filename}' for flow '{flow_name}': {exc}")
+
+        cleaned = self.ARTIFACT_BLOCK_RE.sub("", raw_logs)
+        cleaned = self.INCOMPLETE_ARTIFACT_RE.sub("", cleaned)
+        return cleaned
+
     def _watch_k8s_job(
         self,
         app: Any | None,
@@ -911,6 +1180,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         job_name: str,
         cm_name: str,
         secret_name: str | None,
+        poll_interval: float | None = None,
+        max_wait_seconds: float | None = None,
+        stop_if_still_running: bool = False,
     ) -> None:
         """Background worker that tails Pod stdout/stderr into Execution.log_text and updates status."""
         from flask import has_app_context
@@ -922,6 +1194,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 job_name=job_name,
                 cm_name=cm_name,
                 secret_name=secret_name,
+                poll_interval=poll_interval,
+                max_wait_seconds=max_wait_seconds,
+                stop_if_still_running=stop_if_still_running,
             )
         else:
             with app.app_context():
@@ -931,6 +1206,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     job_name=job_name,
                     cm_name=cm_name,
                     secret_name=secret_name,
+                    poll_interval=poll_interval,
+                    max_wait_seconds=max_wait_seconds,
+                    stop_if_still_running=stop_if_still_running,
                 )
 
     def _watch_k8s_job_in_context(
@@ -940,15 +1218,36 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         job_name: str,
         cm_name: str,
         secret_name: str | None,
+        poll_interval: float | None = None,
+        max_wait_seconds: float | None = None,
+        stop_if_still_running: bool = False,
     ) -> None:
         """Execute Pod log polling and status synchronization inside an active Flask app context."""
-        header_line = f"[ProjectCompass] Submitted Kubernetes Job '{job_name}'.\n"
+        initial_execution = db.session.get(Execution, run_id)
+        warning_lines = "".join(
+            f"{line}\n"
+            for line in (initial_execution.log_text or "").splitlines()
+            if line.startswith("[ProjectCompass] WARNING")
+        ) if initial_execution is not None else ""
+        header_line = warning_lines + f"[ProjectCompass] Submitted Kubernetes Job '{job_name}'.\n"
         captured_pod_logs = ""
+        last_raw_logs: str | None = None
         pod_name: str | None = None
         assigned_node: str | None = None
+        persisted_artifacts: set[str] = set()
+        run_timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        effective_poll = (
+            float(poll_interval)
+            if poll_interval is not None and poll_interval > 0
+            else self._watcher_poll_interval
+        )
+        max_polls = 3 if stop_if_still_running else self._watcher_max_polls
+        if max_wait_seconds is not None and max_wait_seconds > 0 and effective_poll > 0 and not stop_if_still_running:
+            max_polls = max(1, min(max_polls, int(max_wait_seconds / effective_poll) + 1))
 
+        should_cleanup = True
         try:
-            for _ in range(self._watcher_max_polls):
+            for poll_idx in range(max_polls):
                 exe = db.session.get(Execution, run_id)
                 if exe is None or exe.status == "aborted":
                     return
@@ -999,8 +1298,32 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                             raw_logs = self._k8s_get_text(
                                 f"/api/v1/namespaces/{namespace}/pods/{pod_name}/log"
                             )
-                            if raw_logs != captured_pod_logs:
-                                captured_pod_logs = raw_logs
+                            if raw_logs != last_raw_logs:
+                                last_raw_logs = raw_logs
+                                captured_pod_logs = self._extract_and_persist_artifacts(
+                                    flow_name=exe.analysis_name,
+                                    raw_logs=raw_logs,
+                                    persisted_files=persisted_artifacts,
+                                    run_timestamp=run_timestamp,
+                                )
+                                if persisted_artifacts:
+                                    base_analyses_dir = (
+                                        getattr(self, "save_folder_path", "")
+                                        or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
+                                    )
+                                    main_out_dir = os.path.join(
+                                        base_analyses_dir,
+                                        exe.analysis_name,
+                                        "physical_output",
+                                        "main",
+                                    )
+                                    preferred = (
+                                        "output.csv"
+                                        if "output.csv" in persisted_artifacts
+                                        else sorted(persisted_artifacts)[0]
+                                    )
+                                    exe.output_path = os.path.join(main_out_dir, preferred)
+                                    exe.outputs_json = json.dumps(sorted(persisted_artifacts))
                                 node_banner = (
                                     f"[ProjectCompass] Running on worker node '{assigned_node}' (Pod '{pod_name}').\n"
                                     if assigned_node
@@ -1029,6 +1352,39 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                             job_succeeded = True
                 except K8sClientError:
                     pass
+
+                if (job_succeeded or job_failed) and pod_name and last_raw_logs is None:
+                    try:
+                        raw_logs = self._k8s_get_text(
+                            f"/api/v1/namespaces/{namespace}/pods/{pod_name}/log"
+                        )
+                        last_raw_logs = raw_logs
+                        captured_pod_logs = self._extract_and_persist_artifacts(
+                            flow_name=exe.analysis_name,
+                            raw_logs=raw_logs,
+                            persisted_files=persisted_artifacts,
+                            run_timestamp=run_timestamp,
+                        )
+                        if persisted_artifacts:
+                            base_analyses_dir = (
+                                getattr(self, "save_folder_path", "")
+                                or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
+                            )
+                            main_out_dir = os.path.join(
+                                base_analyses_dir,
+                                exe.analysis_name,
+                                "physical_output",
+                                "main",
+                            )
+                            preferred = (
+                                "output.csv"
+                                if "output.csv" in persisted_artifacts
+                                else sorted(persisted_artifacts)[0]
+                            )
+                            exe.output_path = os.path.join(main_out_dir, preferred)
+                            exe.outputs_json = json.dumps(sorted(persisted_artifacts))
+                    except K8sClientError:
+                        pass
 
                 if pod_phase == "Succeeded" or job_succeeded:
                     exe = db.session.get(Execution, run_id)
@@ -1081,12 +1437,35 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                         )
                     return
 
-                time.sleep(self._watcher_poll_interval)
+                if stop_if_still_running and poll_idx + 1 >= max_polls:
+                    should_cleanup = False
+                    return
+
+                time.sleep(effective_poll)
         finally:
-            if secret_name:
-                self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/{secret_name}")
-            self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/configmaps/{cm_name}")
-            self._active_watchers.pop(run_id, None)
+            if should_cleanup:
+                if secret_name:
+                    self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/{secret_name}")
+                self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/configmaps/{cm_name}")
+                self._active_watchers.pop(run_id, None)
+                self._release_workers_if_idle(run_id)
+
+    def _release_workers_if_idle(self, finished_run_id: int) -> None:
+        """Release worker nodes when auto_cleanup is enabled and no other Jobs are running."""
+        if not self._should_manage_workers():
+            return
+        if not getattr(self.worker_provider, "auto_cleanup", False):
+            return
+        try:
+            active_runs = Execution.query.filter(
+                Execution.status == "running",
+                Execution.id != finished_run_id,
+            ).count()
+            active_chains = ChainExecution.query.filter_by(status="running").count()
+            if active_runs == 0 and active_chains == 0:
+                self.worker_provider.release_workers()
+        except Exception as exc:
+            logger.warning(f"Failed releasing idle workers after run {finished_run_id}: {exc}")
 
     def abort_flow_run(self, run_id: int) -> Execution | None:
         """Abort an active Kubernetes Job run and persist the aborted status."""
@@ -1389,3 +1768,4 @@ class K8sChainRunnerUtils(K8sFlowRunnerUtils):
                 db.session.commit()
         finally:
             self._active_chain_threads.pop(chain_run_id, None)
+            self._release_workers_if_idle(-1)

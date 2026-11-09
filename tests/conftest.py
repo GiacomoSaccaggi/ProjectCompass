@@ -30,7 +30,7 @@ def _mock_local_embedder():
 
 
 @pytest.fixture
-def app(tmp_path):
+def app(tmp_path, monkeypatch):
     from app import create_app
     from config import Config
     from models import db
@@ -42,6 +42,7 @@ def app(tmp_path):
         SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
         PC_CONFIG_FILE = os.devnull
 
+    monkeypatch.setenv('PC_WORKERS__AUTO_PROVISION', 'false')
     app = create_app(TestConfig)
 
     with app.app_context():

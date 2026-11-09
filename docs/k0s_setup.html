@@ -254,6 +254,27 @@ sudo k0s kubectl label node worker-node-01 compass.io/tier=gpu workload=ml</code
       Once joined, open <code>http://&lt;MASTER_IP&gt;:5000/workers</code> in ProjectCompass. The node will automatically appear as <span class="badge badge-emerald">Ready</span> and be persisted in the <code>k8s_workers</code> table.
     </p>
 
+    <h3 id="docker-workers-with-compose">Docker workers for local Compose deployments</h3>
+    <p>
+      The optional <code>docker-compose.k0s.yml</code> overlay mounts the host Docker socket and a read-only worker token file into Compass. Create the token on the controller, then run Compose from the project directory:
+    </p>
+    <pre><code class="language-bash">mkdir -p data
+sudo k0s token create --role=worker > ./data/k0s-worker.token
+chmod 600 ./data/k0s-worker.token
+K0S_WORKER_TOKEN_FILE=./data/k0s-worker.token \
+  docker compose -f docker-compose.yml -f docker-compose.k0s.yml up -d</code></pre>
+    <p>
+      The overlay sets <code>PC_K0S_TOKEN_FILE</code> and mounts the token at <code>/run/secrets/k0s-worker.token</code>. Alternatively, configure <code>workers.docker.join_token_file</code> or <code>workers.docker.controller_container</code> in <code>projectcompass.yaml</code>. The worker join address embedded in the token must be reachable from the Docker worker's network.
+    </p>
+    <ul>
+      <li><code>workers.docker.network: bridge</code> is the default and supports multiple managed workers.</li>
+      <li><code>workers.docker.network: host</code> is limited to one Compass-managed worker to avoid kubelet port collisions.</li>
+      <li>The overlay mounts <code>/var/run/docker.sock</code>; this grants host-level Docker control and should only be enabled for a trusted deployment.</li>
+    </ul>
+    <p>
+      The cloud-agnostic <code>WorkerProvider</code> reads <code>workers.auto_provision</code>, <code>workers.auto_cleanup</code> and the Docker options in <code>projectcompass.yaml</code>; external lifecycle scripts are also supported. Pipeline step templates are configured under <code>connectors:</code>. Analysis artifacts are sent through logs up to <code>PC_ARTIFACT_INLINE_MAX_BYTES</code> (5 MiB by default); a larger-file <code>PC_SHARED_ARTIFACT_DIR</code> requires a shared volume mounted in both Compass and the Job. Dataset CSVs are capped at 512 KiB per file and 800 KiB total when sent through a ConfigMap.
+    </p>
+
     <h2 id="draining-and-removing-workers">5. Draining, Resetting &amp; Removing Workers</h2>
     <p>
       Before shutting down or upgrading a worker host, cordoning and draining ensures running Flow Pods are not abruptly terminated:
