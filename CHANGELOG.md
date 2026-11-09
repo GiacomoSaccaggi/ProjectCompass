@@ -5,10 +5,20 @@ All notable changes to ProjectCompass will be documented in this file.
 ## [Unreleased] - 2026-11-09
 
 ### Added
-- Unified structured analysis, Flow and Pipeline Builder execution on isolated k0s Jobs with per-step FlowChains and log-stream artifact extraction.
+- Unified Analysis + Flow model: analyses containing both `compass_flow.yaml` and `Dockerfile` are executable flows, surfaced in the catalog with ⚡ Flow badge and "Edit Code" button.
+- Dockerfile-based K8s Job execution pipeline: images are built locally, pushed to the k0s compose overlay's local Docker registry (`registry:2` on port 5050), and launched as isolated Kubernetes Jobs.
+- Local Docker registry (`registry:2` on port 5050) and MinIO artifact store in `docker-compose.yml`.
+- Unified structured analysis, Flow and Pipeline Builder execution on isolated k0s Jobs with log-stream artifact extraction.
 - Added cloud-agnostic `WorkerProvider` implementations for Docker k0s workers and configured external lifecycle scripts, including token-based joining, readiness checks and ownership-safe idle cleanup.
 - Added configurable Pipeline Builder connectors, worker networking/readiness settings, readable provisioning failures, and oversized dataset warnings.
 - Documented Docker worker setup, join-token mounting, connector configuration, and artifact/dataset transport limits.
+
+### Changed
+- Removed "Flows" as a separate navigation section in the sidebar — flows now live in the Analysis catalog (`/analysis`).
+- `GET /flows` now redirects to `/analysis`; the flow editor at `/flows/<name>` is still accessible from catalog links.
+- `structured_analysis` detection now checks for `compass_flow.yaml` + `Dockerfile` (legacy script detection removed).
+- Demo examples (ScompLink Advanced ML, ScompLink Wine Quality Prediction) now include `Dockerfile` + `compass_flow.yaml`.
+- Sidebar K0S CLUSTER section now shows only "Workers" (no separate "Flows" link).
 
 ## [2.0.0] - 2026-08-19
 

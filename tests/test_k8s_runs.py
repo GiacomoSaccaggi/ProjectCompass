@@ -95,6 +95,7 @@ def test_hello_world_k8s_job_and_sse_idempotency(
         return {}
 
     with (
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post", side_effect=fake_post),
         patch.object(webapp, "_k8s_get", side_effect=fake_get),
         patch.object(webapp, "_k8s_get_text", side_effect=fake_get_text),
@@ -115,9 +116,8 @@ def test_hello_world_k8s_job_and_sse_idempotency(
         run_id = run_data["run_id"]
         assert run_data["status"] == "success"
 
-        # Verify ConfigMap, Secret, and batch/v1 Job manifests were created
+        # Verify Secret and batch/v1 Job manifests were created (Dockerfile mode: no ConfigMap)
         paths = [p for p, _ in posted_resources]
-        assert "/api/v1/namespaces/default/configmaps" in paths
         assert "/api/v1/namespaces/default/secrets" in paths
         assert "/apis/batch/v1/namespaces/default/jobs" in paths
 
@@ -126,7 +126,7 @@ def test_hello_world_k8s_job_and_sse_idempotency(
         pod_spec = job_manifest["spec"]["template"]["spec"]
         assert pod_spec["automountServiceAccountToken"] is False
         container = pod_spec["containers"][0]
-        assert container["image"] == "python:3.11-slim"
+        assert container["image"] == "registry:5050/pc/test:1"
         assert container["envFrom"] == [{"secretRef": {"name": f"pc-flow-sec-{run_id}"}}]
 
         sec_manifest = next(m for p, m in posted_resources if p.endswith("/secrets"))
@@ -212,6 +212,7 @@ def test_failed_flow_captures_stderr_and_never_retries(
         return 'Traceback (most recent call last):\n  File "/workspace/flow.py", line 1\nRuntimeError: boom error\n'
 
     with (
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post", side_effect=fake_post),
         patch.object(webapp, "_k8s_get", side_effect=fake_get),
         patch.object(webapp, "_k8s_get_text", side_effect=fake_get_text),
@@ -248,6 +249,7 @@ def test_worker_provisioning_failure_returns_failed_runs_from_flow_and_api_route
             "ensure_workers",
             side_effect=WorkerProvisioningError("worker token is missing"),
         ),
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post") as post_resource,
     ):
         html_response = client.post("/flows/ProvisionFailureFlow/run", data={})
@@ -282,6 +284,10 @@ def test_oversized_saved_data_dataset_adds_execution_warning(
         name="OversizedDatasetFlow",
         code='print("Saved_data/oversized.csv")',
     )
+    # Remove Dockerfile to force ConfigMap mode (this test verifies dataset bundling warnings)
+    for _f in ("Dockerfile", "compass_flow.yaml"):
+        _p = Path(webapp.save_folder_path) / "OversizedDatasetFlow" / _f
+        _p.unlink(missing_ok=True)
 
     def fake_get(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         if path.endswith("/pods"):
@@ -302,6 +308,7 @@ def test_oversized_saved_data_dataset_adds_execution_warning(
         return {}
 
     with (
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post", side_effect=lambda path, payload: payload),
         patch.object(webapp, "_k8s_get", side_effect=fake_get),
         patch.object(webapp, "_k8s_get_text", return_value="done\n"),
@@ -402,11 +409,12 @@ def test_extract_and_persist_artifacts_and_structured_analysis_flow_run(
         "title: StructuredArtifactFlow\nproduct: Analytics\ndescription: Artifact test\n",
         encoding="utf-8",
     )
-    (sa_dir / "analysis" / "metadata_automatic_report.yaml").write_text(
-        "title: StructuredArtifactFlow\ninputs:\n  threshold: 10\n",
+    (sa_dir / "compass_flow.yaml").write_text(
+        "description: StructuredArtifactFlow\ninputs:\n  threshold:\n    type: text\n    default: \"10\"\n",
         encoding="utf-8",
     )
-    (sa_dir / "analysis" / "structured_analysis_main.py").write_text(
+    (sa_dir / "Dockerfile").write_text("FROM python:3.12-slim\nENTRYPOINT [\"python\", \"flow.py\"]\n", encoding="utf-8")
+    (sa_dir / "flow.py").write_text(
         "def run(inputs, output_path):\n"
         "    with open(output_path, 'w') as fh:\n"
         "        fh.write('col1,col2\\n1,2\\n')\n"
@@ -414,9 +422,9 @@ def test_extract_and_persist_artifacts_and_structured_analysis_flow_run(
         encoding="utf-8",
     )
 
-    flow_info = webapp.ensure_flow_from_structured_analysis(sa_name, runtime_inputs={"threshold": 25})
+    flow_info = webapp.read_flow(sa_name)
+    assert flow_info is not None
     assert flow_info["name"] == sa_name
-    assert (sa_dir / "flow.py").is_file()
 
     csv_payload = b"metric,value\naccuracy,0.98\n"
     html_payload = b"<!DOCTYPE html><html><body><h2>Summary</h2></body></html>"
@@ -450,6 +458,7 @@ def test_extract_and_persist_artifacts_and_structured_analysis_flow_run(
         return {}
 
     with (
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post", side_effect=lambda p, m: m),
         patch.object(webapp, "_k8s_get", side_effect=fake_get),
         patch.object(webapp, "_k8s_get_text", return_value=raw_pod_logs),
@@ -478,3 +487,54 @@ def test_extract_and_persist_artifacts_and_structured_analysis_flow_run(
         if p.is_file() and p.suffix in (".csv", ".html")
     ]
     assert len(history_files) == 2
+
+
+def test_build_and_push_image_tags_k8s_host_and_stages_saved_data(
+    app: Any,
+    isolated_analyses_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify _build_and_push_image tags k8s_tag, imports it, stages Saved_data, and cleans up."""
+    import subprocess
+
+    webapp = app.config["WEBAPP"]
+    sa_dir = isolated_analyses_dir / "DockerBuildFlow"
+    sa_dir.mkdir(parents=True, exist_ok=True)
+    (sa_dir / "flow.py").write_text(
+        'import pandas as pd\ndf = pd.read_csv("Saved_data/sales_data.csv")\n',
+        encoding="utf-8",
+    )
+    (sa_dir / "Dockerfile").write_text("FROM python:3.12-slim\n", encoding="utf-8")
+
+    monkeypatch.setenv("PC_REGISTRY_HOST", "localhost:5050")
+    monkeypatch.setenv("PC_REGISTRY_K8S_HOST", "registry:5000")
+
+    commands: list[Any] = []
+    staged_during_build: dict[str, bool] = {}
+
+    class DummyCompleted:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd: Any, *args: Any, **kwargs: Any) -> DummyCompleted:
+        commands.append(cmd)
+        if isinstance(cmd, list) and cmd[:2] == ["docker", "build"]:
+            staged_during_build["entrypoint"] = (sa_dir / "scripts" / "pc_entrypoint.sh").is_file()
+            staged_during_build["sales_csv"] = (sa_dir / "Saved_data" / "sales_data.csv").is_file()
+        return DummyCompleted()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    returned_tag = webapp._build_and_push_image("DockerBuildFlow", str(sa_dir), 42)
+    assert returned_tag == "registry:5000/pc/dockerbuildflow:42"
+    assert staged_during_build.get("entrypoint") is True
+    assert staged_during_build.get("sales_csv") is True
+    assert ["docker", "tag", "localhost:5050/pc/dockerbuildflow:42", "registry:5000/pc/dockerbuildflow:42"] in commands
+    assert any(
+        isinstance(c, str) and "docker save registry:5000/pc/dockerbuildflow:42" in c
+        for c in commands
+    )
+    # Temporary staged files are cleaned up after build
+    assert not (sa_dir / "scripts" / "pc_entrypoint.sh").exists()
+    assert not (sa_dir / "Saved_data" / "sales_data.csv").exists()

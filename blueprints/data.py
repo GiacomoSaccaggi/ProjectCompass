@@ -49,13 +49,21 @@ def _get_data_lineage():
         analyses = webapp.read_multiple_analysis()
         for analysis_name, info in analyses.items():
             folder = info.get('folder', '')
-            script_path = os.path.join(folder, 'structured_analysis_main.py')
-            if folder and os.path.isfile(script_path):
+            if not folder or not os.path.isdir(folder):
+                continue
+            for scan_dir in (folder, os.path.join(folder, 'analysis')):
+                if not os.path.isdir(scan_dir):
+                    continue
                 try:
-                    with open(script_path, encoding='utf-8', errors='ignore') as sf:
-                        script_text = sf.read()
-                    for ds_name in _extract_lineage_from_script(script_text):
-                        lineage.setdefault(ds_name, set()).add(analysis_name)
+                    for fname in sorted(os.listdir(scan_dir)):
+                        if not fname.endswith('.py'):
+                            continue
+                        script_path = os.path.join(scan_dir, fname)
+                        if os.path.isfile(script_path):
+                            with open(script_path, encoding='utf-8', errors='ignore') as sf:
+                                script_text = sf.read()
+                            for ds_name in _extract_lineage_from_script(script_text):
+                                lineage.setdefault(ds_name, set()).add(analysis_name)
                 except OSError:
                     pass
     except Exception:

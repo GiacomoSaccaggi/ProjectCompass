@@ -418,7 +418,7 @@
       {% if pc.features.schedules %}{label:'Schedules',icon:'fa-clock-o',url:'/schedules/'},{% endif %}
       {% if pc.features.rawgraphs %}{label:'RAWGraphs',icon:'fa-bar-chart',url:'/rawgraphs'},{% endif %}
       {label:'Admin Users',icon:'fa-users',url:'/admin/users'},
-      {label:'Overview',icon:'fa-eye',url:'/overview'},
+      {% if pc.demo.enabled %}{label:'Overview',icon:'fa-eye',url:'/overview'},{% endif %}
       {% if pc.features.todo %}{label:'Todo',icon:'fa-pencil',url:'/todo'},{% endif %}
     ];
     function openCmdPalette(){
@@ -472,7 +472,7 @@
       <div class="w3-bar-block sidebar-nav-list">
         <a href="#" class="w3-bar-item w3-button w3-padding-16 w3-hide-large w3-dark-grey w3-hover-black" onclick="w3_nav_close()" title="close menu"><i class="fa fa-remove fa-fw"></i>  Close Menu</a>
         <a href="/" class="w3-bar-item w3-button"><h5><i class="fa fa-compass fa-fw w3-margin-right"></i>Dashboard</h5></a>
-        <a href="/overview" class="w3-bar-item w3-button"><h5><i class="fa fa-eye fa-fw w3-margin-right"></i>Overview</h5></a>
+        {% if pc.demo.enabled %}<a href="/overview" class="w3-bar-item w3-button"><h5><i class="fa fa-eye fa-fw w3-margin-right"></i>Overview</h5></a>{% endif %}
 
         <a id="myBtn3" onclick="myFuncdownbar('analyses')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-map-signs fa-fw w3-margin-right"></i>Analyses <i id="analyses_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
         <div id="analyses" class="w3-hide w3-show sidebar-subnav">
@@ -505,8 +505,6 @@
           <h5>K0S CLUSTER</h5>
         </div>
         <a href="/workers" class="w3-bar-item w3-button"><h5><i class="fa fa-server fa-fw w3-margin-right"></i>Workers</h5></a>
-        <a href="/flows" class="w3-bar-item w3-button"><h5><i class="fa fa-code fa-fw w3-margin-right"></i>Flows</h5></a>
-        <a href="/chains" class="w3-bar-item w3-button"><h5><i class="fa fa-link fa-fw w3-margin-right"></i>Chains</h5></a>
         {% endif %}
 
         {% if pc.features.ai_chat or pc.features.pipeline_builder or pc.features.schedules or pc.features.executions %}

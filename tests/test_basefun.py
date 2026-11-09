@@ -85,85 +85,79 @@ def test_encrypt_different_keys_different_output():
     assert encrypted1 != encrypted2
 
 
-def test_create_job_request_basic():
-    """Test create_job_request returns correct structure."""
+def test_create_task_config_basic():
+    """Test create_task_config returns correct structure."""
     from basefun import ProjectCompass
 
-    job_request = ProjectCompass.create_job_request(
-        RECIPE_ID='my_recipe',
-        RECIPE_VERSION='1_0_0'
+    cfg = ProjectCompass.create_task_config(
+        task_id='my_task',
+        task_version='1_0_0',
     )
 
-    assert job_request['spec_version'] == 'v2'
-    assert job_request['recipe_id'] == 'my_recipe'
-    assert job_request['recipe_version'] == '1_0_0'
-    assert 'system_configuration' in job_request
-    assert job_request['system_configuration']['send_dag_complete_email'] is False
-    assert job_request['system_configuration']['prefer_user_pyenv'] is True
-    assert job_request['system_configuration']['allow_unpublished_recipe_runs'] is True
-    assert 'configuration' in job_request
-    assert job_request['configuration'] == {}
+    assert cfg['task_id'] == 'my_task'
+    assert cfg['task_version'] == '1_0_0'
+    assert cfg['configuration'] == {}
 
 
-def test_create_job_request_with_inputs():
-    """Test create_job_request with input_recipe kwargs."""
+def test_create_task_config_with_inputs():
+    """Test create_task_config with input_params kwargs."""
     from basefun import ProjectCompass
 
-    input_config = {
-        'country': 'DNK',
+    params = {
+        'region': 'EU',
         'start_date': '2026-01-01',
         'end_date': '2026-01-31',
-        'debug_mode': True
+        'debug_mode': True,
     }
 
-    job_request = ProjectCompass.create_job_request(
-        RECIPE_ID='pam_pipeline',
-        RECIPE_VERSION='2_3_4',
-        input_recipe=input_config
+    cfg = ProjectCompass.create_task_config(
+        task_id='etl_pipeline',
+        task_version='2_3_4',
+        input_params=params,
     )
 
-    assert job_request['recipe_id'] == 'pam_pipeline'
-    assert job_request['recipe_version'] == '2_3_4'
-    assert job_request['configuration']['country'] == 'DNK'
-    assert job_request['configuration']['start_date'] == '2026-01-01'
-    assert job_request['configuration']['end_date'] == '2026-01-31'
-    assert job_request['configuration']['debug_mode'] is True
+    assert cfg['task_id'] == 'etl_pipeline'
+    assert cfg['task_version'] == '2_3_4'
+    assert cfg['configuration']['region'] == 'EU'
+    assert cfg['configuration']['start_date'] == '2026-01-01'
+    assert cfg['configuration']['end_date'] == '2026-01-31'
+    assert cfg['configuration']['debug_mode'] is True
 
 
-def test_create_job_request_empty_inputs():
-    """Test create_job_request with empty input_recipe."""
+def test_create_task_config_empty_inputs():
+    """Test create_task_config with empty input_params."""
     from basefun import ProjectCompass
 
-    job_request = ProjectCompass.create_job_request(
-        RECIPE_ID='test_recipe',
-        RECIPE_VERSION='0_0_1',
-        input_recipe={}
+    cfg = ProjectCompass.create_task_config(
+        task_id='test_task',
+        task_version='0_0_1',
+        input_params={},
     )
 
-    assert job_request['configuration'] == {}
+    assert cfg['configuration'] == {}
 
 
-def test_create_job_request_nested_inputs():
-    """Test create_job_request with nested configuration."""
+def test_create_task_config_nested_inputs():
+    """Test create_task_config with nested configuration."""
     from basefun import ProjectCompass
 
-    input_config = {
+    params = {
         'database': {
             'host': 'localhost',
-            'port': 5432
+            'port': 5432,
         },
-        'features': ['feature1', 'feature2']
+        'features': ['feature1', 'feature2'],
     }
 
-    job_request = ProjectCompass.create_job_request(
-        RECIPE_ID='nested_recipe',
-        RECIPE_VERSION='1_0_0',
-        input_recipe=input_config
+    cfg = ProjectCompass.create_task_config(
+        task_id='nested_task',
+        task_version='1_0_0',
+        input_params=params,
     )
 
-    assert job_request['configuration']['database']['host'] == 'localhost'
-    assert job_request['configuration']['database']['port'] == 5432
-    assert job_request['configuration']['features'] == ['feature1', 'feature2']
+    assert cfg['configuration']['database']['host'] == 'localhost'
+    assert cfg['configuration']['database']['port'] == 5432
+    assert cfg['configuration']['features'] == ['feature1', 'feature2']
 
 
 def test_projectcompass_init_via_app(app):

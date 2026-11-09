@@ -1,4 +1,3 @@
-title: Sales Performance Report
 description: Generate a summary report of sales metrics by region and product
 inputs:
   start_date:
@@ -13,6 +12,3 @@ inputs:
     type: text
     default: "all"
     description: Filter by region (North, South, East, West, or all)
-output:
-  type: csv
-  description: Aggregated sales summary with revenue, cost, and profit by product and region

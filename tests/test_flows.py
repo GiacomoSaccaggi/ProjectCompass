@@ -52,7 +52,7 @@ def test_save_and_read_hello_world_flow(app: Any, isolated_analyses_dir: Path) -
     assert (flow_dir / "flow.py").is_file()
     assert (flow_dir / "flow_config.yaml").is_file()
     assert (flow_dir / "metadata.yaml").is_file()
-    assert (flow_dir / "analysis" / "structured_analysis_main.py").is_file()
+    assert (flow_dir / "compass_flow.yaml").is_file()
 
     # Verify secret values are NOT persisted in plaintext in flow_config.yaml
     raw_cfg_text = (flow_dir / "flow_config.yaml").read_text(encoding="utf-8")

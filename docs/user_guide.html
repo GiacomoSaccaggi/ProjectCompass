@@ -87,7 +87,7 @@
           <li><strong>Pipeline Builder (<code>/pipeline_builder/</code>)</strong> — Compose and run <code>scomp-link</code> pipelines.</li>
           <li><strong>Data Explorer (<code>/query_results/</code> &amp; <code>/connections</code>)</strong> — Run DuckDB or remote ConnectorX SQL queries.</li>
           <li><strong>AI Chat (<code>/chat</code>)</strong> — Ask natural-language questions over datasets or per-analysis RAG indexes.</li>
-          <li><strong>Kubernetes Console (<code>/workers</code>, <code>/flows</code>, <code>/chains</code>, <code>/runs</code>)</strong> — Operate distributed k0s jobs.</li>
+          <li><strong>Kubernetes Console (<code>/workers</code>, <code>/runs</code>)</strong> — Operate distributed k0s jobs. Flows are accessed from the Analysis catalog.</li>
         </ul>
       </li>
     </ol>
@@ -120,12 +120,17 @@
           </tr>
           <tr>
             <td><strong>Structured Analysis</strong></td>
-            <td><code>structured_analysis_main.py</code> + <code>metadata_automatic_report.yaml</code></td>
+            <td><code>compass_flow.yaml + Dockerfile</code> + <code>compass_flow.yaml</code></td>
             <td>Generates a dynamic parameter form at <code>/investigations/</code>, executes in a background thread (or k0s Pod), and streams logs via SSE.</td>
           </tr>
           <tr>
+            <td><strong>Executable Flow</strong></td>
+            <td><code>compass_flow.yaml</code> + <code>Dockerfile</code></td>
+            <td>Appears in the catalog with a ⚡ Flow badge and "Edit Code" button. Image is built from the Dockerfile, pushed to the local registry, and run as an isolated K8s Job.</td>
+          </tr>
+          <tr>
             <td><strong>Scomp-Link Pipeline</strong></td>
-            <td><code>pipeline_config.json</code> + generated <code>structured_analysis_main.py</code></td>
+            <td><code>pipeline_config.json</code> + generated <code>compass_flow.yaml + Dockerfile</code></td>
             <td>Created visually in <code>/pipeline_builder/</code>; supports versioned snapshots (<code>PipelineVersion</code>) and one-click execution.</td>
           </tr>
         </tbody>
@@ -137,11 +142,11 @@
       To make a Python analysis executable from the Web UI, API, or Scheduler, include two files inside its <code>analysis/</code> subfolder:
     </p>
     <ol>
-      <li><code>metadata_automatic_report.yaml</code> — Declares the form inputs shown to users.</li>
-      <li><code>structured_analysis_main.py</code> — Defines a <code>run(inputs: dict, output_path: str)</code> function (or executes directly as a script).</li>
+      <li><code>compass_flow.yaml</code> — Declares the form inputs shown to users.</li>
+      <li><code>compass_flow.yaml + Dockerfile</code> — Defines a <code>run(inputs: dict, output_path: str)</code> function (or executes directly as a script).</li>
     </ol>
 
-    <pre><code class="language-yaml"># Analyses/Sales Performance Report/analysis/metadata_automatic_report.yaml
+    <pre><code class="language-yaml"># Analyses/Sales Performance Report/analysis/compass_flow.yaml
 region:
   name: "Target Region"
   description: "Geographic region to filter sales records"
@@ -155,7 +160,7 @@ min_amount:
   type: "number"
   default: 100</code></pre>
 
-    <pre><code class="language-python"># Analyses/Sales Performance Report/analysis/structured_analysis_main.py
+    <pre><code class="language-python"># Analyses/Sales Performance Report/analysis/compass_flow.yaml + Dockerfile
 from pathlib import Path
 import pandas as pd
 
@@ -269,7 +274,7 @@ ORDER BY total_orders DESC;</code></pre>
     <h2 id="schedules-and-executions">6. Schedules, Execution History &amp; Webhooks</h2>
     <ul>
       <li><strong>Execution Console (<code>/executions/</code>)</strong> — Inspect every historical run across structured analyses, pipelines, and k0s flows, complete with status badges (<code>running</code>, <code>completed</code>, <code>failed</code>), duration, and live SSE log streaming.</li>
-      <li><strong>Cron Scheduler (<code>/schedules/</code>)</strong> — Attach standard 5-field cron expressions (e.g., <code>0 6 * * 1-5</code>) to either local analyses or Kubernetes flows/chains, and configure optional <code>webhook_url</code> notifications.</li>
+      <li><strong>Cron Scheduler (<code>/schedules/</code>)</strong> — Attach standard 5-field cron expressions (e.g., <code>0 6 * * 1-5</code>) to executable flows in the catalog, and configure optional <code>webhook_url</code> notifications.</li>
     </ul>
 
     <div class="page-pager">

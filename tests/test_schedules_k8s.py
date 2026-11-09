@@ -160,6 +160,7 @@ def test_schedule_create_pause_resume_and_k8s_execution(
         return {}
 
     with (
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post", side_effect=fake_post),
         patch.object(webapp, "_k8s_get", side_effect=fake_get),
         patch.object(webapp, "_k8s_get_text", return_value="scheduled hello world\n"),

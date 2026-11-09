@@ -1,0 +1,91 @@
+CREATE DATABASE IF NOT EXISTS demo_analytics;
+
+CREATE TABLE demo_analytics.page_views (
+    date Date,
+    url String,
+    country String,
+    views UInt32,
+    unique_visitors UInt32,
+    avg_duration_sec Float32
+) ENGINE = MergeTree()
+ORDER BY (date, url);
+
+CREATE TABLE demo_analytics.events (
+    timestamp DateTime,
+    event_type String,
+    user_id UInt32,
+    page String,
+    device String,
+    country String
+) ENGINE = MergeTree()
+ORDER BY (timestamp, event_type);
+
+INSERT INTO demo_analytics.page_views VALUES
+('2025-06-01', '/home', 'Italy', 1200, 890, 45.2),
+('2025-06-01', '/products', 'Italy', 840, 620, 72.5),
+('2025-06-01', '/pricing', 'Italy', 310, 280, 95.1),
+('2025-06-01', '/home', 'Germany', 950, 710, 42.8),
+('2025-06-01', '/products', 'Germany', 680, 510, 68.3),
+('2025-06-01', '/home', 'France', 780, 590, 40.1),
+('2025-06-01', '/products', 'France', 520, 390, 65.7),
+('2025-06-01', '/pricing', 'France', 190, 170, 88.4),
+('2025-06-01', '/blog', 'United States', 1500, 1100, 120.3),
+('2025-06-01', '/home', 'United States', 2200, 1650, 38.9),
+('2025-06-02', '/home', 'Italy', 1150, 860, 44.0),
+('2025-06-02', '/products', 'Italy', 900, 670, 74.1),
+('2025-06-02', '/pricing', 'Italy', 340, 300, 92.0),
+('2025-06-02', '/checkout', 'Italy', 120, 110, 180.5),
+('2025-06-02', '/home', 'Germany', 980, 730, 43.5),
+('2025-06-02', '/products', 'Germany', 710, 530, 70.2),
+('2025-06-02', '/home', 'France', 800, 600, 41.3),
+('2025-06-02', '/blog', 'France', 350, 290, 110.7),
+('2025-06-02', '/home', 'United States', 2350, 1720, 37.5),
+('2025-06-02', '/products', 'United States', 1600, 1200, 62.8),
+('2025-06-03', '/home', 'Italy', 1300, 950, 46.1),
+('2025-06-03', '/products', 'Italy', 870, 640, 71.9),
+('2025-06-03', '/pricing', 'Italy', 290, 260, 97.3),
+('2025-06-03', '/home', 'Germany', 1020, 760, 44.7),
+('2025-06-03', '/checkout', 'Germany', 95, 88, 195.2),
+('2025-06-03', '/home', 'Spain', 620, 470, 39.8),
+('2025-06-03', '/products', 'Spain', 410, 310, 60.4),
+('2025-06-03', '/home', 'United States', 2100, 1580, 39.2),
+('2025-06-03', '/products', 'United States', 1450, 1080, 64.1),
+('2025-06-03', '/blog', 'United States', 1700, 1250, 125.8);
+
+INSERT INTO demo_analytics.events VALUES
+('2025-06-01 08:12:00', 'page_view', 1001, '/home', 'desktop', 'Italy'),
+('2025-06-01 08:12:05', 'click', 1001, '/home', 'desktop', 'Italy'),
+('2025-06-01 08:13:20', 'page_view', 1001, '/products', 'desktop', 'Italy'),
+('2025-06-01 08:15:00', 'add_to_cart', 1001, '/products', 'desktop', 'Italy'),
+('2025-06-01 09:00:00', 'page_view', 1002, '/home', 'mobile', 'Germany'),
+('2025-06-01 09:01:30', 'page_view', 1002, '/pricing', 'mobile', 'Germany'),
+('2025-06-01 09:05:00', 'signup', 1002, '/pricing', 'mobile', 'Germany'),
+('2025-06-01 10:30:00', 'page_view', 1003, '/blog', 'desktop', 'United States'),
+('2025-06-01 10:35:00', 'page_view', 1003, '/products', 'desktop', 'United States'),
+('2025-06-01 10:40:00', 'add_to_cart', 1003, '/products', 'desktop', 'United States'),
+('2025-06-01 10:42:00', 'checkout', 1003, '/checkout', 'desktop', 'United States'),
+('2025-06-01 10:45:00', 'purchase', 1003, '/checkout', 'desktop', 'United States'),
+('2025-06-01 11:00:00', 'page_view', 1004, '/home', 'tablet', 'France'),
+('2025-06-01 11:02:00', 'click', 1004, '/home', 'tablet', 'France'),
+('2025-06-01 14:20:00', 'page_view', 1005, '/home', 'mobile', 'Spain'),
+('2025-06-01 14:22:00', 'page_view', 1005, '/products', 'mobile', 'Spain'),
+('2025-06-01 14:30:00', 'page_view', 1006, '/pricing', 'desktop', 'Italy'),
+('2025-06-01 14:35:00', 'signup', 1006, '/pricing', 'desktop', 'Italy'),
+('2025-06-01 16:00:00', 'page_view', 1007, '/blog', 'desktop', 'Germany'),
+('2025-06-01 16:10:00', 'page_view', 1007, '/products', 'desktop', 'Germany'),
+('2025-06-02 07:45:00', 'page_view', 1008, '/home', 'mobile', 'Italy'),
+('2025-06-02 07:46:00', 'page_view', 1008, '/products', 'mobile', 'Italy'),
+('2025-06-02 07:50:00', 'add_to_cart', 1008, '/products', 'mobile', 'Italy'),
+('2025-06-02 07:55:00', 'checkout', 1008, '/checkout', 'mobile', 'Italy'),
+('2025-06-02 09:30:00', 'page_view', 1009, '/home', 'desktop', 'United States'),
+('2025-06-02 09:32:00', 'click', 1009, '/home', 'desktop', 'United States'),
+('2025-06-02 09:35:00', 'page_view', 1009, '/pricing', 'desktop', 'United States'),
+('2025-06-02 11:00:00', 'page_view', 1010, '/blog', 'desktop', 'France'),
+('2025-06-02 11:10:00', 'page_view', 1010, '/products', 'desktop', 'France'),
+('2025-06-02 11:15:00', 'add_to_cart', 1010, '/products', 'desktop', 'France'),
+('2025-06-02 13:00:00', 'page_view', 1001, '/home', 'mobile', 'Italy'),
+('2025-06-02 13:05:00', 'page_view', 1001, '/products', 'mobile', 'Italy'),
+('2025-06-02 13:10:00', 'purchase', 1001, '/checkout', 'mobile', 'Italy'),
+('2025-06-02 15:00:00', 'page_view', 1011, '/home', 'desktop', 'Japan'),
+('2025-06-02 15:05:00', 'page_view', 1011, '/products', 'desktop', 'Japan'),
+('2025-06-02 15:10:00', 'signup', 1011, '/pricing', 'desktop', 'Japan');

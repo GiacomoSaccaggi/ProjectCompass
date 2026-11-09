@@ -96,12 +96,12 @@ flowchart TB
     BP_Conn["connections.py (ConnectorX Remote DBs)"]
     BP_Agent["agent.py (Sandboxed Pandas AI Chat)"]
     BP_RAG["rag.py (Per-Analysis Hybrid RAG)"]
-    BP_K8s["k8s.py (Workers, Flows, Jobs, Chains)"]
+    BP_K8s["k8s.py (Workers, Flows, Jobs)"]
     BP_API["api.py (JSON REST API v1)"]
   end
 
   subgraph Engine["Cooperative MRO Core (app.config WEBAPP)"]
-    PC["ProjectCompass -> DataUtils -> AnalysisUtils -> GitSyncUtils -> HTMLUtils -> K8sChainRunnerUtils -> K8sFlowRunnerUtils -> K8sClusterUtils -> BaseK8sClient"]
+    PC["ProjectCompass -> DataUtils -> AnalysisUtils -> GitSyncUtils -> HTMLUtils -> K8sFlowRunnerUtils -> K8sClusterUtils -> BaseK8sClient"]
   end
 
   subgraph Persistence["Hybrid Storage Layer (DATA_DIR)"]
@@ -179,7 +179,7 @@ flowchart TB
           <tr>
             <td><code>blueprints/k8s.py</code></td>
             <td><code>k8s_bp</code></td>
-            <td>Kubernetes console for k0s worker nodes (<code>/workers</code>), reusable Python flows (<code>/flows</code>), isolated <code>batch/v1</code> job runs (<code>/runs</code>), and linear chains (<code>/chains</code>).</td>
+            <td>Kubernetes console for k0s worker nodes (<code>/workers</code>) and isolated <code>batch/v1</code> job runs (<code>/runs</code>). Flows are managed from the Analysis catalog — <code>GET /flows</code> redirects to <code>/analysis</code>; the flow editor at <code>/flows/&lt;name&gt;</code> is accessed via catalog links.</td>
           </tr>
           <tr>
             <td><code>blueprints/api.py</code></td>
@@ -196,14 +196,13 @@ flowchart TB
     </p>
 
     <pre><code class="language-python"># Effective Method Resolution Order (ProjectCompass.__mro__)
-ProjectCompass          # basefun.py          — Top-level facade, apply_settings(), create_job_request()
+ProjectCompass          # basefun.py          — Top-level facade, apply_settings(), create_task_config()
   ├── DataUtils         # utils/data_utils.py — DuckDB in-memory SQL + ConnectorX routing (run_sql)
   └── AnalysisUtils     # utils/analysis_utils.py — Catalog CRUD, FTS sync, Structured Analysis & Flow bridges
         └── GitSyncUtils        # utils/git_utils.py  — Automated git init/clone/pull/commit/push for Analyses/
               └── HTMLUtils     # utils/html_utils.py — header.html parser, substitute_html(), YAML env loader
-                    └── K8sChainRunnerUtils   # utils/k8s_utils.py — Linear multi-flow chain orchestration
-                          └── K8sFlowRunnerUtils  # utils/k8s_utils.py — ConfigMap, Secret, batch/v1 Job & log watcher
-                                └── K8sClusterUtils   # utils/k8s_utils.py — Node join/sync/drain/delete & token gen
+                    └── K8sFlowRunnerUtils  # utils/k8s_utils.py — ConfigMap, Secret, batch/v1 Job & log watcher
+                          └── K8sClusterUtils   # utils/k8s_utils.py — Node join/sync/drain/delete & token gen
                                       └── BaseK8sClient     # utils/k8s_utils.py — Kubeconfig/in-cluster API clients
                                             └── object</code></pre>
 
@@ -243,15 +242,11 @@ ProjectCompass          # basefun.py          — Top-level facade, apply_settin
             <td><code>execution_runs</code></td>
             <td>Unified run ledger for both local structured analyses and k0s flows (<code>analysis_name</code>, <code>status</code>, <code>inputs_json</code>, <code>log_text</code>, <code>output_path</code>, <code>k8s_job_name</code>, <code>chain_id</code>).</td>
           </tr>
-          <tr>
-            <td><code>FlowChain</code></td>
-            <td><code>flow_chains</code></td>
-            <td>Ordered multi-step Kubernetes flow sequences (<code>name</code>, <code>steps_json</code>, <code>stop_on_failure</code>, <code>last_status</code>).</td>
-          </tr>
+          
           <tr>
             <td><code>Schedule</code></td>
             <td><code>schedules</code></td>
-            <td>Cron automation definitions targeting <code>analysis</code>, <code>flow</code>, or <code>chain</code> with <code>cron_expr</code>, <code>inputs_json</code>, and <code>webhook_url</code>.</td>
+            <td>Cron automation definitions targeting <code>analysis</code>, <code>flow</code> with <code>cron_expr</code>, <code>inputs_json</code>, and <code>webhook_url</code>.</td>
           </tr>
           <tr>
             <td><code>PipelineVersion</code></td>
@@ -301,11 +296,13 @@ ProjectCompass          # basefun.py          — Top-level facade, apply_settin
     ├── readme.md                     # Auto-generated catalog index table
     └── &lt;Analysis Name&gt;/
         ├── metadata.yaml             # Title, product, owner, links, K8s flow attributes
+        ├── compass_flow.yaml         # Flow config (makes analysis executable on k0s)
+        ├── Dockerfile                # Container build (makes analysis executable on k0s)
         ├── output_versions.yaml      # Versioned HTML outputs & dashboard URLs
         ├── pipeline_config.json      # Optional Scomp-Link visual pipeline specification
         ├── analysis/
-        │   ├── structured_analysis_main.py
-        │   ├── metadata_automatic_report.yaml
+        │   ├── compass_flow.yaml
+        │   ├── Dockerfile
         │   └── requirements.txt
         ├── physical_output/main/     # Generated HTML/CSV deliverables
         └── sql_extractions/          # Auto-extracted docstring SQL queries</code></pre>

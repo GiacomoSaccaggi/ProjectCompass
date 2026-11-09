@@ -1,9 +1,26 @@
+# ProjectCompass — Full Stack
+#
+# Architecture:
+#   projectcompass  → Flask app (port 8080)
+#   mithril         → LLM proxy (port 16180), auto-pulls a small local model
+#   k0s             → Kubernetes controller+worker (port 6443)
+#   k0s-worker-1/2  → Kubernetes worker nodes
+#   minio           → S3 artifact store (API 9002, console 9001)
+#   registry        → Docker image registry (port 5050)
+#
+# Usage:
+#   docker compose up -d --build        # production (core features only)
+#   bash demo.sh                        # demo (all features + sample databases)
+#
+# Enable optional features via PC_* env vars — see .env.example
+
 services:
+  # ──────────────────── Application ────────────────────
   projectcompass:
     # image: ghcr.io/giacomosaccaggi/projectcompass:latest
-    build: .  # build locally to match local code
+    build: .
     ports:
-      - "8080:8080"
+      - "${PC_PORT:-8080}:8080"
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=False
@@ -11,15 +28,33 @@ services:
       - USE_GITLAB_REPO=False
       - USERNAME=docker_user
       - MITHRIL_HOST=http://mithril:16180
-      - SECRET_KEY=admin
-      - ADMIN_USERNAME=admin
-      - "ADMIN_PASSWORD_HASH=scrypt:32768:8:1$$Qb9qoIE6k2pWeLkH$$05a224b86612a0b78e088b30241be5cbd5a99bab0f6b7f5eef37866abee7c5c82cb74934039fd3a4a592e96fd59cec3514914e90d4ce9f74fb478460ce4cc002"
+      - SECRET_KEY=${SECRET_KEY:-admin}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - "ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:-scrypt:32768:8:1$$Qb9qoIE6k2pWeLkH$$05a224b86612a0b78e088b30241be5cbd5a99bab0f6b7f5eef37866abee7c5c82cb74934039fd3a4a592e96fd59cec3514914e90d4ce9f74fb478460ce4cc002}"
       - DB_CONNECTIONS_KEY=${DB_CONNECTIONS_KEY:-}
       - DB_CONNECTIONS_MAX_ROWS=${DB_CONNECTIONS_MAX_ROWS:-100000}
-      # Uncomment to mount your external settings file (defaults to /app/data/projectcompass.yaml).
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      # k0s cluster
+      - K8S_API_URL=https://k0s:6443
+      - K8S_VERIFY_SSL=false
+      - K8S_NAMESPACE=${K8S_NAMESPACE:-default}
+      - PC_WORKERS__AUTO_PROVISION=${PC_WORKERS__AUTO_PROVISION:-false}
+      - PC_WORKERS__AUTO_CLEANUP=${PC_WORKERS__AUTO_CLEANUP:-false}
+      # MinIO / S3 artifact store
+      - PC_S3_ENDPOINT=http://minio:9000
+      - PC_S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - PC_S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - PC_S3_BUCKET=${PC_S3_BUCKET:-pc-artifacts}
+      # Docker registry for flow images
+      - PC_REGISTRY_HOST=${PC_REGISTRY_HOST:-localhost:5050}
+      - PC_REGISTRY_K8S_HOST=${PC_REGISTRY_K8S_HOST:-registry:5000}
+      # Optional settings file
       # - PC_CONFIG_FILE=/app/data/projectcompass.yaml
       # - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
       # - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+    env_file:
+      - path: .env.k0s
+        required: false
     volumes:
       - ./Analyses:/app/Analyses
       - ./Saved_data:/app/Saved_data
@@ -29,6 +64,7 @@ services:
       - ./templates:/app/templates
       - ./utils:/app/utils
       - ./blueprints:/app/blueprints
+      - ./scripts:/app/scripts:ro
       - ./app.py:/app/app.py
       - ./logs:/app/log
       - /var/run/docker.sock:/var/run/docker.sock
@@ -36,12 +72,20 @@ services:
     restart: unless-stopped
     container_name: projectcompass_app
     depends_on:
-      - mithril
+      mithril:
+        condition: service_healthy
+      k0s:
+        condition: service_healthy
+      registry:
+        condition: service_started
+      minio:
+        condition: service_healthy
 
+  # ──────────────────── LLM Backend ────────────────────
   mithril:
     image: ghcr.io/giacomosaccaggi/mithril:latest
     ports:
-      - "16180:16180"
+      - "${MITHRIL_PORT:-16180}:16180"
     environment:
       - MITHRIL_KEY_GEMINI=${MITHRIL_KEY_GEMINI:-}
       - MITHRIL_KEY_OPENAI=${MITHRIL_KEY_OPENAI:-}
@@ -56,3 +100,172 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  mithril-init:
+    image: curlimages/curl
+    container_name: mithril-init
+    depends_on:
+      mithril:
+        condition: service_healthy
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "Pulling default local model..."
+        curl -sf http://mithril:16180/api/pull -d '{"name":"qwen2:1.5b"}' || echo "Model pull skipped"
+    restart: "no"
+
+  # ──────────────────── S3 Artifact Store ────────────────────
+  minio:
+    image: pgsty/silo:latest
+    container_name: pc-minio
+    hostname: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    restart: unless-stopped
+
+  minio-init:
+    image: python:3.12-slim
+    container_name: pc-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["python", "-c"]
+    command:
+      - |
+        import subprocess, sys
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "boto3"], stdout=subprocess.DEVNULL)
+        import boto3, os
+        from botocore.config import Config
+        s3 = boto3.client("s3", endpoint_url="http://minio:9000",
+            aws_access_key_id=os.environ.get("MINIO_ROOT_USER", "minioadmin"),
+            aws_secret_access_key=os.environ.get("MINIO_ROOT_PASSWORD", "minioadmin"),
+            config=Config(signature_version="s3v4"), region_name="us-east-1")
+        bucket = os.environ.get("PC_S3_BUCKET", "pc-artifacts")
+        try:
+            s3.create_bucket(Bucket=bucket)
+            print(f"Bucket {bucket} created.")
+        except Exception as e:
+            if "BucketAlreadyOwnedByYou" in str(e) or "BucketAlreadyExists" in str(e):
+                print(f"Bucket {bucket} already exists.")
+            else:
+                raise
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      PC_S3_BUCKET: ${PC_S3_BUCKET:-pc-artifacts}
+    restart: "no"
+
+  # ──────────────────── Docker Registry ────────────────────
+  registry:
+    image: registry:2
+    container_name: pc-registry
+    hostname: registry
+    ports:
+      - "${REGISTRY_PORT:-5050}:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+    restart: unless-stopped
+
+  # ──────────────────── k0s Cluster ────────────────────
+  k0s:
+    image: ${K0S_IMAGE:-docker.io/k0sproject/k0s:v1.31.3-k0s.0}
+    container_name: k0s
+    hostname: k0s
+    privileged: true
+    cgroup: host
+    command: ["k0s", "controller", "--enable-worker", "--no-taints"]
+    ports:
+      - "6443:6443"
+    volumes:
+      - k0s-data:/var/lib/k0s
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ./k0s-registry.toml:/var/lib/k0s/containerd/config.d/registry.toml:ro
+      - ./k0s-hosts.d:/var/lib/k0s/containerd/hosts.d:ro
+    tmpfs:
+      - /run
+    healthcheck:
+      test: ["CMD", "k0s", "status"]
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 12
+    restart: unless-stopped
+
+  k0s-worker-1:
+    image: ${K0S_IMAGE:-docker.io/k0sproject/k0s:v1.31.3-k0s.0}
+    container_name: k0s-worker-1
+    hostname: k0s-worker-1
+    privileged: true
+    cgroup: host
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /etc/containerd
+        cat > /etc/containerd/config.toml <<'EOF'
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry:5000"]
+          endpoint = ["http://registry:5000"]
+        EOF
+        echo "Waiting for join token..."
+        while [ ! -f /run/k0s-tokens/worker ]; do sleep 3; done
+        echo "Token found, joining cluster..."
+        exec k0s worker --token-file /run/k0s-tokens/worker
+    volumes:
+      - k0s-tokens:/run/k0s-tokens:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+    depends_on:
+      k0s:
+        condition: service_healthy
+      registry:
+        condition: service_started
+    restart: unless-stopped
+
+  k0s-worker-2:
+    image: ${K0S_IMAGE:-docker.io/k0sproject/k0s:v1.31.3-k0s.0}
+    container_name: k0s-worker-2
+    hostname: k0s-worker-2
+    privileged: true
+    cgroup: host
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /etc/containerd
+        cat > /etc/containerd/config.toml <<'EOF'
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry:5000"]
+          endpoint = ["http://registry:5000"]
+        EOF
+        echo "Waiting for join token..."
+        while [ ! -f /run/k0s-tokens/worker ]; do sleep 3; done
+        echo "Token found, joining cluster..."
+        exec k0s worker --token-file /run/k0s-tokens/worker
+    volumes:
+      - k0s-tokens:/run/k0s-tokens:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+    depends_on:
+      k0s:
+        condition: service_healthy
+      registry:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  k0s-data:
+  k0s-tokens:
+  registry-data:
+  minio-data:

@@ -43,6 +43,15 @@ def app(tmp_path, monkeypatch):
         PC_CONFIG_FILE = os.devnull
 
     monkeypatch.setenv('PC_WORKERS__AUTO_PROVISION', 'false')
+    monkeypatch.setenv('PC_FEATURES__AI_CHAT', 'true')
+    monkeypatch.setenv('PC_FEATURES__RAG', 'true')
+    monkeypatch.setenv('PC_FEATURES__PIPELINE_BUILDER', 'true')
+    monkeypatch.setenv('PC_FEATURES__RAWGRAPHS', 'true')
+    monkeypatch.setenv('PC_FEATURES__QUERY_RUNNER', 'true')
+    monkeypatch.setenv('PC_FEATURES__DB_CONNECTIONS', 'true')
+    monkeypatch.setenv('PC_FEATURES__TODO', 'true')
+    monkeypatch.setenv('PC_DEMO__ENABLED', 'true')
+    monkeypatch.setenv('PC_BRANDING__DEMO_NOTICE__ENABLED', 'true')
     app = create_app(TestConfig)
 
     with app.app_context():

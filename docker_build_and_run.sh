@@ -41,7 +41,7 @@ docker run -d \
     -p ${EXTERNAL_PORT}:${INTERNAL_PORT} \
     --name ${CONTAINER_NAME} \
     --link ollama:ollama \
-    -e OLLAMA_HOST=ollama:11434 \
+    -e MITHRIL_HOST=ollama:11434 \
     -v "$(pwd)/Analyses:/app/Analyses" \
     -v "$(pwd)/Saved_data:/app/Saved_data" \
     -v "$(pwd)/Saved_queries:/app/Saved_queries" \

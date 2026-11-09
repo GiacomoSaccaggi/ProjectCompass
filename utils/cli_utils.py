@@ -151,7 +151,7 @@ class BaseCompassCliClient(ABC):
 
 
 class CompassCliRunner(BaseCompassCliClient):
-    """Concrete CLI runner for managing Workers, Flows, Chains, Runs, Analyses, and Schedules."""
+    """Concrete CLI runner for managing Workers, Flows, Runs, Analyses, and Schedules."""
 
     def client_type(self) -> str:
         """Identify this concrete runner implementation."""
@@ -277,44 +277,6 @@ class CompassCliRunner(BaseCompassCliClient):
         }
         return self._request("POST", f"/api/analyses/{name}/run", json_body=body)
 
-    def list_chains(self) -> dict[str, Any]:
-        """List all sequential flow chains (`A -> B -> C`)."""
-        return self._request("GET", "/chains")
-
-    def save_chain(
-        self,
-        name: str,
-        flow_names: list[str] | str,
-        description: str = "",
-    ) -> dict[str, Any]:
-        """Create or update a linear flow chain."""
-        steps = self._parse_csv_list(flow_names)
-        return self._request(
-            "POST",
-            "/chains/save",
-            json_body={
-                "name": name,
-                "flow_names": steps,
-                "description": description,
-            },
-        )
-
-    def run_chain(
-        self,
-        name: str,
-        parameters: dict[str, Any] | str | None = None,
-        wait: bool = False,
-    ) -> dict[str, Any]:
-        """Launch a sequential execution of a flow chain."""
-        return self._request(
-            "POST",
-            f"/chains/{name}/run",
-            json_body={
-                "parameters": self._parse_json_or_kv(parameters),
-                "wait": bool(wait),
-            },
-        )
-
     def list_runs(self, flow_name: str | None = None, limit: int = 25) -> dict[str, Any]:
         """List recent execution runs."""
         params: dict[str, Any] = {"limit": limit}
@@ -345,7 +307,6 @@ class CompassCliRunner(BaseCompassCliClient):
     def create_schedule(
         self,
         flow_name: str | None = None,
-        chain_name: str | None = None,
         schedule_type: str = "cron",
         cron_expr: str = "0 * * * *",
         interval_seconds: int = 0,
@@ -354,10 +315,9 @@ class CompassCliRunner(BaseCompassCliClient):
         job_id: str | None = None,
         enabled: bool = True,
     ) -> dict[str, Any]:
-        """Create a cron or interval schedule for a flow or flow chain."""
+        """Create a cron or interval schedule for a flow."""
         body: dict[str, Any] = {
             "flow_name": flow_name or "",
-            "chain_name": chain_name or "",
             "schedule_type": schedule_type,
             "cron_expr": cron_expr,
             "interval_seconds": interval_seconds,
@@ -378,7 +338,7 @@ class CompassCliRunner(BaseCompassCliClient):
         """Build the argument parser for the standalone ProjectCompass CLI."""
         parser = argparse.ArgumentParser(
             prog="compass_cli",
-            description="ProjectCompass external CLI for k0s Workers, Flows, Chains, Runs, and Schedules.",
+            description="ProjectCompass external CLI for k0s Workers, Flows, Runs, and Schedules.",
         )
         parser.add_argument("--url", default=None, help="ProjectCompass base URL (or COMPASS_URL)")
         parser.add_argument("--user", default=None, help="HTTP Basic Auth username (or COMPASS_USER)")
@@ -426,21 +386,6 @@ class CompassCliRunner(BaseCompassCliClient):
         analyses_run.add_argument("--params", default="{}", help="Run parameters (JSON)")
         analyses_run.add_argument("--wait", action="store_true", help="Wait for completion")
 
-        # chains
-        chains_p = subparsers.add_parser("chains", help="Manage and run sequential flow chains")
-        chains_sub = chains_p.add_subparsers(dest="action", required=True)
-        chains_sub.add_parser("list", help="List all flow chains")
-
-        chains_save = chains_sub.add_parser("save", help="Create or update a flow chain")
-        chains_save.add_argument("name", help="Chain name")
-        chains_save.add_argument("steps", help="Comma-separated ordered flow names (e.g. StepA,StepB)")
-        chains_save.add_argument("--description", default="", help="Chain description")
-
-        chains_run = chains_sub.add_parser("run", help="Launch a flow chain")
-        chains_run.add_argument("name", help="Chain name")
-        chains_run.add_argument("--params", default="{}", help="Override parameters (JSON)")
-        chains_run.add_argument("--wait", action="store_true", help="Wait for chain completion")
-
         # runs
         runs_p = subparsers.add_parser("runs", help="Inspect and control flow runs")
         runs_sub = runs_p.add_subparsers(dest="action", required=True)
@@ -463,9 +408,8 @@ class CompassCliRunner(BaseCompassCliClient):
         sched_sub = sched_p.add_subparsers(dest="action", required=True)
         sched_sub.add_parser("list", help="List schedules")
 
-        sched_create = sched_sub.add_parser("create", help="Create a schedule for a flow or chain")
+        sched_create = sched_sub.add_parser("create", help="Create a schedule for a flow")
         sched_create.add_argument("--flow", default=None, help="Flow name to schedule")
-        sched_create.add_argument("--chain", default=None, help="Chain name to schedule")
         sched_create.add_argument("--type", default="cron", choices=["cron", "interval"], help="Trigger type")
         sched_create.add_argument("--cron", default="0 * * * *", help="5-field crontab expression")
         sched_create.add_argument("--seconds", type=int, default=0, help="Interval seconds")
@@ -531,23 +475,6 @@ class CompassCliRunner(BaseCompassCliClient):
                     raise CompassCliError(f"Unsupported flows action: {args.action}")
             elif args.resource == "analyses" and args.action == "run":
                 res = self.run_analysis(name=args.name, parameters=args.params, wait=args.wait)
-            elif args.resource == "chains":
-                if args.action == "list":
-                    res = self.list_chains()
-                elif args.action == "save":
-                    res = self.save_chain(
-                        name=args.name,
-                        flow_names=args.steps,
-                        description=args.description,
-                    )
-                elif args.action == "run":
-                    res = self.run_chain(
-                        name=args.name,
-                        parameters=args.params,
-                        wait=args.wait,
-                    )
-                else:
-                    raise CompassCliError(f"Unsupported chains action: {args.action}")
             elif args.resource == "runs":
                 if args.action == "list":
                     res = self.list_runs(flow_name=args.flow, limit=args.limit)
@@ -566,7 +493,6 @@ class CompassCliRunner(BaseCompassCliClient):
                 elif args.action == "create":
                     res = self.create_schedule(
                         flow_name=args.flow,
-                        chain_name=args.chain,
                         schedule_type=args.type,
                         cron_expr=args.cron,
                         interval_seconds=args.seconds,

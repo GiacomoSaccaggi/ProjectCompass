@@ -82,7 +82,7 @@
       Rather than writing monolithic, hard-to-test scripts inside the Web UI code editor, best practice is to create a <strong>shared, installable Python package</strong> (referred to here as <code>compass_worker_kit</code>) that your worker Pods and external nodes import. This library serves two critical purposes:
     </p>
     <ol>
-      <li><strong>Layer 1 — Pod Execution Runtime (<code>BaseCompassTask</code>)</strong>: Standardizes how every task running on a k0s worker Pod parses master-injected parameters (`FLOW_PARAMS_JSON`, `/workspace/params.json`, `PC_PARAM_*`), reads injected Kubernetes Secrets, emits structured telemetry, and stays 100% compatible with both Kubernetes Flows (`flow.py`) and local Structured Analyses (`structured_analysis_main.py`).</li>
+      <li><strong>Layer 1 — Pod Execution Runtime (<code>BaseCompassTask</code>)</strong>: Standardizes how every task running on a k0s worker Pod parses master-injected parameters (`FLOW_PARAMS_JSON`, `/workspace/params.json`, `PC_PARAM_*`), reads injected Kubernetes Secrets, emits structured telemetry, and stays 100% compatible with both Kubernetes Flows (`flow.py`) and local Structured Analyses (`compass_flow.yaml + Dockerfile`).</li>
       <li><strong>Layer 2 — Master REST API Bridge (<code>CompassMasterClient</code>)</strong>: Allows worker tasks (or standalone worker daemons) to authenticate back to the ProjectCompass Master via Bearer Token (`Authorization: Bearer &lt;token&gt;`) to pull datasets via DuckDB/ConnectorX (`POST /api/query`), trigger downstream Flows or Chains, or register/heartbeat worker nodes.</li>
     </ol>
 
@@ -476,7 +476,7 @@ class BaseCompassTask(ABC):
             return 1
 
     def run_as_structured_analysis(self, inputs: dict[str, Any], output_path: str) -> str:
-        """Backwards-compatible adapter for local structured_analysis_main.py run(inputs, output_path)."""
+        """Backwards-compatible adapter for local compass_flow.yaml + Dockerfile run(inputs, output_path)."""
         merged_inputs = {**self._params, **(inputs or {})}
         self._params = merged_inputs
         summary = self.execute(merged_inputs)
@@ -532,8 +532,8 @@ from compass_worker_kit.tasks.churn_scoring import CustomerChurnScoringTask
 if __name__ == "__main__":
     sys.exit(CustomerChurnScoringTask().run_as_flow())</code></pre>
 
-    <h3 id="structured-analysis-entrypoint">Using the Exact Same Class in a Local Structured Analysis (<code>structured_analysis_main.py</code>)</h3>
-    <pre><code class="language-python"># Analyses/churn-scoring-flow/analysis/structured_analysis_main.py
+    <h3 id="structured-analysis-entrypoint">Using the Exact Same Class in a Local Structured Analysis (<code>compass_flow.yaml + Dockerfile</code>)</h3>
+    <pre><code class="language-python"># Analyses/churn-scoring-flow/analysis/compass_flow.yaml + Dockerfile
 from typing import Any
 from compass_worker_kit.tasks.churn_scoring import CustomerChurnScoringTask
 
@@ -590,7 +590,7 @@ docker save ghcr.io/your-org/compass-worker:0.1.0 | sudo k0s ctr images import -
     <div class="page-pager">
       <a href="kubernetes_console.html" class="pager-link">
         <span class="pager-label">&larr; Previous</span>
-        <span class="pager-title">Kubernetes Console, Flows &amp; Chains</span>
+        <span class="pager-title">Kubernetes Console, Workers &amp; Jobs</span>
       </a>
       <a href="routes.html" class="pager-link" style="text-align: right;">
         <span class="pager-label">Next &rarr;</span>

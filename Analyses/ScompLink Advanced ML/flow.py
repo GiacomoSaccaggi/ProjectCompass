@@ -7,11 +7,22 @@ Features used:
 - Drift Detection: PSI-based distribution drift (train vs test split)
 - Rich HTML Report: KPI cards, summary stats, comparison table, dark mode
 """
+import json
 import os
 import shutil
 
 import pandas as pd
 from scomp_link import CleanStep, DriftDetector, FeatureEngineer, ModelStep, SelectStep, ShapExplainer, TrainStep
+
+
+def _resolve_data_dir() -> str:
+    env_dir = os.environ.get('PC_DATA_DIR', '').strip()
+    if env_dir and os.path.isdir(env_dir):
+        return env_dir
+    local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Saved_data')
+    if os.path.isdir(local_dir):
+        return local_dir
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'Saved_data')
 
 
 def detect_task_type(df, target_col):
@@ -25,19 +36,19 @@ def detect_task_type(df, target_col):
 
 def run(inputs, output_path):
     """Run advanced scomp-link pipeline with v2.x features."""
-    data_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'Saved_data', 'wine_quality.csv')
+    data_path = os.path.join(_resolve_data_dir(), 'wine_quality.csv')
     df = pd.read_csv(data_path)
 
     target_col = inputs.get('target_col', 'quality')
     task_type = inputs.get('task_type', 'auto')
     test_size = float(inputs.get('test_size', '0.2'))
-    use_fe = inputs.get('feature_engineering', 'true') == 'true'
-    use_explain = inputs.get('explainability', 'true') == 'true'
+    use_fe = str(inputs.get('feature_engineering', 'true')).lower() == 'true'
+    use_explain = str(inputs.get('explainability', 'true')).lower() == 'true'
 
     if task_type == 'auto':
         task_type = detect_task_type(df, target_col)
 
-    out_dir = os.path.dirname(output_path)
+    out_dir = os.path.dirname(output_path) or '.'
     os.makedirs(out_dir, exist_ok=True)
 
     # --- Feature Engineering ---
@@ -132,10 +143,25 @@ def run(inputs, output_path):
 
 
 if __name__ == '__main__':
+    default_inputs = {
+        'target_col': 'quality',
+        'task_type': 'auto',
+        'test_size': '0.2',
+        'feature_engineering': 'true',
+        'explainability': 'true',
+    }
+    raw_params = os.environ.get('FLOW_PARAMS_JSON', '').strip()
+    if raw_params:
+        try:
+            parsed = json.loads(raw_params)
+            if isinstance(parsed, dict):
+                default_inputs.update(parsed)
+        except ValueError:
+            pass
+    out_dir = os.environ.get('PC_OUTPUT_DIR', 'output').strip() or 'output'
     result = run(
-        inputs={'target_col': 'quality', 'task_type': 'auto', 'test_size': '0.2',
-                'feature_engineering': 'true', 'explainability': 'true'},
-        output_path='output/output.csv'
+        inputs=default_inputs,
+        output_path=os.path.join(out_dir, 'output.csv'),
     )
     print(f"Model: {result.get('model_type')}")
     print(f"Metrics: {result.get('metrics')}")

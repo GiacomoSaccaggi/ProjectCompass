@@ -164,7 +164,7 @@
           {% for name, link in links.items() %}
             <a href="{{ link }}"><i class="fa fa-link"></i> {{ name }}</a>
           {% endfor %}
-          <a href="/overview"><i class="fa fa-book"></i> Architecture &amp; Overview</a>
+          {% if pc.demo.enabled %}<a href="/overview"><i class="fa fa-book"></i> Architecture &amp; Overview</a>{% endif %}
           <a href="/analysis"><i class="fa fa-folder-open-o"></i> Browse Catalog</a>
         </div>
         <details style="margin-top: 14px; font-size: 0.88rem; color: var(--mariner-text-secondary);">

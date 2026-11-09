@@ -155,7 +155,7 @@ class TestFeatureGate:
             )
 
         hidden_paths = (
-            '/chat', '/workers', '/flows', '/chains', '/pipeline_builder', '/schedules/', '/executions',
+            '/chat', '/workers', '/flows', '/pipeline_builder', '/schedules/', '/executions',
         )
         for hidden_path in hidden_paths:
             assert hidden_path not in sidebar_menu

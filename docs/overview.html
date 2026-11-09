@@ -104,7 +104,7 @@
       </div>
       <div class="feature-box">
         <h4>⚙️ 2. Structured Execution Engine</h4>
-        <p>Turns any Python folder containing <code>structured_analysis_main.py</code> and <code>metadata_automatic_report.yaml</code> into an interactive web form with live SSE execution logs and versioned outputs.</p>
+        <p>Any analysis folder containing <code>compass_flow.yaml</code> and a <code>Dockerfile</code> becomes an executable flow with live SSE execution logs and versioned outputs.</p>
       </div>
       <div class="feature-box">
         <h4>🔗 3. Visual Pipeline Builder</h4>
@@ -128,7 +128,7 @@
       </div>
       <div class="feature-box">
         <h4>☸️ 8. k0s Kubernetes Console</h4>
-        <p>Native orchestration of worker nodes (<code>/workers</code>), isolated <code>batch/v1</code> Pod flows (<code>/flows</code>), linear multi-step chains (<code>/chains</code>), and real-time Pod log streaming (<code>/runs</code>).</p>
+        <p>Worker node management (<code>/workers</code>), isolated <code>batch/v1</code> Pod execution, and real-time Pod log streaming (<code>/runs</code>). Flows are managed directly from the Analysis catalog — any analysis with <code>compass_flow.yaml</code> + <code>Dockerfile</code> is executable.</p>
       </div>
       <div class="feature-box">
         <h4>⏱️ 9. APScheduler &amp; Webhooks</h4>
@@ -157,7 +157,7 @@ flowchart TD
   PC -->|Pipeline Builder and RAGStore| SL
   PC -->|Chat, Embeddings and Rerank| MT
   PC -->|Local CSV and Remote DB SQL| CX
-  PC -->|ConfigMap + Secret + batch/v1 Job| K0S
+  PC -->|ConfigMap or Dockerfile Build + batch/v1 Job| K0S
       </pre>
       <div class="mermaid-caption">
         Figure 1 — ProjectCompass integrates Scomp-Link, Mithril, ConnectorX/DuckDB, and k0s Kubernetes into a single cohesive platform.
@@ -191,7 +191,7 @@ flowchart TD
           </tr>
           <tr>
             <td><strong>k0s &amp; Worker SDK</strong></td>
-            <td>Single-binary Kubernetes distribution running isolated Python <code>batch/v1</code> Jobs and linear chains across distributed worker machines.</td>
+            <td>Single-binary Kubernetes distribution running isolated <code>batch/v1</code> Jobs across distributed worker machines. Flows are defined via <code>compass_flow.yaml</code> + <code>Dockerfile</code> in analysis directories.</td>
             <td><code>utils/k8s_utils.py</code>, <code>blueprints/k8s.py</code>, <code>scripts/k0s_master_setup.sh</code></td>
           </tr>
         </tbody>

@@ -280,7 +280,7 @@ class DefaultsSource(BaseSettingsSource):
                     'upload': '/static/img/upload_analysis.png',
                 },
                 'demo_notice': {
-                    'enabled': True,
+                    'enabled': False,
                     'text': (
                         'DEMO Project Notice: This is a demonstration-only project intended for evaluation purposes. '
                         'Although it may resemble a final product, the creators assume no liability for any errors, '
@@ -302,18 +302,18 @@ class DefaultsSource(BaseSettingsSource):
                 'font_family': '"Raleway", sans-serif',
                 'default_dark_mode': False,
             },
-            'demo': {'enabled': True, 'analyses_dir': None, 'data_dir': None},
+            'demo': {'enabled': False, 'analyses_dir': None, 'data_dir': None},
             'features': {
-                'ai_chat': True,
-                'rag': True,
+                'ai_chat': False,
+                'rag': False,
                 'k8s': True,
-                'pipeline_builder': True,
+                'pipeline_builder': False,
                 'schedules': True,
                 'executions': True,
-                'rawgraphs': True,
-                'query_runner': True,
-                'db_connections': True,
-                'todo': True,
+                'rawgraphs': False,
+                'query_runner': False,
+                'db_connections': False,
+                'todo': False,
             },
             'connections': [],
             'workers': {

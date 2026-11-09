@@ -88,7 +88,8 @@ def create_app(config_class: type = Config) -> Flask:
 
     @app.context_processor
     def inject_pc_settings() -> dict[str, PublicAppSettings]:
-        return {'pc': template_settings}
+        active = app.config.get('PC_SETTINGS')
+        return {'pc': active.for_templates() if hasattr(active, 'for_templates') else template_settings}
 
     FeatureGate(settings.features).install(app)
 

@@ -18,24 +18,14 @@
     <!-- Left column: Create Schedule Form -->
     <div class="w3-col l4 m12 w3-margin-bottom">
       <div class="w3-card w3-white w3-padding">
-        <h6><b><i class="fa fa-plus-circle"></i> New Flow / Chain Schedule</b></h6>
+        <h6><b><i class="fa fa-plus-circle"></i> New Flow Schedule</b></h6>
         <form method="POST" action="/schedules/create">
           <div class="w3-margin-bottom">
             <label class="w3-small"><b>Flow</b></label>
             <select class="w3-select w3-border" name="flow_name">
-              <option value="">-- Select a Flow (or choose a Chain below) --</option>
+              <option value="">-- Select a Flow --</option>
               {% for fl in flows or [] %}
               <option value="{{ fl.name }}">{{ fl.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="w3-margin-bottom">
-            <label class="w3-small"><b>Or Flow Chain (<code>A -&gt; B -&gt; C</code>)</b></label>
-            <select class="w3-select w3-border" name="chain_name">
-              <option value="">-- Optional: Select a Flow Chain --</option>
-              {% for ch in chains or [] %}
-              <option value="{{ ch.name }}">{{ ch.name }} ({{ ch.flow_names_arrow }})</option>
               {% endfor %}
             </select>
           </div>

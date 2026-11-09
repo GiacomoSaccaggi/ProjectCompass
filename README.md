@@ -32,8 +32,8 @@ ProjectCompass is a Python-based tool for teams that produce data analyses. It s
 | 🤖 **AI Chat** | Ask questions about your data in natural language (Mithril — multi-model: Gemini, OpenAI, Anthropic, Groq, local GGUF) |
 | 🧠 **RAG per Analysis** | Per-project retrieval-augmented generation with code-aware chunking, hybrid search (dense + BM25), LLM reranking, guardrails, and source provenance |
 | 🔗 **REST API** | JSON endpoints with Bearer token authentication for external integrations |
-| ☸️ **Kubernetes Console** | Read-only workers, Python flows, sequential chains, Job runs and logs |
-| 💻 **External CLI** | Control flows, chains, runs and schedules using HTTP Basic or Bearer authentication |
+| ☸️ **Kubernetes Console** | Read-only workers, Dockerfile-based K8s Job execution, runs and logs — flows live in the catalog |
+| 💻 **External CLI** | Control runs and schedules using HTTP Basic or Bearer authentication |
 | 👥 **Multi-User RBAC** | Admin, editor, viewer roles with user management |
 | 💬 **Comments** | Real-time HTMX comments on analyses for team collaboration |
 | 🔔 **Webhooks** | HMAC-SHA256 signed payloads for external system integration |
@@ -127,25 +127,22 @@ ProjectCompass is the orchestrator and UI: structured analyses and Flow steps ru
 
 ### Docker k0s workers
 
-The Docker provider requires Docker CLI access and the host Docker socket. The `docker-compose.k0s.yml` overlay mounts `/var/run/docker.sock` and a read-only worker join token. Generate the token on the k0s controller and start the overlay:
+The unified `docker-compose.yml` stack includes a local Docker registry (`registry:2` on port 5050), a k0s control-plane + worker node, and MinIO for artifact storage, and mounts `/var/run/docker.sock` and a read-only worker join token. Run the bootstrap script or start the stack directly:
 
 ```bash
-mkdir -p data
-sudo k0s token create --role=worker > ./data/k0s-worker.token
-chmod 600 ./data/k0s-worker.token
-K0S_WORKER_TOKEN_FILE=./data/k0s-worker.token \
-  docker compose -f docker-compose.yml -f docker-compose.k0s.yml up -d
+bash scripts/k0s_setup.sh
+docker compose up -d
 ```
 
 The overlay passes the token as `PC_K0S_TOKEN_FILE`. Alternatively, configure `workers.docker.join_token_file` or `PC_K0S_JOIN_TOKEN`; `workers.docker.controller_container` can be used to create a token with `docker exec` when the controller is a container. The configured token must identify an API endpoint reachable from the worker container network.
 
-Docker worker settings live under `workers` in `projectcompass.yaml` (see [`projectcompass.example.yaml`](projectcompass.example.yaml)). `workers.docker.network` defaults to `bridge`, which permits multiple managed workers; `host` networking is available but limited to one managed worker. Workers use `workers.docker.ready_timeout_seconds` (default `120`) to wait for Kubernetes readiness. `workers.auto_provision` enables provisioning and `workers.auto_cleanup` releases managed Docker or external workers only when no Flow or FlowChain is active. The old `workers.docker.auto_cleanup` key remains a compatibility alias.
+Docker worker settings live under `workers` in `projectcompass.yaml` (see [`projectcompass.example.yaml`](projectcompass.example.yaml)). `workers.docker.network` defaults to `bridge`, which permits multiple managed workers; `host` networking is available but limited to one managed worker. Workers use `workers.docker.ready_timeout_seconds` (default `120`) to wait for Kubernetes readiness. `workers.auto_provision` enables provisioning and `workers.auto_cleanup` releases managed Docker or external workers only when no Flow is active. The old `workers.docker.auto_cleanup` key remains a compatibility alias.
 
 For infrastructure-managed workers, set `workers.provider: external` and configure `ensure_script`, `release_script`, and optionally `status_script`. Scripts receive worker count or node names through `PC_WORKER_COUNT` and `PC_WORKER_NODES`; their output is parsed as JSON or newline-delimited node names. Compass does not include provider-specific infrastructure integrations.
 
 ### Connectors and data/artifact limits
 
-Pipeline Builder connectors are configured in the top-level `connectors:` list. Each connector defines a `name`, `description`, container `image`, `builtin` flag, and typed `parameters`; a `select` parameter can use `source: connections` to populate saved connection names. Every saved step runs as its own Flow in a sequential FlowChain. For example:
+Pipeline Builder connectors are configured in the top-level `connectors:` list. Each connector defines a `name`, `description`, container `image`, `builtin` flag, and typed `parameters`; a `select` parameter can use `source: connections` to populate saved connection names. Every saved step runs as an executable flow from the catalog. For example:
 
 ```yaml
 connectors:
@@ -184,11 +181,11 @@ ProjectCompass/
 │   ├── data.py             # Query runner, data upload, RAWGraphs, lineage
 │   ├── agent.py            # LLM chat with sandboxed execution (Mithril backend)
 │   ├── rag.py              # RAG index build, status, and management
-│   ├── k8s.py              # Worker, flow, Job and chain endpoints
+│   ├── k8s.py              # Worker, flow and Job endpoints
 │   └── api.py              # REST API (JSON endpoints)
 ├── utils/
 │   ├── analysis_utils.py   # Analysis, flow and version management
-│   ├── k8s_utils.py        # Kubernetes client, workers, Jobs and chains
+│   ├── k8s_utils.py        # Kubernetes client, workers and Jobs
 │   ├── git_utils.py        # Optional analyses synchronization
 │   ├── cli_utils.py        # External HTTP client and CLI commands
 │   ├── data_utils.py       # DuckDB SQL, file operations
@@ -210,7 +207,7 @@ ProjectCompass/
 ├── tests/                  # pytest test suite
 ├── k8s/                    # Kubernetes deployment and RBAC manifests
 ├── scripts/                # External CLI and k0s setup
-├── Analyses/               # Analysis storage (file-based)
+├── Analyses/               # Analysis storage (file-based, flows have compass_flow.yaml + Dockerfile)
 ├── Saved_data/             # Uploaded datasets
 ├── Saved_queries/          # Saved SQL queries
 ├── projectcompass.db       # SQLite database (users, executions, comments, audit log)
@@ -355,10 +352,14 @@ Analyses/My Analysis/
 ├── metadata.yaml                          # Catalog metadata
 ├── readme.md                              # Description
 ├── output_versions.yaml                   # Version tracking
+├── compass_flow.yaml                      # Flow config (makes it executable on k0s)
+├── Dockerfile                             # Container build (makes it executable on k0s)
 └── analysis/
-    ├── metadata_automatic_report.yaml     # Form definition (inputs)
-    └── structured_analysis_main.py        # Execution script (run function)
+    ├── compass_flow.yaml                  # Flow configuration (inputs)
+    └── Dockerfile                          # Build recipe
 ```
+
+An analysis becomes an executable **Flow** when it contains both `compass_flow.yaml` and a `Dockerfile`. These appear in the catalog with a ⚡ Flow badge and an "Edit Code" button. 
 
 Schedule options: `Every day at HH:MM`, `Every hour`, `Every Monday`, `Every Friday`, `Custom cron expression`.
 
@@ -366,16 +367,16 @@ Jobs persist across restarts via SQLite.
 
 ---
 
-## k0s Cluster Console: Workers, Flows, Runs & Schedules
+## k0s Cluster Console: Workers, Runs & Schedules
 
-The console monitors workers without managing machines, runs generic Python flows as Kubernetes Jobs, records runs and collected logs, executes linear flow chains and schedules flows or chains. It also supports flow versions, resource defaults, existing Secret references, PVC-backed state and optional Git synchronization.
+The console monitors workers without managing machines and records runs and collected logs. Flows are managed from the Analysis catalog — an analysis that contains both `compass_flow.yaml` and a `Dockerfile` is an executable flow. Execution uses a Dockerfile-based build pipeline: the image is built locally, pushed to the k0s compose overlay's local Docker registry (`registry:2` on port 5050), and launched as an isolated Kubernetes Job. A legacy ConfigMap-injection mode is retained for backward compatibility.
 
 - [Kubernetes console operations and deployment](docs/kubernetes_console.html): workflows, security, persistence, configuration, limitations and troubleshooting.
 - [Building the custom Python worker library (`compass_worker_kit`)](docs/worker_library.html): Dual-Layer `BaseCompassTask` Pod runtime + `CompassMasterClient` REST SDK.
 - [External API and CLI reference](docs/routes.html#external-cli-reference): authentication, endpoint contracts, examples and command syntax.
 - [k0s setup and worker connection](docs/k0s_setup.html): controller preparation, networking and standard worker commands.
 
-Existing logs persist when the database is stored durably, but in-process watchers and chains do not automatically resume after a process restart. The scheduler lock is not a distributed failover mechanism. Review the linked guides before production deployment.
+Existing logs persist when the database is stored durably, but in-process watchers do not automatically resume after a process restart. The scheduler lock is not a distributed failover mechanism. Review the linked guides before production deployment.
 
 ---
 

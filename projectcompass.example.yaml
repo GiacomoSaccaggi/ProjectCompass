@@ -15,7 +15,7 @@ branding:
     analysis: /static/img/background2.PNG
     upload: /static/img/upload_analysis.png
   demo_notice:
-    enabled: true
+    enabled: false
     text: "DEMO Project Notice: This is a demonstration-only project intended for evaluation purposes. Although it may resemble a final product, the creators assume no liability for any errors, malfunctions, or damages resulting from its use."
   footer:
     enabled: true
@@ -32,21 +32,21 @@ theme:
   default_dark_mode: false
 
 demo:
-  enabled: true
+  enabled: false
   analyses_dir: null
   data_dir: null
 
 features:
-  ai_chat: true
-  rag: true
+  ai_chat: false
+  rag: false
   k8s: true
-  pipeline_builder: true
+  pipeline_builder: false
   schedules: true
   executions: true
-  rawgraphs: true
-  query_runner: true
-  db_connections: true
-  todo: true
+  rawgraphs: false
+  query_runner: false
+  db_connections: false
+  todo: false
 
 # Connection lists are YAML-only. Passwords and custom URIs can use
 # ${ENV_VAR} references and are encrypted when synchronized into the database.

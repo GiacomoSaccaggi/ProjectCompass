@@ -1,28 +1,28 @@
 product:
-  - Companies specific processes
+  - Company processes
   - Research project
   - Packages or libraries
   - Runnable process
 countries:
-  - Italy
+  - Global
   - US
-  - France
-  - Canada
-  - Germany
-  - India
+  - EU
+  - APAC
 input type:
   - string
   - double
   - date
   - integer
 output type:
-  - MDL table load data
-  - MDL table load data for dashboard in Tableau
+  - Database table
+  - Database table for dashboard
   - Physical extraction
-  - Physical extraction for dashboard in Tableau
+  - Physical extraction for dashboard
   - Static report
-  - Static report and physical extraction for dashboard in Tableau
-  - Static report and MDL table load data for dashboard in Tableau
+  - Static report and physical extraction for dashboard
+  - Static report and database table for dashboard
   - Static report and physical extraction send via mail
   - Static report send via mail
+  - CSV export
+  - HTML report
   - Others

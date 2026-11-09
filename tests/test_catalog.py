@@ -258,8 +258,8 @@ def test_save_pipeline_full_flow(client, app):
             webapp = app.config['WEBAPP']
             analysis_dir = f"{webapp.extract_main_folder()}/{name}"
             assert os.path.isdir(analysis_dir)
-            assert os.path.isfile(f"{analysis_dir}/analysis/structured_analysis_main.py")
-            assert os.path.isfile(f"{analysis_dir}/analysis/metadata_automatic_report.yaml")
+            assert os.path.isfile(f"{analysis_dir}/compass_flow.yaml")
+            assert os.path.isfile(f"{analysis_dir}/Dockerfile")
             assert os.path.isfile(f"{analysis_dir}/metadata.yaml")
             assert os.path.isfile(f"{analysis_dir}/readme.md")
     finally:
@@ -272,7 +272,7 @@ def test_save_pipeline_full_flow(client, app):
                     target_dir = os.path.join(main_folder, entry)
                     if os.path.isdir(target_dir):
                         shutil.rmtree(target_dir)
-            webapp.delete_chain(name)
+
             from models import FlowVersion, PipelineVersion, db
             PipelineVersion.query.filter_by(analysis_name=name).delete()
             FlowVersion.query.filter(FlowVersion.flow_name.like(f"{name}%")).delete(synchronize_session=False)
@@ -497,7 +497,7 @@ def test_restore_version(client, app):
         webapp = app.config['WEBAPP']
         analysis_dir = f"{webapp.extract_main_folder()}/{name}"
         os.makedirs(f"{analysis_dir}/analysis", exist_ok=True)
-        with open(f"{analysis_dir}/analysis/structured_analysis_main.py", 'w') as f:
+        with open(f"{analysis_dir}/analysis/pipeline_main.py", 'w') as f:
             f.write('# Original script')
 
         # Create a version record
@@ -520,7 +520,7 @@ def test_restore_version(client, app):
         # Verify script was restored
         with app.app_context():
             webapp = app.config['WEBAPP']
-            with open(f"{webapp.extract_main_folder()}/{name}/analysis/structured_analysis_main.py") as f:
+            with open(f"{webapp.extract_main_folder()}/{name}/analysis/pipeline_main.py") as f:
                 content = f.read()
             assert 'Restored script from version 1' in content
     finally:
@@ -579,19 +579,20 @@ def test_run_investigation_creates_k8s_flow_and_extracts_artifacts(client, app, 
         'links: {}\n',
         encoding='utf-8',
     )
-    (sa_dir / 'analysis' / 'metadata_automatic_report.yaml').write_text(
-        'title: Sales Summary K8s\n'
+    (sa_dir / 'compass_flow.yaml').write_text(
+        'description: Sales Summary K8s\n'
         'inputs:\n'
         '  region:\n'
         '    type: text\n'
         '    default: "all"\n',
         encoding='utf-8',
     )
-    (sa_dir / 'analysis' / 'structured_analysis_main.py').write_text(
+    (sa_dir / 'Dockerfile').write_text('FROM python:3.12-slim\nENTRYPOINT ["python", "flow.py"]\n', encoding='utf-8')
+    (sa_dir / 'flow.py').write_text(
         'import os\n'
         'import pandas as pd\n'
         'def run(inputs, output_path):\n'
-        '    df = pd.read_csv(os.path.join(os.path.dirname(__file__), "..", "..", "..", "Saved_data", "sales_data.csv"))\n'
+        '    df = pd.read_csv(os.path.join(os.path.dirname(__file__), "..", "..", "Saved_data", "sales_data.csv"))\n'
         '    os.makedirs(os.path.dirname(output_path), exist_ok=True)\n'
         '    df.head(2).to_csv(output_path, index=False)\n'
         '    return {"rows": 2, "region": inputs.get("region", "all")}\n',
@@ -632,6 +633,7 @@ def test_run_investigation_creates_k8s_flow_and_extracts_artifacts(client, app, 
         return {}
 
     with (
+        patch.object(webapp, '_build_and_push_image', return_value='registry:5050/pc/sales-summary-k8s:1'),
         patch.object(webapp, '_k8s_post', side_effect=fake_post),
         patch.object(webapp, '_k8s_get', side_effect=fake_get),
         patch.object(webapp, '_k8s_get_text', return_value=pod_log_output),
@@ -642,12 +644,6 @@ def test_run_investigation_creates_k8s_flow_and_extracts_artifacts(client, app, 
             data={'analysis_name': sa_name, 'region': 'North'},
         )
         assert resp.status_code == 302
-        assert '/outputs/?name=Sales512Summary512K8s' in resp.headers['Location']
-
-    # Verify Flow wrapper and ConfigMap with bundled Saved_data were created
-    assert (sa_dir / 'flow.py').is_file()
-    cm_manifest = next(m for p, m in posted_manifests if p.endswith('/configmaps'))
-    assert 'saved_data__sales_data.csv' in cm_manifest['data']
 
     # Verify decoded artifacts written to physical_output/main/ and timestamped copies in physical_output/
     assert (sa_dir / 'physical_output' / 'main' / 'output.csv').read_bytes() == csv_bytes
@@ -682,16 +678,14 @@ def test_catalog_run_returns_failed_run_when_worker_provisioning_fails(
     analyses_dir = tmp_path / 'Analyses'
     analysis_dir = analyses_dir / 'Provision Failure Analysis'
     (analysis_dir / 'analysis').mkdir(parents=True)
-    (analysis_dir / 'analysis' / 'structured_analysis_main.py').write_text(
-        'def run(inputs, output_path):\n    return {}\n',
-        encoding='utf-8',
-    )
+    (analysis_dir / 'compass_flow.yaml').write_text('description: test\ninputs: {}\n', encoding='utf-8')
+    (analysis_dir / 'Dockerfile').write_text('FROM python:3.12-slim\nENTRYPOINT ["python", "flow.py"]\n', encoding='utf-8')
     monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
     webapp.save_flow(name='Provision Failure Analysis', code='print("not run")')
     provider = webapp.worker_provider
 
     with (
-        patch.object(webapp, 'ensure_flow_from_structured_analysis', return_value={}),
+        patch.object(webapp, '_build_and_push_image', return_value='registry:5050/pc/test:1'),
         patch.object(webapp, '_should_manage_workers', return_value=True),
         patch.object(webapp, '_count_ready_workers', return_value=0),
         patch.object(
@@ -736,8 +730,9 @@ def test_execute_stream_and_abort_via_k8s_job(client, app, tmp_path, monkeypatch
     (sa_dir / 'analysis').mkdir(parents=True)
     (sa_dir / 'physical_output' / 'main').mkdir(parents=True)
     (sa_dir / 'metadata.yaml').write_text('title: Streamed Analysis\nproduct: ML\n', encoding='utf-8')
-    (sa_dir / 'analysis' / 'metadata_automatic_report.yaml').write_text('title: Streamed Analysis\ninputs: {}\n', encoding='utf-8')
-    (sa_dir / 'analysis' / 'structured_analysis_main.py').write_text(
+    (sa_dir / 'compass_flow.yaml').write_text('description: Streamed Analysis\ninputs: {}\n', encoding='utf-8')
+    (sa_dir / 'Dockerfile').write_text('FROM python:3.12-slim\nENTRYPOINT ["python", "flow.py"]\n', encoding='utf-8')
+    (sa_dir / 'analysis' / 'pipeline_main.py').write_text(
         'def run(inputs, output_path):\n    print("hello from k8s pod")\n    return {}\n',
         encoding='utf-8',
     )
@@ -759,6 +754,7 @@ def test_execute_stream_and_abort_via_k8s_job(client, app, tmp_path, monkeypatch
         return {}
 
     with (
+        patch.object(webapp, '_build_and_push_image', return_value='registry:5050/pc/test:1'),
         patch.object(webapp, '_k8s_post', side_effect=lambda p, m: m),
         patch.object(webapp, '_k8s_get', side_effect=fake_get_succeeded),
         patch.object(webapp, '_k8s_get_text', return_value='hello from k8s pod\n'),
@@ -802,8 +798,8 @@ def test_execute_stream_and_abort_via_k8s_job(client, app, tmp_path, monkeypatch
         db.session.commit()
 
 
-def test_pipeline_builder_renders_connectors_and_compiles_flow_chain(client, app, tmp_path, monkeypatch):
-    """Verify /pipeline_builder renders connectors and /save_pipeline/ compiles per-step Flows and a FlowChain."""
+def test_pipeline_builder_renders_connectors_and_compiles_steps(client, app, tmp_path, monkeypatch):
+    """Verify /pipeline_builder renders connectors and /save_pipeline/ compiles per-step Flows."""
     from dataclasses import replace
     from unittest.mock import patch
     from models import DbConnection, Execution, db
@@ -884,7 +880,6 @@ def test_pipeline_builder_renders_connectors_and_compiles_flow_chain(client, app
         save_data = save_resp.get_json()
         assert save_data['success'] is True
         assert save_data['status'] == 'ok'
-        assert save_data['chain_name'] == pipeline_name
         expected_steps = [
             f'{pipeline_name}__step_1_trino_etl',
             f'{pipeline_name}__step_2_python_script',
@@ -904,59 +899,20 @@ def test_pipeline_builder_renders_connectors_and_compiles_flow_chain(client, app
             assert flow2['image'] == 'python:3.12-slim'
             assert flow2['parameters']['code'] == 'print("processing events")'
 
-            chain_info = webapp.read_chain(pipeline_name)
-            assert chain_info is not None
-            assert chain_info['flow_names'] == expected_steps
+        # 4. Verify step Flows were compiled (no chain is created)
+        with app.app_context():
+            flow1 = webapp.read_flow(expected_steps[0])
+            assert flow1 is not None
 
-        # 4. Run the compiled FlowChain and verify each step submits a K8s Job with its connector image
-        posted_jobs = []
-
-        def fake_post(path, payload):
-            if path.endswith('/jobs'):
-                posted_jobs.append(payload)
-            return payload
-
-        def fake_get(path, params=None):
-            if path.endswith('/pods'):
-                return {
-                    'items': [{
-                        'metadata': {'name': 'pc-step-pod'},
-                        'spec': {'nodeName': 'worker-1'},
-                        'status': {
-                            'phase': 'Succeeded',
-                            'containerStatuses': [{'state': {'terminated': {'exitCode': 0, 'reason': 'Completed'}}}],
-                        },
-                    }]
-                }
-            if '/jobs/' in path:
-                return {'status': {'succeeded': 1, 'failed': 0}}
-            return {}
-
-        with (
-            patch.object(webapp, '_k8s_post', side_effect=fake_post),
-            patch.object(webapp, '_k8s_get', side_effect=fake_get),
-            patch.object(webapp, '_k8s_get_text', return_value='step completed\n'),
-            patch.object(webapp, '_k8s_delete', return_value={}),
-        ):
-            run_resp = client.post(f'/chains/{pipeline_name}/run', json={'wait': True})
-            assert run_resp.status_code == 200
-            run_data = run_resp.get_json()
-            assert run_data['status'] == 'success'
-            assert len(posted_jobs) == 2
-            job1_container = posted_jobs[0]['spec']['template']['spec']['containers'][0]
-            job2_container = posted_jobs[1]['spec']['template']['spec']['containers'][0]
-            assert job1_container['image'] == 'custom-trino-runner:latest'
-            assert job2_container['image'] == 'python:3.12-slim'
     finally:
         with app.app_context():
             DbConnection.query.filter_by(name='warehouse_trino').delete()
             Execution.query.filter(Execution.analysis_name.like('TrinoToPythonPipeline%')).delete(synchronize_session=False)
-            webapp.delete_chain('TrinoToPythonPipeline')
             db.session.commit()
 
 
 def test_static_catalog_entries_and_no_in_process_execution_in_catalog(client, app, tmp_path, monkeypatch):
-    """Verify static catalog entries without structured_analysis_main.py remain structured_analysis == 'n' and catalog.py has no local execution."""
+    """Verify static catalog entries without compass_flow.yaml + Dockerfile remain structured_analysis == 'n' and catalog.py has no local execution."""
     from pathlib import Path
 
     webapp = app.config['WEBAPP']
@@ -1020,3 +976,50 @@ def test_execution_template_targets_resolve_to_registered_routes(app):
     for path, method in template_targets:
         endpoint, _ = adapter.match(path, method=method)
         assert endpoint
+
+
+def test_core_only_template_gating_and_pipeline_main_execution(client, app, tmp_path, monkeypatch):
+    """Verify core-only template gating hides disabled links and generated pipeline_main.py executes via __main__."""
+    import json
+    import os
+    import subprocess
+    import sys
+
+    from blueprints.catalog import _generate_pipeline_script
+    from utils.app_settings import DefaultsSource, SettingsLoader
+
+    # 1. Verify Pipeline Builder generated script runs via __main__ with FLOW_PARAMS_JSON and PC_OUTPUT_DIR
+    data_dir = tmp_path / 'Saved_data'
+    data_dir.mkdir(parents=True, exist_ok=True)
+    (data_dir / 'employees.csv').write_text('name,salary\nAlice,100\nBob,120\n', encoding='utf-8')
+    out_dir = tmp_path / 'pc_output'
+    script_path = tmp_path / 'pipeline_main.py'
+    script_code = _generate_pipeline_script(
+        [{'type': 'load_data', 'config': {'dataset': 'employees', 'limit': '0'}}],
+        str(data_dir),
+    )
+    script_path.write_text(script_code, encoding='utf-8')
+    env = os.environ.copy()
+    env['PC_DATA_DIR'] = str(data_dir)
+    env['PC_OUTPUT_DIR'] = str(out_dir)
+    env['FLOW_PARAMS_JSON'] = json.dumps({'target_col': 'salary'})
+    proc = subprocess.run([sys.executable, str(script_path)], env=env, capture_output=True, text=True, timeout=30)
+    assert proc.returncode == 0, proc.stderr
+    assert (out_dir / 'output.csv').is_file()
+
+    # 2. Verify core-only settings hide /overview, /chat/analysis, and /rag/status/ in templates
+    webapp = app.config['WEBAPP']
+    original_settings = app.config['PC_SETTINGS']
+    core_settings = SettingsLoader((DefaultsSource(),)).load()
+    monkeypatch.setitem(app.config, 'PC_SETTINGS', core_settings)
+    webapp.apply_settings(core_settings.for_templates())
+    try:
+        dash_html = client.get('/').data.decode('utf-8')
+        assert '/overview' not in dash_html
+
+        catalog_html = client.get('/analysis').data.decode('utf-8')
+        assert '/chat/analysis' not in catalog_html
+        assert '/rag/status/' not in catalog_html
+        assert '/overview' not in catalog_html
+    finally:
+        webapp.apply_settings(original_settings.for_templates())

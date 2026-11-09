@@ -87,7 +87,7 @@
     <div class="callout callout-captain">
       <div class="callout-title">🧭 Captain's Log — Dual HTML / JSON Endpoints</div>
       <p>
-        Operational routes such as <code>/workers</code>, <code>/flows</code>, <code>/chains</code>, <code>/runs</code>, and <code>/schedules/</code> render HTMX/Jinja2 HTML when visited in a browser, and automatically return structured JSON when the client sends <code>Accept: application/json</code> or <code>Content-Type: application/json</code>.
+        Operational routes such as <code>/workers</code>, <code>/runs</code>, and <code>/schedules/</code> render HTMX/Jinja2 HTML when visited in a browser, and automatically return structured JSON when the client sends <code>Accept: application/json</code> or <code>Content-Type: application/json</code>. The <code>/flows</code> route now redirects to <code>/analysis</code>; the flow editor at <code>/flows/&lt;name&gt;</code> is still accessible from catalog links.
       </p>
     </div>
 
@@ -130,12 +130,12 @@
           <tr>
             <td><span class="method method-get">GET</span></td>
             <td><code>/flows</code></td>
-            <td>Lists all reusable Python Flows stored under `Analyses/` (`is_flow=True`).</td>
+            <td>Redirects to <code>/analysis</code>. Flows are now managed from the unified Analysis catalog — analyses with <code>compass_flow.yaml</code> + <code>Dockerfile</code> appear with a ⚡ Flow badge.</td>
           </tr>
           <tr>
             <td><span class="method method-get">GET</span></td>
             <td><code>/flows/&lt;name&gt;</code></td>
-            <td>Returns flow metadata, `flow.py` source code, default `parameters`, `pip_requirements`, `secret_refs`, `image`, and version history.</td>
+            <td>Flow editor accessible from catalog links. Returns flow metadata, source code, default `parameters`, `pip_requirements`, `secret_refs`, `image`, and version history.</td>
           </tr>
           <tr>
             <td><span class="method method-post">POST</span></td>
@@ -145,22 +145,7 @@
           <tr>
             <td><span class="method method-post">POST</span></td>
             <td><code>/flows/&lt;name&gt;/run</code></td>
-            <td>Dispatches an isolated `batch/v1` Kubernetes Job (`pc-flow-job-&lt;run_id&gt;`). Accepts `{"parameters": {...}, "secrets": {...}, "wait": false}` and returns `{"run_id": 42, "status": "running", "job_name": "..."}`.</td>
-          </tr>
-          <tr>
-            <td><span class="method method-get">GET</span></td>
-            <td><code>/chains</code></td>
-            <td>Lists all linear Flow Chains (`FlowChain`).</td>
-          </tr>
-          <tr>
-            <td><span class="method method-post">POST</span></td>
-            <td><code>/chains/save</code></td>
-            <td>Creates or updates a sequential Flow Chain (`{"name": "daily-ml", "flow_names": ["ingest", "train", "score"]}`).</td>
-          </tr>
-          <tr>
-            <td><span class="method method-post">POST</span></td>
-            <td><code>/chains/&lt;name&gt;/run</code></td>
-            <td>Starts sequential execution of all flows in the chain (`{"parameters": {...}, "wait": false}`).</td>
+            <td>Dispatches an isolated `batch/v1` Kubernetes Job. For Dockerfile-based flows, the image is built and pushed to the local registry before launching. Accepts `{"parameters": {...}, "secrets": {...}, "wait": false}` and returns `{"run_id": 42, "status": "running", "job_name": "..."}`.</td>
           </tr>
           <tr>
             <td><span class="method method-get">GET</span></td>

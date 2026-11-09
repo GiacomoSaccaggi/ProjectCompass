@@ -1,0 +1,42 @@
+# Demo configuration — enables all features and sample database connections.
+# Mounted by docker-compose.demo.yml via PC_CONFIG_FILE.
+
+demo:
+  enabled: true
+
+branding:
+  demo_notice:
+    enabled: true
+
+features:
+  ai_chat: true
+  rag: true
+  pipeline_builder: true
+  rawgraphs: true
+  query_runner: true
+  db_connections: true
+  todo: true
+
+connections:
+  - name: "Demo PostgreSQL (Store)"
+    type: postgres
+    host: demo-postgres
+    port: 5432
+    database: demo_store
+    username: demo
+    password: demo
+
+  - name: "Demo MySQL (HR)"
+    type: mysql
+    host: demo-mysql
+    port: 3306
+    database: demo_hr
+    username: demo
+    password: demo
+
+  - name: "Demo ClickHouse (Analytics)"
+    type: clickhouse
+    host: demo-clickhouse
+    port: 9000
+    database: demo_analytics
+    username: default

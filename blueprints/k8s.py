@@ -27,7 +27,7 @@ from flask import (
     url_for,
 )
 
-from models import ChainExecution, Execution, db, log_action
+from models import Execution, db, log_action
 
 k8s_bp = Blueprint("k8s", __name__)
 
@@ -204,12 +204,12 @@ def _render_flows_view(
 
 @k8s_bp.route("/flows", methods=["GET"])
 def flows_page() -> Response | str:
-    """Display the Flows list and code editor or return JSON list of flows."""
+    """Redirect to the unified analysis catalog or return JSON list of flows."""
     if _wants_json():
         webapp = current_app.config["WEBAPP"]
         flows = [_serialize_flow(f) for f in webapp.list_flows()]
         return jsonify({"flows": flows})
-    return _render_flows_view(selected_name=request.args.get("name"))
+    return redirect("/analysis")
 
 
 @k8s_bp.route("/flows/<name>", methods=["GET"])
@@ -608,7 +608,7 @@ def run_abort_route(run_id: int) -> Response | tuple[Response, int]:
 
 @k8s_bp.route("/schedules/create", methods=["POST"])
 def schedule_create_route() -> Response | tuple[Response, int]:
-    """Create a cron or interval schedule for a Flow or FlowChain backed by APScheduler and K8s Jobs."""
+    """Create a cron or interval schedule for a Flow backed by APScheduler and K8s Jobs."""
     denied = _check_write_permission()
     if denied is not None:
         return denied
@@ -622,7 +622,6 @@ def schedule_create_route() -> Response | tuple[Response, int]:
     scheduler = current_app.config["SCHEDULER"]
     payload = request.get_json(silent=True) if request.is_json else None
 
-    chain_name = str((payload.get("chain_name") if payload else request.form.get("chain_name")) or "").strip()
     flow_name = str(
         (
             (payload.get("flow_name") or payload.get("analysis_name"))
@@ -632,16 +631,10 @@ def schedule_create_route() -> Response | tuple[Response, int]:
         or ""
     ).strip()
 
-    if chain_name:
-        if webapp.read_chain(chain_name) is None:
-            if _wants_json():
-                return jsonify({"error": f"Flow chain '{chain_name}' not found."}), 404
-            return Response(f"Flow chain '{chain_name}' not found.", status=404)
-    else:
-        if not flow_name or webapp.read_flow(flow_name) is None:
-            if _wants_json():
-                return jsonify({"error": f"Flow '{flow_name}' not found."}), 404
-            return Response(f"Flow '{flow_name}' not found.", status=404)
+    if not flow_name or webapp.read_flow(flow_name) is None:
+        if _wants_json():
+            return jsonify({"error": f"Flow '{flow_name}' not found."}), 404
+        return Response(f"Flow '{flow_name}' not found.", status=404)
 
     schedule_type = str(
         (payload.get("schedule_type") if payload else request.form.get("schedule_type")) or "cron"
@@ -678,22 +671,19 @@ def schedule_create_route() -> Response | tuple[Response, int]:
                 return jsonify({"error": f"Invalid cron expression '{cron_expr}': {exc}"}), 400
             return Response(f"Invalid cron expression '{cron_expr}': {exc}", status=400)
 
-    target_label = f"Chain: {chain_name}" if chain_name else flow_name
-    default_job_prefix = f"chain_{chain_name}" if chain_name else f"flow_{flow_name}"
     raw_job_id = payload.get("job_id") if payload else request.form.get("job_id")
-    job_id = str(raw_job_id or f"{default_job_prefix}_{int(time.time())}").strip()
+    job_id = str(raw_job_id or f"flow_{flow_name}_{int(time.time())}").strip()
     scheduler.add_job(
         id=job_id,
         func=execute_scheduled_flow,
         trigger=trigger,
         kwargs={
-            "name": None if chain_name else flow_name,
-            "chain_name": chain_name or None,
+            "name": flow_name,
             "parameters": params,
             "pip_requirements": pip_reqs,
             "image": image,
         },
-        name=f"{target_label} ({schedule_type})",
+        name=f"{flow_name} ({schedule_type})",
         coalesce=True,
         max_instances=1,
         misfire_grace_time=60,
@@ -713,239 +703,19 @@ def schedule_create_route() -> Response | tuple[Response, int]:
         "create_schedule",
         "schedule",
         job_id,
-        details={"flow": flow_name or None, "chain": chain_name or None, "type": schedule_type},
+        details={"flow": flow_name, "type": schedule_type},
     )
     if _wants_json():
         return jsonify(
             {
                 "job_id": job_id,
-                "name": f"{target_label} ({schedule_type})",
+                "name": f"{flow_name} ({schedule_type})",
                 "schedule_type": schedule_type,
-                "flow_name": flow_name or None,
-                "chain_name": chain_name or None,
+                "flow_name": flow_name,
                 "state": "paused" if is_paused else "active",
             }
         )
     return redirect("/schedules/")
-
-
-def _render_chains_view(
-    selected_chain_name: str | None = None,
-    chain_run: ChainExecution | None = None,
-    message: str | None = None,
-    error: str | None = None,
-) -> str:
-    """Render the FlowChains management and execution detail page."""
-    webapp = current_app.config["WEBAPP"]
-    html_part = webapp.substitute_html(
-        port=webapp.constants.get("port", 5000),
-        project_folder=webapp.project_folder,
-    )
-    chains = webapp.list_chains()
-    flows = webapp.list_flows()
-    selected_chain: dict[str, Any] | None = None
-    if selected_chain_name:
-        selected_chain = webapp.read_chain(selected_chain_name)
-    elif chains and not request.args.get("new"):
-        selected_chain = chains[0]
-
-    recent_chain_runs = ChainExecution.query.order_by(ChainExecution.started_at.desc()).limit(10).all()
-
-    chain_run_steps: list[dict[str, Any]] = []
-    if chain_run is not None:
-        chain_def = webapp.read_chain(chain_run.chain_name)
-        step_flow_names = chain_def["flow_names"] if chain_def else []
-        try:
-            exec_ids: list[int] = json.loads(chain_run.execution_ids_json or "[]")
-        except ValueError:
-            exec_ids = []
-
-        total_steps = max(len(step_flow_names), len(exec_ids))
-        for idx in range(total_steps):
-            fl_name = step_flow_names[idx] if idx < len(step_flow_names) else f"Step {idx + 1}"
-            exe_obj = db.session.get(Execution, exec_ids[idx]) if idx < len(exec_ids) else None
-            if exe_obj is not None:
-                step_status = exe_obj.status
-            elif chain_run.status == "running" and idx == chain_run.current_step:
-                step_status = "running"
-            else:
-                step_status = "skipped" if chain_run.status in ("failed", "aborted") else "pending"
-            chain_run_steps.append(
-                {
-                    "step_num": idx + 1,
-                    "flow_name": exe_obj.analysis_name if exe_obj else fl_name,
-                    "status": step_status,
-                    "execution": exe_obj,
-                }
-            )
-
-    return render_template(
-        "chains.html",
-        head=html_part["head"],
-        top_container=html_part["top_container"],
-        sidebar_menu=html_part["sidebar_menu"],
-        chains=chains,
-        flows=flows,
-        selected_chain=selected_chain,
-        recent_chain_runs=recent_chain_runs,
-        chain_run=chain_run,
-        chain_run_steps=chain_run_steps,
-        message=message,
-        error=error,
-    )
-
-
-@k8s_bp.route("/chains", methods=["GET"])
-def chains_page() -> Response | str:
-    """Display the FlowChains editor, list, and recent chain executions or return JSON."""
-    if _wants_json():
-        webapp = current_app.config["WEBAPP"]
-        return jsonify({"chains": webapp.list_chains()})
-    return _render_chains_view(
-        selected_chain_name=request.args.get("name"),
-        message=request.args.get("msg"),
-    )
-
-
-@k8s_bp.route("/chains/save", methods=["POST"])
-def chain_save_route() -> Response | tuple[Response, int] | str:
-    """Create or update a linear FlowChain."""
-    denied = _check_write_permission()
-    if denied is not None:
-        return denied
-
-    webapp = current_app.config["WEBAPP"]
-    payload = request.get_json(silent=True) if request.is_json else None
-    name = str((payload.get("name") if payload else request.form.get("name")) or "").strip()
-    description = str((payload.get("description") if payload else request.form.get("description")) or "").strip()
-    owner = session.get("username") or "flow-author"
-
-    if payload is not None:
-        flow_names_input: list[str] | str = (
-            payload.get("flow_names")
-            or payload.get("flow_names_text")
-            or payload.get("steps")
-            or []
-        )
-    else:
-        raw_text = (request.form.get("flow_names_text") or "").strip()
-        if raw_text:
-            flow_names_input = raw_text
-        else:
-            multi = request.form.getlist("flow_names")
-            flow_names_input = multi if multi else (request.form.get("flow_names") or "")
-
-    try:
-        saved = webapp.save_chain(
-            name=name,
-            flow_names=flow_names_input,
-            description=description,
-            owner=owner,
-        )
-        log_action("save_chain", "chain", saved["name"], details={"steps": saved["flow_names"]})
-    except ValueError as exc:
-        if _wants_json():
-            return jsonify({"error": str(exc)}), 400
-        return _render_chains_view(error=str(exc))
-
-    if _wants_json():
-        return jsonify(saved)
-
-    return redirect(url_for("k8s.chains_page", name=saved["name"], msg="Flow chain saved."))
-
-
-@k8s_bp.route("/chains/<name>/run", methods=["POST"])
-def chain_run_route(name: str) -> Response | tuple[Response, int] | str:
-    """Launch a sequential execution of a FlowChain."""
-    denied = _check_write_permission()
-    if denied is not None:
-        return denied
-
-    webapp = current_app.config["WEBAPP"]
-    chain = webapp.read_chain(name)
-    if chain is None:
-        if _wants_json():
-            return jsonify({"error": f"Flow chain '{name}' not found."}), 404
-        return Response(f"Flow chain '{name}' not found.", status=404)
-
-    payload = request.get_json(silent=True) if request.is_json else None
-    parameters = payload.get("parameters") if payload else request.form.get("parameters")
-    wait_sync = bool(
-        (payload and payload.get("wait"))
-        or request.args.get("wait") == "1"
-        or current_app.config.get("K8S_SYNC_WATCHER", False)
-    )
-
-    chain_exe = webapp.launch_chain_run(
-        chain_name=name,
-        parameters=parameters,
-        user_id=session.get("user_id"),
-        trigger_type="manual",
-        app=current_app._get_current_object(),  # type: ignore[attr-defined]
-        wait_for_completion=wait_sync,
-    )
-    log_action("run_chain", "chain", name, details={"chain_run_id": chain_exe.id})
-
-    if _wants_json():
-        return jsonify(
-            {
-                "chain_run_id": chain_exe.id,
-                "chain_name": chain_exe.chain_name,
-                "status": chain_exe.status,
-                "current_step": chain_exe.current_step,
-                "execution_ids": json.loads(chain_exe.execution_ids_json or "[]"),
-                "error_message": chain_exe.error_message,
-                "detail_url": url_for("k8s.chain_run_detail_route", chain_run_id=chain_exe.id),
-            }
-        )
-
-    return redirect(url_for("k8s.chain_run_detail_route", chain_run_id=chain_exe.id))
-
-
-@k8s_bp.route("/chains/<name>/delete", methods=["POST"])
-def chain_delete_route(name: str) -> Response | tuple[Response, int]:
-    """Delete a FlowChain definition."""
-    denied = _check_write_permission()
-    if denied is not None:
-        return denied
-
-    webapp = current_app.config["WEBAPP"]
-    if not webapp.delete_chain(name):
-        if _wants_json():
-            return jsonify({"error": f"Flow chain '{name}' not found."}), 404
-        return Response(f"Flow chain '{name}' not found.", status=404)
-
-    log_action("delete_chain", "chain", name)
-    if _wants_json():
-        return jsonify({"deleted": name})
-    return redirect(url_for("k8s.chains_page", msg=f"Deleted chain '{name}'."))
-
-
-@k8s_bp.route("/chains/runs/<int:chain_run_id>", methods=["GET"])
-def chain_run_detail_route(chain_run_id: int) -> Response | tuple[Response, int] | str:
-    """Display the step-by-step execution status of a ChainExecution."""
-    chain_exe = db.session.get(ChainExecution, chain_run_id)
-    if chain_exe is None:
-        if _wants_json():
-            return jsonify({"error": f"Chain run #{chain_run_id} not found."}), 404
-        return Response(f"Chain run #{chain_run_id} not found.", status=404)
-
-    if _wants_json():
-        return jsonify(
-            {
-                "chain_run_id": chain_exe.id,
-                "chain_name": chain_exe.chain_name,
-                "status": chain_exe.status,
-                "current_step": chain_exe.current_step,
-                "execution_ids": json.loads(chain_exe.execution_ids_json or "[]"),
-                "error_message": chain_exe.error_message,
-            }
-        )
-
-    return _render_chains_view(
-        selected_chain_name=chain_exe.chain_name,
-        chain_run=chain_exe,
-    )
 
 
 @k8s_bp.route("/schedules/<job_id>/toggle", methods=["POST"])

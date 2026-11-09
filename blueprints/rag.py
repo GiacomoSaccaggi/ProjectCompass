@@ -101,6 +101,10 @@ def trigger_rag_rebuild(app, analysis_name: str):
 
     Works with local embeddings — no Mithril dependency for the build itself.
     """
+    settings = app.config.get('PC_SETTINGS')
+    if settings is not None and not settings.features.rag:
+        return
+
     def _rebuild():
         with app.app_context():
             try:

@@ -20,11 +20,11 @@ import zlib
 from utils.analysis_utils import AnalysisUtils
 from utils.data_utils import DataUtils
 from utils.html_utils import HTMLUtils
-from utils.k8s_utils import K8sChainRunnerUtils
+from utils.k8s_utils import K8sFlowRunnerUtils
 
 
 # Import env variables
-class ProjectCompass(DataUtils, AnalysisUtils, HTMLUtils, K8sChainRunnerUtils):
+class ProjectCompass(DataUtils, AnalysisUtils, HTMLUtils, K8sFlowRunnerUtils):
     def __init__(self, dir_path, data_dir=None):
 
         self.dir_path = dir_path
@@ -38,20 +38,13 @@ class ProjectCompass(DataUtils, AnalysisUtils, HTMLUtils, K8sChainRunnerUtils):
         self.project_folder = ''
 
     @staticmethod
-    def create_job_request(RECIPE_ID, RECIPE_VERSION, **kwargs):
-        job_request_dict = {
-            'spec_version': "v2",
-            'recipe_id': RECIPE_ID,
-            'recipe_version': RECIPE_VERSION,
-            'system_configuration': {
-                'send_dag_complete_email': False,
-                'prefer_user_pyenv': True,
-                'allow_unpublished_recipe_runs': True
-            },
-            'configuration': {k: v for k, v in kwargs.get('input_recipe', {}).items()}
-
+    def create_task_config(task_id: str, task_version: str, **kwargs) -> dict:
+        """Build a generic task configuration payload."""
+        return {
+            'task_id': task_id,
+            'task_version': task_version,
+            'configuration': dict(kwargs.get('input_params', {})),
         }
-        return job_request_dict
 
 
 

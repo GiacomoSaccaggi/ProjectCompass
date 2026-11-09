@@ -36,8 +36,11 @@ class TestSettingsLoader:
         assert settings.branding.page_title == 'ProjectCompass'
         assert settings.branding.logo_icon_url == '/static/img/logo_icon.png'
         assert settings.theme.primary_color == '#222831'
-        assert settings.demo.enabled is True
-        assert settings.features.is_enabled('ai_chat') is True
+        assert settings.demo.enabled is False
+        assert settings.features.is_enabled('ai_chat') is False
+        assert settings.features.is_enabled('executions') is True
+        assert settings.features.is_enabled('schedules') is True
+        assert settings.features.is_enabled('k8s') is True
         assert settings.connection_errors == ()
         assert isinstance(settings.workers, WorkerSettings)
         assert settings.workers.provider == 'docker'

@@ -157,7 +157,7 @@ def test_http_basic_auth_and_env_bearer_token(
     assert "token" in admin_tok_resp.get_json()
 
 
-def test_json_api_parity_for_flows_analyses_chains_runs_workers_and_schedules(
+def test_json_api_parity_for_flows_analyses_runs_workers_and_schedules(
     app: Any,
     unauth_client: Any,
     isolated_analyses_dir: Path,
@@ -212,6 +212,7 @@ def test_json_api_parity_for_flows_analyses_chains_runs_workers_and_schedules(
         patch.object(webapp, "_k8s_get", side_effect=fake_k8s_get),
         patch.object(webapp, "_k8s_get_text", return_value="json api output\n"),
         patch.object(webapp, "_fetch_node_metrics", return_value={}),
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post", return_value={"metadata": {"name": "ok"}}),
         patch.object(webapp, "_k8s_delete", return_value={"status": "Success"}),
     ):
@@ -275,28 +276,7 @@ def test_json_api_parity_for_flows_analyses_chains_runs_workers_and_schedules(
         assert abort_resp.status_code == 200
         assert abort_resp.get_json()["status"] == "aborted"
 
-        # 5. POST /chains/save, GET /chains, POST /chains/<name>/run, POST /chains/<name>/delete JSON
-        chain_save_resp = unauth_client.post(
-            "/chains/save",
-            json={"name": "ApiChain", "flow_names": ["ApiFlow1"], "description": "JSON chain"},
-            headers=headers,
-        )
-        assert chain_save_resp.status_code == 200
-        assert chain_save_resp.get_json()["name"] == "ApiChain"
-
-        chains_list_resp = unauth_client.get("/chains", headers=headers)
-        assert chains_list_resp.status_code == 200
-        assert any(c["name"] == "ApiChain" for c in chains_list_resp.get_json()["chains"])
-
-        chain_run_resp = unauth_client.post(
-            "/chains/ApiChain/run",
-            json={"parameters": {"k": "v"}, "wait": True},
-            headers=headers,
-        )
-        assert chain_run_resp.status_code == 200
-        assert chain_run_resp.get_json()["status"] == "success"
-
-        # 6. POST /schedules/create, GET /schedules/, POST /schedules/<id>/toggle JSON
+        # 5. POST /schedules/create, GET /schedules/, POST /schedules/<id>/toggle JSON
         sched_create_resp = unauth_client.post(
             "/schedules/create",
             json={
@@ -318,10 +298,6 @@ def test_json_api_parity_for_flows_analyses_chains_runs_workers_and_schedules(
         sched_toggle_resp = unauth_client.post("/schedules/json_sched_1/toggle", headers=headers)
         assert sched_toggle_resp.status_code == 200
         assert sched_toggle_resp.get_json()["state"] == "paused"
-
-        chain_del_resp = unauth_client.post("/chains/ApiChain/delete", headers=headers)
-        assert chain_del_resp.status_code == 200
-        assert chain_del_resp.get_json()["deleted"] == "ApiChain"
 
 
 def test_standalone_compass_cli_runner_with_basic_and_bearer_auth(
@@ -382,6 +358,7 @@ def test_standalone_compass_cli_runner_with_basic_and_bearer_auth(
         patch.object(webapp, "_k8s_get", side_effect=fake_cli_k8s_get),
         patch.object(webapp, "_k8s_get_text", return_value="executed from cli file\n"),
         patch.object(webapp, "_fetch_node_metrics", return_value={}),
+        patch.object(webapp, "_build_and_push_image", return_value="registry:5050/pc/test:1"),
         patch.object(webapp, "_k8s_post", return_value={"metadata": {"name": "ok"}}),
         patch.object(webapp, "_k8s_delete", return_value={"status": "Success"}),
     ):
@@ -430,18 +407,7 @@ def test_standalone_compass_cli_runner_with_basic_and_bearer_auth(
         assert code == 0
         assert json.loads(ana_out)["status"] == "success"
 
-        # 5. Create and run a chain via CLI
-        code, ch_save_out = cli.execute_cli(
-            ["chains", "save", "CliChain", "CliPushedFlow", "--description", "Single step CLI chain"]
-        )
-        assert code == 0
-        assert json.loads(ch_save_out)["name"] == "CliChain"
-
-        code, ch_run_out = cli.execute_cli(["chains", "run", "CliChain", "--wait"])
-        assert code == 0
-        assert json.loads(ch_run_out)["status"] == "success"
-
-        # 6. Create, list, and toggle schedule via CLI
+        # 5. Create, list, and toggle schedule via CLI
         code, sch_out = cli.execute_cli(
             [
                 "schedules",

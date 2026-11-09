@@ -97,7 +97,7 @@
         </div>
         <div class="stat-chip">
           <span class="stat-value">k0s Regatta Fleet</span>
-          <span class="stat-label">Isolated batch/v1 Jobs, Chains &amp; Cron Schedules</span>
+          <span class="stat-label">Isolated batch/v1 Jobs &amp; Cron Schedules</span>
         </div>
         <div class="stat-chip">
           <span class="stat-value">Dual-Layer SDK</span>
@@ -295,12 +295,12 @@
         </div>
       </article>
 
-      <article class="doc-card" data-keywords="user guide tutorial catalog structured_analysis_main pipeline builder scomp-link sql duckdb connectorx rawgraphs rag chat">
+      <article class="doc-card" data-keywords="user guide tutorial catalog compass_flow pipeline builder scomp-link sql duckdb connectorx rawgraphs rag chat">
         <div>
           <span class="badge badge-emerald">02 • Skipper's Manual</span>
           <h3>End-to-End User Guide</h3>
           <p>
-            Hands-on operational seamanship: creating HTML/Notebook/Structured analyses, authoring <code>structured_analysis_main.py</code>, rigging visual <code>scomp-link</code> ML pipelines with the <code>&gt;&gt;</code> operator, querying remote DBs via ConnectorX, and chatting with per-analysis RAG indexes.
+            Hands-on operational seamanship: creating HTML/Notebook/Structured analyses, configuring <code>compass_flow.yaml</code> + <code>Dockerfile</code>, rigging visual <code>scomp-link</code> ML pipelines with the <code>&gt;&gt;</code> operator, querying remote DBs via ConnectorX, and chatting with per-analysis RAG indexes.
           </p>
         </div>
         <div class="doc-card-footer">
@@ -338,7 +338,7 @@
           <span class="badge badge-purple">04 • Standing Rigging</span>
           <h3>Core Classes &amp; Cooperative MRO</h3>
           <p>
-            Complete class hierarchy and method reference for <code>ProjectCompass</code>, <code>DataUtils</code>, <code>AnalysisUtils</code>, <code>GitSyncUtils</code>, <code>HTMLUtils</code>, the 4-tier Kubernetes MRO chain (<code>BaseK8sClient</code> &rarr; <code>K8sChainRunnerUtils</code>), and the RAG/Agent engines.
+            Complete class hierarchy and method reference for <code>ProjectCompass</code>, <code>DataUtils</code>, <code>AnalysisUtils</code>, <code>GitSyncUtils</code>, <code>HTMLUtils</code>, the Kubernetes MRO (<code>BaseK8sClient</code> &rarr; <code>K8sFlowRunnerUtils</code>), and the RAG/Agent engines.
           </p>
         </div>
         <div class="doc-card-footer">
@@ -367,7 +367,7 @@
   <section class="pillar-section" id="pillar-fleet">
     <div class="pillar-header">
       <h2 class="pillar-title">⚓ Pillar III — The k0s Flotilla &amp; Regatta Fleet (Cluster &amp; Worker SDK)</h2>
-      <p class="pillar-subtitle">Provision k0s master/worker nodes, orchestrate isolated Pods &amp; chains, and build your custom Python worker library.</p>
+      <p class="pillar-subtitle">Provision k0s master/worker nodes, orchestrate isolated Pods, and build your custom Python worker library.</p>
     </div>
 
     <div class="card-grid">
@@ -385,12 +385,12 @@
         </div>
       </article>
 
-      <article class="doc-card" data-keywords="kubernetes console flows jobs configmap secret chains apscheduler pvc kustomize security">
+      <article class="doc-card" data-keywords="kubernetes console flows jobs configmap secret apscheduler pvc kustomize security">
         <div>
           <span class="badge badge-gold">07 • Regatta Dispatch</span>
-          <h3>Kubernetes Console, Flows &amp; Chains</h3>
+          <h3>Kubernetes Console, Workers &amp; Jobs</h3>
           <p>
-            Deep-dive into <code>/workers</code> state reconciliation, isolated <code>batch/v1</code> Job execution (<code>pc-flow-cfg-*</code>, <code>pc-flow-sec-*</code>, <code>pc-flow-job-*</code>), linear <code>FlowChain</code> DAGs, APScheduler cron triggers, PVC persistence, and security boundaries.
+            Deep-dive into <code>/workers</code> state reconciliation, Dockerfile-based image builds with the local registry, isolated <code>batch/v1</code> Job execution, APScheduler cron triggers, PVC persistence, and security boundaries. Flows are managed from the Analysis catalog.
           </p>
         </div>
         <div class="doc-card-footer">
@@ -428,7 +428,7 @@
           <span class="badge badge-cyan">09 • Sextant &amp; Telegraph</span>
           <h3>Web Routes, REST API &amp; External CLI</h3>
           <p>
-            Complete reference for all Web UI endpoints, JSON REST APIs (<code>/api/*</code>, <code>/workers</code>, <code>/flows</code>, <code>/runs</code>, <code>/chains</code>, <code>/schedules</code>, <code>/rag</code>), Bearer token authentication, SSE log streaming, and <code>scripts/compass_cli.py</code>.
+            Complete reference for all Web UI endpoints, JSON REST APIs (<code>/api/*</code>, <code>/workers</code>, <code>/runs</code>, <code>/schedules</code>, <code>/rag</code>), Bearer token authentication, SSE log streaming, and <code>scripts/compass_cli.py</code>. <code>GET /flows</code> now redirects to <code>/analysis</code>.
           </p>
         </div>
         <div class="doc-card-footer">

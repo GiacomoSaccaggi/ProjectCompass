@@ -109,19 +109,28 @@ class AnalysisUtils(GitSyncUtils):
                         f.split('.')[0]] = f'{self.analysis_folder}/{folder}/physical_output/' + f
         except Exception:
             pass
-        if 'analysis' in os.listdir(f"{main_folder}/{folder}") and 'structured_analysis_main.py' in os.listdir(
-                f"{main_folder}/{folder}/analysis") and 'metadata_automatic_report.yaml' in os.listdir(
-                f"{main_folder}/{folder}/analysis"):
+
+        # --- compass_flow.yaml + Dockerfile → is_flow ---
+        compass_flow_path = os.path.join(main_folder, folder, 'compass_flow.yaml')
+        dockerfile_path = os.path.join(main_folder, folder, 'Dockerfile')
+        analysis['has_dockerfile'] = os.path.isfile(dockerfile_path)
+        analysis['is_flow'] = os.path.isfile(compass_flow_path) and analysis['has_dockerfile']
+        analysis['flow_config'] = {}
+        analysis['structured_analysis'] = 'n'
+        analysis['structured_metadata'] = {}
+        if os.path.isfile(compass_flow_path):
+            try:
+                with open(compass_flow_path, encoding='utf-8') as f_flow:
+                    analysis['flow_config'] = yaml.safe_load(f_flow) or {}
+            except (yaml.YAMLError, OSError):
+                pass
+        if analysis['is_flow']:
             analysis['structured_analysis'] = 'y'
-            with open(f"{main_folder}/{folder}/analysis/metadata_automatic_report.yaml") as file:
-                try:
-                    metadata_struct = yaml.safe_load(file)
-                except yaml.YAMLError as exc:
-                    print(exc)
-            analysis['structured_metadata'] = metadata_struct
-        else:
-            analysis['structured_analysis'] = 'n'
-            analysis['structured_metadata'] = {}
+            if isinstance(analysis['flow_config'].get('inputs'), dict):
+                analysis['structured_metadata'] = {
+                    'title': analysis['flow_config'].get('description', analysis.get('title', folder)),
+                    'inputs': analysis['flow_config']['inputs'],
+                }
         try:
             with open(f"{main_folder}/{folder}/readme.md", 'w') as file:
                 file.write(f"# {analysis['title']}\n")
@@ -603,21 +612,31 @@ class AnalysisUtils(GitSyncUtils):
             with open(versions_path, "w", encoding="utf-8") as f_ver:
                 f_ver.write('main version: ""\n')
 
-        auto_meta_path = os.path.join(analysis_subdir, "metadata_automatic_report.yaml")
-        with open(auto_meta_path, "w", encoding="utf-8") as f_auto:
-            yaml.safe_dump({"flow": flow_name, "image": resolved_image}, f_auto, sort_keys=False)
+        # --- Generate compass_flow.yaml + Dockerfile ---
+        compass_flow_path = os.path.join(flow_dir, "compass_flow.yaml")
+        compass_flow_data = {
+            "description": description or "Python flow executed on k0s",
+            "inputs": {
+                str(k): {"type": "text", "default": str(v)}
+                for k, v in parsed_params.items()
+            } if parsed_params else {},
+        }
+        with open(compass_flow_path, "w", encoding="utf-8") as f_cf:
+            yaml.safe_dump(compass_flow_data, f_cf, sort_keys=False)
 
-        shim_path = os.path.join(analysis_subdir, "structured_analysis_main.py")
-        shim_code = (
-            '"""Backwards-compatible analysis wrapper delegating to ../flow.py."""\n'
-            "import os\n"
-            "import runpy\n\n"
-            "FLOW_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'flow.py'))\n"
-            "if __name__ == '__main__' and os.path.exists(FLOW_PATH):\n"
-            "    runpy.run_path(FLOW_PATH, run_name='__main__')\n"
-        )
-        with open(shim_path, "w", encoding="utf-8") as f_shim:
-            f_shim.write(shim_code)
+        dockerfile_path = os.path.join(flow_dir, "Dockerfile")
+        if not os.path.isfile(dockerfile_path):
+            dockerfile_content = (
+                f"FROM {resolved_image}\n"
+                "WORKDIR /app\n"
+                "COPY . .\n"
+                "RUN if [ -s requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi\n"
+                'ENTRYPOINT ["/bin/sh", "scripts/pc_entrypoint.sh", "python", "flow.py"]\n'
+            )
+            with open(dockerfile_path, "w", encoding="utf-8") as f_docker:
+                f_docker.write(dockerfile_content)
+
+
 
         self._record_flow_version(
             flow_name=flow_name,
@@ -774,17 +793,22 @@ class AnalysisUtils(GitSyncUtils):
             return None
 
         flow_py_path = os.path.join(flow_dir, "flow.py")
-        legacy_py_path = os.path.join(flow_dir, "analysis", "structured_analysis_main.py")
         flow_cfg_path = os.path.join(flow_dir, "flow_config.yaml")
+        compass_flow_path = os.path.join(flow_dir, "compass_flow.yaml")
+        dockerfile_path = os.path.join(flow_dir, "Dockerfile")
         metadata_path = os.path.join(flow_dir, "metadata.yaml")
 
         code = ""
-        if os.path.isfile(flow_py_path):
-            with open(flow_py_path, encoding="utf-8") as f_py:
-                code = f_py.read()
-        elif os.path.isfile(legacy_py_path):
-            with open(legacy_py_path, encoding="utf-8") as f_leg:
-                code = f_leg.read()
+        script_candidates = [
+            flow_py_path,
+            os.path.join(flow_dir, "analysis", "flow_main.py"),
+            os.path.join(flow_dir, "analysis", "pipeline_main.py"),
+        ]
+        for candidate_path in script_candidates:
+            if os.path.isfile(candidate_path):
+                with open(candidate_path, encoding="utf-8") as f_py:
+                    code = f_py.read()
+                break
 
         cfg: dict[str, Any] = {}
         if os.path.isfile(flow_cfg_path):
@@ -793,6 +817,14 @@ class AnalysisUtils(GitSyncUtils):
                     cfg = yaml.safe_load(f_cfg) or {}
                 except yaml.YAMLError:
                     cfg = {}
+
+        compass_flow: dict[str, Any] = {}
+        if os.path.isfile(compass_flow_path):
+            with open(compass_flow_path, encoding="utf-8") as f_cf:
+                try:
+                    compass_flow = yaml.safe_load(f_cf) or {}
+                except yaml.YAMLError:
+                    compass_flow = {}
 
         meta: dict[str, Any] = {}
         if os.path.isfile(metadata_path):
@@ -803,6 +835,11 @@ class AnalysisUtils(GitSyncUtils):
                     meta = {}
 
         params: dict[str, Any] = cfg.get("parameters") or {}
+        if not params and isinstance(compass_flow.get("inputs"), dict):
+            params = {
+                str(k): (v.get("default", "") if isinstance(v, dict) else str(v))
+                for k, v in compass_flow["inputs"].items()
+            }
         if not params and isinstance(meta.get("inputs"), dict):
             params = {
                 str(k): (v.get("default", "") if isinstance(v, dict) else str(v))
@@ -820,10 +857,16 @@ class AnalysisUtils(GitSyncUtils):
         secret_refs = self.parse_secret_refs(cfg.get("secret_refs"))
         versions = self.read_flow_versions(flow_name)
         latest_version_num = versions[0]["version_num"] if versions else 1
+        is_flow = os.path.isfile(compass_flow_path) and os.path.isfile(dockerfile_path)
 
         return {
             "name": flow_name,
-            "description": str(cfg.get("description") or meta.get("description") or "").strip(),
+            "description": str(
+                cfg.get("description")
+                or compass_flow.get("description")
+                or meta.get("description")
+                or ""
+            ).strip(),
             "code": code,
             "parameters": params,
             "parameters_json": json.dumps(params, indent=2),
@@ -836,13 +879,14 @@ class AnalysisUtils(GitSyncUtils):
             "owner": str(cfg.get("owner") or meta.get("owner") or ""),
             "version_num": latest_version_num,
             "versions": versions,
-            "has_flow_py": os.path.isfile(flow_py_path),
+            "is_flow": is_flow,
+            "has_flow_py": os.path.isfile(flow_py_path) or bool(code),
             "last_modified": last_mod,
             "folder": flow_dir,
         }
 
     def list_flows(self) -> list[dict[str, Any]]:
-        """Return all Flows available in the Analyses/ directory."""
+        """Return all executable Flows available in the Analyses/ directory."""
         if not os.path.isdir(self.save_folder_path):
             return []
         flows: list[dict[str, Any]] = []
@@ -853,356 +897,13 @@ class AnalysisUtils(GitSyncUtils):
             if not os.path.isdir(full_path):
                 continue
             flow_data = self.read_flow(entry)
-            if flow_data is not None:
+            if flow_data is not None and (
+                flow_data.get("is_flow")
+                or flow_data.get("has_flow_py")
+                or os.path.isfile(os.path.join(full_path, "flow_config.yaml"))
+            ):
                 flows.append(flow_data)
         return flows
-
-    @staticmethod
-    def _build_structured_analysis_flow_wrapper(
-        flow_name: str,
-        script_source: str,
-        default_inputs: dict[str, Any],
-        referenced_datasets: list[str] | None = None,
-    ) -> str:
-        """Build a standalone Python Flow wrapper around structured_analysis_main.py."""
-        encoded_script = base64.b64encode(script_source.encode("utf-8")).decode("ascii")
-        datasets_list = list(referenced_datasets or [])
-        wrapper_lines = [
-            '"""Auto-generated ProjectCompass Flow wrapper for Structured Analysis."""',
-            "from __future__ import annotations",
-            "",
-            "import base64",
-            "import importlib.util",
-            "import json",
-            "import os",
-            "import shutil",
-            "import sys",
-            "from typing import Any",
-            "",
-            f"ANALYSIS_NAME: str = {flow_name!r}",
-            f"DEFAULT_INPUTS: dict[str, Any] = {json.dumps(default_inputs, sort_keys=True)}",
-            f"REFERENCED_DATASETS: list[str] = {datasets_list!r}",
-            f"STRUCTURED_SCRIPT_B64: str = {encoded_script!r}",
-            "",
-            "",
-            "def _load_runtime_inputs() -> dict[str, Any]:",
-            "    merged: dict[str, Any] = dict(DEFAULT_INPUTS)",
-            '    params_file = os.environ.get("FLOW_PARAMS_FILE", "/workspace/params.json")',
-            "    if params_file and os.path.isfile(params_file):",
-            "        try:",
-            '            with open(params_file, encoding="utf-8") as f_params:',
-            "                loaded = json.load(f_params)",
-            "            if isinstance(loaded, dict):",
-            "                merged.update(loaded)",
-            "        except Exception:",
-            "            pass",
-            '    raw_env_json = os.environ.get("FLOW_PARAMS_JSON", "").strip()',
-            "    if raw_env_json:",
-            "        try:",
-            "            loaded_env = json.loads(raw_env_json)",
-            "            if isinstance(loaded_env, dict):",
-            "                merged.update(loaded_env)",
-            "        except Exception:",
-            "            pass",
-            "    return merged",
-            "",
-            "",
-            "def _setup_workspace() -> tuple[str, str]:",
-            '    work_root = "/tmp/pc_work"',
-            '    saved_data_dir = os.path.join(work_root, "Saved_data")',
-            '    analysis_dir = os.path.join(work_root, "Analyses", ANALYSIS_NAME, "analysis")',
-            '    output_main_dir = "/tmp/pc_output/main"',
-            "    os.makedirs(saved_data_dir, exist_ok=True)",
-            "    os.makedirs(analysis_dir, exist_ok=True)",
-            "    os.makedirs(output_main_dir, exist_ok=True)",
-            "",
-            '    if os.path.isdir("/workspace"):',
-            '        for entry in sorted(os.listdir("/workspace")):',
-            '            if entry.startswith("saved_data__"):',
-            '                dataset_file = entry[len("saved_data__"):]',
-            '                src_path = os.path.join("/workspace", entry)',
-            "                if dataset_file and os.path.isfile(src_path):",
-            "                    shutil.copy2(src_path, os.path.join(saved_data_dir, dataset_file))",
-            '        ws_saved = "/workspace/Saved_data"',
-            "        if os.path.isdir(ws_saved):",
-            "            for entry in sorted(os.listdir(ws_saved)):",
-            "                src_path = os.path.join(ws_saved, entry)",
-            "                if os.path.isfile(src_path):",
-            "                    shutil.copy2(src_path, os.path.join(saved_data_dir, entry))",
-            "",
-            '    env_data_dir = os.environ.get("PC_DATA_DIR", "").strip()',
-            "    if env_data_dir and os.path.isdir(env_data_dir):",
-            "        for entry in sorted(os.listdir(env_data_dir)):",
-            "            src_path = os.path.join(env_data_dir, entry)",
-            "            dst_path = os.path.join(saved_data_dir, entry)",
-            "            if os.path.isfile(src_path) and not os.path.exists(dst_path):",
-            "                shutil.copy2(src_path, dst_path)",
-            "",
-            "    for alias_parent in (",
-            '        os.path.join(work_root, "Analyses"),',
-            '        os.path.join(work_root, "Analyses", ANALYSIS_NAME),',
-            "    ):",
-            '        alias_path = os.path.join(alias_parent, "Saved_data")',
-            "        if not os.path.exists(alias_path):",
-            "            try:",
-            "                os.symlink(saved_data_dir, alias_path)",
-            "            except OSError:",
-            "                shutil.copytree(saved_data_dir, alias_path, dirs_exist_ok=True)",
-            "",
-            '    script_path = os.path.join(analysis_dir, "structured_analysis_main.py")',
-            '    script_bytes = base64.b64decode(STRUCTURED_SCRIPT_B64.encode("ascii"))',
-            '    with open(script_path, "wb") as f_script:',
-            "        f_script.write(script_bytes)",
-            "",
-            '    return script_path, os.path.join(output_main_dir, "output.csv")',
-            "",
-            "",
-            'def _emit_artifacts(output_root: str = "/tmp/pc_output") -> None:',
-            "    emitted: set[str] = set()",
-            '    shared_dir = os.environ.get("PC_SHARED_ARTIFACT_DIR", "").strip()',
-            '    inline_max = int(os.environ.get("PC_ARTIFACT_INLINE_MAX_BYTES", str(5 * 1024 * 1024)))',
-            '    search_dirs = [os.path.join(output_root, "main"), output_root]',
-            "    for folder in search_dirs:",
-            "        if not os.path.isdir(folder):",
-            "            continue",
-            "        for entry in sorted(os.listdir(folder)):",
-            '            if entry.startswith(".") or ".ini" in entry or entry in emitted:',
-            "                continue",
-            "            full_path = os.path.join(folder, entry)",
-            "            if not os.path.isfile(full_path):",
-            "                continue",
-            '            with open(full_path, "rb") as f_art:',
-            "                raw_bytes = f_art.read()",
-            "            if shared_dir and os.path.isdir(shared_dir) and len(raw_bytes) > inline_max:",
-            "                shutil.copy2(full_path, os.path.join(shared_dir, entry))",
-            "            else:",
-            '                encoded = base64.b64encode(raw_bytes).decode("ascii")',
-            '                sys.stdout.write(f"[PC_ARTIFACT_BEGIN:{entry}]\\n{encoded}\\n[PC_ARTIFACT_END]\\n")',
-            "                sys.stdout.flush()",
-            "            emitted.add(entry)",
-            "",
-            "",
-            "def main() -> None:",
-            "    inputs = _load_runtime_inputs()",
-            "    script_path, output_path = _setup_workspace()",
-            "    script_dir = os.path.dirname(script_path)",
-            "    if script_dir not in sys.path:",
-            "        sys.path.insert(0, script_dir)",
-            '    spec = importlib.util.spec_from_file_location("structured_analysis_main", script_path)',
-            "    if spec is None or spec.loader is None:",
-            '        raise RuntimeError(f"Unable to load structured analysis script: {script_path}")',
-            "    module = importlib.util.module_from_spec(spec)",
-            "    spec.loader.exec_module(module)",
-            "    result = module.run(inputs=inputs, output_path=output_path)",
-            '    print(f"[ProjectCompass] Structured analysis \'{ANALYSIS_NAME}\' finished.")',
-            "    if isinstance(result, dict):",
-            "        try:",
-            "            print(json.dumps(result, default=str))",
-            "        except Exception:",
-            "            pass",
-            '    _emit_artifacts("/tmp/pc_output")',
-            "",
-            "",
-            'if __name__ == "__main__":',
-            "    main()",
-            "",
-        ]
-        return "\n".join(wrapper_lines)
-
-    def ensure_flow_from_structured_analysis(
-        self,
-        name: str,
-        runtime_inputs: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Generate or update a Kubernetes Flow wrapper from Analyses/<name>/analysis/structured_analysis_main.py.
-
-        Preserves the original structured_analysis_main.py, metadata_automatic_report.yaml,
-        and catalog metadata.yaml fields so the analysis remains a full catalog entry
-        while executing exclusively as an isolated Kubernetes Job.
-        """
-        flow_name = self._validate_flow_name(name.replace("512", " "))
-        flow_dir = os.path.join(self.save_folder_path, flow_name)
-        analysis_subdir = os.path.join(flow_dir, "analysis")
-        script_path = os.path.join(analysis_subdir, "structured_analysis_main.py")
-
-        if not os.path.isfile(script_path):
-            raise FileNotFoundError(
-                f"Structured analysis script not found for '{flow_name}': {script_path}"
-            )
-
-        with open(script_path, encoding="utf-8", errors="ignore") as f_script:
-            original_script = f_script.read()
-
-        flow_py_path = os.path.join(flow_dir, "flow.py")
-        if (
-            "Backwards-compatible analysis wrapper delegating to ../flow.py" in original_script
-            and os.path.isfile(flow_py_path)
-        ):
-            existing_flow = self.read_flow(flow_name)
-            if existing_flow is not None:
-                return existing_flow
-
-        metadata_path = os.path.join(flow_dir, "metadata.yaml")
-        orig_meta: dict[str, Any] = {}
-        if os.path.isfile(metadata_path):
-            try:
-                with open(metadata_path, encoding="utf-8") as f_meta:
-                    orig_meta = yaml.safe_load(f_meta) or {}
-            except (OSError, yaml.YAMLError):
-                orig_meta = {}
-
-        auto_meta_path = os.path.join(analysis_subdir, "metadata_automatic_report.yaml")
-        orig_auto_meta_raw: str | None = None
-        orig_auto_meta: dict[str, Any] = {}
-        if os.path.isfile(auto_meta_path):
-            try:
-                with open(auto_meta_path, encoding="utf-8") as f_auto:
-                    orig_auto_meta_raw = f_auto.read()
-                orig_auto_meta = yaml.safe_load(orig_auto_meta_raw) or {}
-            except (OSError, yaml.YAMLError):
-                orig_auto_meta = {}
-
-        flow_cfg_path = os.path.join(flow_dir, "flow_config.yaml")
-        existing_cfg: dict[str, Any] = {}
-        if os.path.isfile(flow_cfg_path):
-            try:
-                with open(flow_cfg_path, encoding="utf-8") as f_cfg:
-                    existing_cfg = yaml.safe_load(f_cfg) or {}
-            except (OSError, yaml.YAMLError):
-                existing_cfg = {}
-
-        default_params: dict[str, Any] = {}
-        for meta_source in (orig_meta, orig_auto_meta):
-            if isinstance(meta_source, dict) and isinstance(meta_source.get("inputs"), dict):
-                for param_key, param_spec in meta_source["inputs"].items():
-                    if isinstance(param_spec, dict):
-                        default_params[str(param_key)] = param_spec.get("default", "")
-                    elif param_spec is not None:
-                        default_params[str(param_key)] = param_spec
-
-        merged_params: dict[str, Any] = dict(default_params)
-        if isinstance(runtime_inputs, dict):
-            merged_params.update(runtime_inputs)
-
-        stdlib_modules = {
-            "abc", "base64", "collections", "copy", "csv", "datetime", "functools",
-            "glob", "hashlib", "hmac", "importlib", "io", "itertools", "json",
-            "logging", "math", "os", "pathlib", "pickle", "random", "re", "runpy",
-            "shutil", "signal", "sqlite3", "string", "subprocess", "sys", "tempfile",
-            "threading", "time", "traceback", "typing", "unittest", "uuid", "warnings",
-            "zipfile", "zlib",
-        }
-        req_file = os.path.join(flow_dir, "requirements.txt")
-        pip_reqs: list[str] = list(existing_cfg.get("pip_requirements") or [])
-        if not pip_reqs and os.path.isfile(req_file):
-            try:
-                with open(req_file, encoding="utf-8") as f_req:
-                    raw_req_text = f_req.read()
-                parsed_reqs = self.parse_pip_requirements(raw_req_text)
-                pip_reqs = [
-                    pkg for pkg in parsed_reqs
-                    if pkg.split("==")[0].split(">=")[0].strip() not in stdlib_modules
-                ]
-            except OSError:
-                pip_reqs = []
-
-        lineage_datasets = sorted(
-            {
-                f"{ds}.csv"
-                for ds in re.findall(r'read_csv\(.*?["\']([^"\'/\\]+)\.csv["\']', original_script)
-            }
-            | set(re.findall(r'["\']([A-Za-z0-9_.-]+\.csv)["\']', original_script))
-        )
-
-        wrapper_code = self._build_structured_analysis_flow_wrapper(
-            flow_name=flow_name,
-            script_source=original_script,
-            default_inputs=default_params,
-            referenced_datasets=lineage_datasets,
-        )
-
-        description = str(
-            orig_meta.get("description")
-            or orig_auto_meta.get("description")
-            or existing_cfg.get("description")
-            or f"Structured analysis flow for {flow_name}"
-        ).strip()
-        owner = str(orig_meta.get("owner") or existing_cfg.get("owner") or "flow-author").strip()
-        image = str(
-            existing_cfg.get("image")
-            or orig_auto_meta.get("image")
-            or os.environ.get("K8S_DEFAULT_IMAGE", "python:3.11-slim")
-        ).strip()
-
-        self.save_flow(
-            name=flow_name,
-            code=wrapper_code,
-            description=description,
-            parameters=merged_params,
-            pip_requirements=pip_reqs,
-            secret_refs=existing_cfg.get("secret_refs"),
-            image=image,
-            owner=owner,
-            version_message=f"Sync structured analysis {flow_name}",
-        )
-
-        # Restore original structured_analysis_main.py so catalog structured_analysis=='y' and code remain intact
-        with open(script_path, "w", encoding="utf-8") as f_restore_script:
-            f_restore_script.write(original_script)
-
-        # Restore original metadata_automatic_report.yaml
-        if orig_auto_meta_raw is not None:
-            with open(auto_meta_path, "w", encoding="utf-8") as f_restore_auto:
-                f_restore_auto.write(orig_auto_meta_raw)
-        else:
-            auto_payload = {
-                "title": flow_name,
-                "description": description,
-                "inputs": {
-                    str(k): {"type": "text", "default": str(v), "description": str(k)}
-                    for k, v in default_params.items()
-                },
-                "output": {"type": "csv", "description": "Structured analysis output"},
-            }
-            with open(auto_meta_path, "w", encoding="utf-8") as f_restore_auto:
-                yaml.safe_dump(auto_payload, f_restore_auto, sort_keys=False)
-
-        # Restore/preserve catalog metadata.yaml fields
-        restored_meta: dict[str, Any] = {
-            "title": orig_meta.get("title") or flow_name,
-            "start_date": (
-                orig_meta["start_date"].strftime("%Y-%m-%d")
-                if hasattr(orig_meta.get("start_date"), "strftime")
-                else str(orig_meta.get("start_date") or datetime.date.today().strftime("%Y-%m-%d"))
-            ),
-            "description": orig_meta.get("description") if "description" in orig_meta else description,
-            "owner": orig_meta.get("owner") if "owner" in orig_meta else owner,
-            "collaborators": orig_meta.get("collaborators", ""),
-            "product": orig_meta.get("product") or "Structured Analysis",
-            "countries": orig_meta.get("countries") or "Global",
-            "inputs": (
-                orig_meta["inputs"]
-                if isinstance(orig_meta.get("inputs"), dict) and orig_meta["inputs"]
-                else {
-                    str(k): {"default": str(v), "type": "str"}
-                    for k, v in merged_params.items()
-                }
-            ),
-            "links": orig_meta.get("links") if isinstance(orig_meta.get("links"), dict) else {},
-            "gitlab": orig_meta.get("gitlab", ""),
-            "gdrive": orig_meta.get("gdrive", ""),
-            "dashboard link": orig_meta.get("dashboard link", ""),
-            "output_type": orig_meta.get("output_type") or "CSV",
-            "output description": orig_meta.get(
-                "output description",
-                "Structured analysis output persisted from Kubernetes Job execution",
-            ),
-            "lineage": orig_meta.get("lineage") or [ds.removesuffix(".csv") for ds in lineage_datasets],
-        }
-        with open(metadata_path, "w", encoding="utf-8") as f_restore_meta:
-            yaml.safe_dump(restored_meta, f_restore_meta, sort_keys=False)
-
-        return self.read_flow(flow_name) or {}
 
     def _resolve_connector_spec(
         self,
@@ -1530,7 +1231,7 @@ class AnalysisUtils(GitSyncUtils):
         saved_flow["step_type"] = step_type
         return saved_flow
 
-    def compile_pipeline_to_flow_chain(
+    def compile_pipeline_steps(
         self,
         name: str,
         steps: list[dict[str, Any]],
@@ -1540,7 +1241,7 @@ class AnalysisUtils(GitSyncUtils):
         connectors_map: Any | None = None,
         connectors: Any | None = None,
     ) -> dict[str, Any]:
-        """Compile an ordered list of Pipeline Builder steps into per-step Flows and a FlowChain."""
+        """Compile an ordered list of Pipeline Builder steps into per-step Flows."""
         pipeline_name = self._validate_flow_name(name)
         resolved_connectors = connectors_map if connectors_map is not None else connectors
         step_flows: list[str] = []
@@ -1563,22 +1264,8 @@ class AnalysisUtils(GitSyncUtils):
             step_flows.append(flow_info["name"])
             compiled_steps.append(flow_info)
 
-        chain_info: dict[str, Any] | None = None
-        if step_flows and hasattr(self, "save_chain"):
-            from flask import has_app_context
-
-            if has_app_context():
-                chain_info = self.save_chain(  # type: ignore[attr-defined]
-                    name=pipeline_name,
-                    flow_names=step_flows,
-                    description=description or f"Pipeline chain for {pipeline_name}",
-                    owner=owner or "flow-author",
-                )
-
         return {
             "name": pipeline_name,
-            "chain_name": pipeline_name,
             "step_flows": step_flows,
             "steps": compiled_steps,
-            "chain": chain_info,
         }

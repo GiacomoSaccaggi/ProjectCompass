@@ -1,0 +1,53 @@
+# Demo overlay — adds sample databases + enables all features.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+#   bash demo.sh          (does this automatically)
+
+services:
+  projectcompass:
+    environment:
+      - PC_CONFIG_FILE=/app/data/projectcompass.yaml
+    volumes:
+      - ./demo/projectcompass.yaml:/app/data/projectcompass.yaml:ro
+    depends_on:
+      - demo-postgres
+      - demo-mysql
+      - demo-clickhouse
+
+  demo-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: demo_store
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+    volumes:
+      - ./demo/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    container_name: demo_postgres
+
+  demo-mysql:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: demo_hr
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo
+      MYSQL_ROOT_PASSWORD: rootdemo
+    volumes:
+      - ./demo/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    container_name: demo_mysql
+
+  demo-clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    volumes:
+      - ./demo/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "9100:9000"
+      - "8123:8123"
+    restart: unless-stopped
+    container_name: demo_clickhouse

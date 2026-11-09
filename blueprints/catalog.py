@@ -22,6 +22,7 @@ import numpy as np
 from flask import (
     Blueprint,
     Response,
+    abort,
     current_app,
     jsonify,
     redirect,
@@ -301,6 +302,9 @@ def load_analysis_internal():
 @catalog_bp.route('/overview')
 def overview_page():
     webapp = get_webapp()
+    settings = current_app.config.get('PC_SETTINGS')
+    if settings and not settings.demo.enabled:
+        abort(404)
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     return render_template('overview.html',
                            title=webapp.environments_info['title'],
@@ -435,10 +439,11 @@ def create_investigations():
     webapp = get_webapp()
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     name = request.args.get('name', '').replace('512', ' ')
-    metadata_path = f"{webapp.extract_main_folder()}/{name}/analysis/metadata_automatic_report.yaml"
-    if os.path.isfile(metadata_path):
-        with open(metadata_path) as f:
-            metadata = yaml.safe_load(f) or {}
+    compass_flow_path = f"{webapp.extract_main_folder()}/{name}/compass_flow.yaml"
+    if os.path.isfile(compass_flow_path):
+        with open(compass_flow_path) as f:
+            flow_config = yaml.safe_load(f) or {}
+        metadata = {'title': flow_config.get('description', name), 'inputs': flow_config.get('inputs', {})}
     else:
         metadata = {'title': name, 'inputs': {}}
 
@@ -449,7 +454,7 @@ def create_investigations():
         default = field_info.get('default', '')
         desc = field_info.get('description', field_name)
         style = 'width:100%;margin:6px 0 14px 0;'
-        if field_type == 'select':
+        if field_type in ('select', 'radio'):
             options_html = ''.join(
                 f'<option value="{opt}"{" selected" if str(opt) == str(default) else ""}>{opt}</option>'
                 for opt in field_info.get('options', [])
@@ -507,16 +512,19 @@ def run_investigation() -> Response | tuple[str, int]:
         }
 
     name = raw_name.replace('512', ' ').strip()
-    script_path = os.path.join(webapp.extract_main_folder(), name, 'analysis', 'structured_analysis_main.py')
-    if not name or not os.path.isfile(script_path):
-        return f"Structured analysis '{name}' not found.", 404
+    analysis_dir = os.path.join(webapp.extract_main_folder(), name)
+    dockerfile_path = os.path.join(analysis_dir, 'Dockerfile')
+    compass_flow_path = os.path.join(analysis_dir, 'compass_flow.yaml')
+    has_dockerfile_flow = os.path.isfile(dockerfile_path) and os.path.isfile(compass_flow_path)
+
+    if not name or not has_dockerfile_flow:
+        return f"Executable analysis '{name}' not found. Requires compass_flow.yaml + Dockerfile.", 404
 
     user_id = session.get('user_id')
     triggered_by = session.get('username') or 'catalog-user'
     app_obj = current_app._get_current_object()  # type: ignore[attr-defined]
 
     try:
-        webapp.ensure_flow_from_structured_analysis(name, inputs)
         exe = webapp.launch_flow_run(
             flow_name=name,
             parameters=inputs,
@@ -556,8 +564,11 @@ def execute_stream(name: str) -> Response | tuple[Response, int]:
     webapp = get_webapp()
     clean_name = name.replace('512', ' ').strip()
     main_folder = webapp.extract_main_folder()
-    script_path = os.path.join(main_folder, clean_name, 'analysis', 'structured_analysis_main.py')
-    flow_py_path = os.path.join(main_folder, clean_name, 'flow.py')
+    analysis_dir = os.path.join(main_folder, clean_name)
+    has_flow = (
+        os.path.isfile(os.path.join(analysis_dir, 'compass_flow.yaml'))
+        and os.path.isfile(os.path.join(analysis_dir, 'Dockerfile'))
+    )
 
     raw_run_id = request.args.get('run_id', '').strip()
     inputs: dict[str, Any] = {
@@ -575,11 +586,9 @@ def execute_stream(name: str) -> Response | tuple[Response, int]:
         if exe is None:
             return jsonify({'error': f"Run #{raw_run_id} not found."}), 404
     else:
-        if not os.path.isfile(script_path) and not os.path.isfile(flow_py_path):
-            return jsonify({'error': f"Structured analysis '{clean_name}' not found."}), 404
+        if not has_flow:
+            return jsonify({'error': f"Executable analysis '{clean_name}' not found. Requires compass_flow.yaml + Dockerfile."}), 404
         try:
-            if os.path.isfile(script_path):
-                webapp.ensure_flow_from_structured_analysis(clean_name, inputs)
             wait_sync = bool(
                 request.args.get('wait') == '1'
                 or current_app.config.get('K8S_SYNC_WATCHER', False)
@@ -769,9 +778,9 @@ def save_pipeline():
     else:
         steps = _build_steps(graph if isinstance(graph, dict) else {})
 
-    # Generate structured_analysis_main.py
+    # Generate pipeline entrypoint script
     script = _generate_pipeline_script(steps, webapp.save_data_path)
-    with open(f"{analysis_code_dir}/structured_analysis_main.py", 'w', encoding='utf-8') as f:
+    with open(f"{analysis_code_dir}/pipeline_main.py", 'w', encoding='utf-8') as f:
         f.write(script)
 
     # Save pipeline.json definition
@@ -786,12 +795,25 @@ def save_pipeline():
     with open(f"{analysis_code_dir}/pipeline.json", 'w', encoding='utf-8') as f_pipe:
         json.dump(pipeline_def, f_pipe, indent=2)
 
-    # Generate metadata_automatic_report.yaml
+    # Generate compass_flow.yaml
     meta_inputs = _extract_inputs_from_steps(steps)
-    meta = {'title': name, 'description': description, 'inputs': meta_inputs,
-            'output': {'type': 'csv', 'description': 'Pipeline output'}}
-    with open(f"{analysis_code_dir}/metadata_automatic_report.yaml", 'w', encoding='utf-8') as f:
-        yaml.dump(meta, f, default_flow_style=False)
+    compass_flow = {
+        'description': description,
+        'inputs': meta_inputs,
+    }
+    with open(f"{analysis_dir}/compass_flow.yaml", 'w', encoding='utf-8') as f:
+        yaml.dump(compass_flow, f, default_flow_style=False)
+
+    # Generate Dockerfile
+    dockerfile_content = (
+        "FROM python:3.12-slim\n"
+        "WORKDIR /app\n"
+        "COPY . .\n"
+        "RUN pip install --no-cache-dir scomp-link pandas || true\n"
+        'ENTRYPOINT ["/bin/sh", "scripts/pc_entrypoint.sh", "python", "analysis/pipeline_main.py"]\n'
+    )
+    with open(f"{analysis_dir}/Dockerfile", 'w', encoding='utf-8') as f:
+        f.write(dockerfile_content)
 
     # Generate metadata.yaml for catalog
     catalog_meta = {
@@ -814,11 +836,8 @@ def save_pipeline():
     with open(f"{analysis_dir}/output_versions.yaml", 'w', encoding='utf-8') as f:
         f.write("---\n")
 
-    # Sync top-level analysis Flow wrapper while preserving structured_analysis_main.py and catalog metadata
-    webapp.ensure_flow_from_structured_analysis(name)
-
-    # Compile per-step Flows and register sequential FlowChain
-    compiled = webapp.compile_pipeline_to_flow_chain(
+    # Compile per-step Flows
+    compiled = webapp.compile_pipeline_steps(
         name=name,
         steps=steps,
         description=description,
@@ -827,12 +846,6 @@ def save_pipeline():
     )
     step_flow_names = list(compiled.get('step_flows') or [])
     if not step_flow_names:
-        webapp.save_chain(
-            name=name,
-            flow_names=[name],
-            description=description or f"Pipeline chain for {name}",
-            owner=owner or 'flow-author',
-        )
         step_flow_names = [name]
 
     # Index in FTS for search
@@ -863,13 +876,12 @@ def save_pipeline():
     db.session.add(version)
     db.session.commit()
 
-    logger.info(f"Pipeline '{name}' saved as structured analysis and FlowChain (v{max_version + 1})")
+    logger.info(f"Pipeline '{name}' saved as structured analysis (v{max_version + 1})")
     log_action('save', 'pipeline', name)
     return jsonify(
         success=True,
         status='ok',
         name=name,
-        chain_name=name,
         step_flows=step_flow_names,
     )
 
@@ -974,9 +986,10 @@ def _build_steps(nodes, edges=None):
 
 
 def _generate_pipeline_script(steps, data_path):
-    """Generate a structured_analysis_main.py from pipeline steps using scomp-link DSL."""
+    """Generate a pipeline_main.py from pipeline steps using scomp-link DSL."""
     lines = [
         '"""Auto-generated pipeline by ProjectCompass Pipeline Builder."""',
+        'import json',
         'import os',
         'import pandas as pd',
         'from scomp_link import (CleanStep, SelectStep, ModelStep, TrainStep,',
@@ -984,8 +997,12 @@ def _generate_pipeline_script(steps, data_path):
         '',
         '',
         'def run(inputs, output_path):',
-        '    data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "Saved_data")',
-        '    out_dir = os.path.dirname(output_path)',
+        '    data_dir = os.environ.get("PC_DATA_DIR") or (',
+        '        os.path.join(os.path.dirname(__file__), "..", "Saved_data")',
+        '        if os.path.isdir(os.path.join(os.path.dirname(__file__), "..", "Saved_data"))',
+        '        else os.path.join(os.path.dirname(__file__), "..", "..", "..", "Saved_data")',
+        '    )',
+        '    out_dir = os.path.dirname(output_path) or "."',
         '    os.makedirs(out_dir, exist_ok=True)',
         '    df = None',
         '    results = {}',
@@ -1262,12 +1279,26 @@ def _generate_pipeline_script(steps, data_path):
     lines.append('    elif results and not os.path.exists(output_path):')
     lines.append('        pd.DataFrame([results]).to_csv(output_path, index=False)')
     lines.append('    return results')
+    lines.append('')
+    lines.append('')
+    lines.append('if __name__ == "__main__":')
+    lines.append('    _inputs = {}')
+    lines.append('    _raw_params = os.environ.get("FLOW_PARAMS_JSON", "").strip()')
+    lines.append('    if _raw_params:')
+    lines.append('        try:')
+    lines.append('            _parsed = json.loads(_raw_params)')
+    lines.append('            if isinstance(_parsed, dict):')
+    lines.append('                _inputs.update(_parsed)')
+    lines.append('        except ValueError:')
+    lines.append('            pass')
+    lines.append('    _out_dir = os.environ.get("PC_OUTPUT_DIR", "output").strip() or "output"')
+    lines.append('    run(_inputs, os.path.join(_out_dir, "output.csv"))')
 
     return chr(10).join(lines) + chr(10)
 
 
 def _generate_pipeline_code(nodes, edges=None, name=''):
-    """Generate structured_analysis_main.py code from pipeline nodes and edges."""
+    """Generate pipeline_main.py code from pipeline nodes and edges."""
     steps = _order_nodes(nodes, edges=edges)
     return _generate_pipeline_script(steps, '')
 
@@ -1412,10 +1443,9 @@ def execute_scheduled_flow(
     parameters: dict | None = None,
     pip_requirements: list | str | None = None,
     image: str | None = None,
-    chain_name: str | None = None,
     app=None,
 ):
-    """Execute a scheduled Flow or FlowChain via the Kubernetes Job runner and unified Execution pipeline."""
+    """Execute a scheduled Flow via the Kubernetes Job runner and unified Execution pipeline."""
     from flask import has_app_context
 
     resolved_app = app
@@ -1427,18 +1457,6 @@ def execute_scheduled_flow(
         try:
             webapp = flask_app.config['WEBAPP']
             wait_sync = bool(flask_app.config.get('K8S_SYNC_WATCHER', False))
-            if chain_name:
-                if not hasattr(webapp, 'read_chain') or webapp.read_chain(chain_name) is None:
-                    msg = f"Scheduled chain '{chain_name}' does not exist."
-                    flask_app.logger.error(msg)
-                    logger.error(msg)
-                    return None
-                return webapp.launch_chain_run(
-                    chain_name=chain_name,
-                    trigger_type='scheduled',
-                    app=flask_app,
-                    wait_for_completion=wait_sync,
-                )
 
             flow_info = webapp.read_flow(name) if name else None
             if not name or flow_info is None:
@@ -1448,14 +1466,21 @@ def execute_scheduled_flow(
                 return None
 
             if not flow_info.get('has_flow_py'):
-                script_candidate = os.path.join(
+                compass_flow_path = os.path.join(
                     webapp.extract_main_folder(),
                     name,
-                    'analysis',
-                    'structured_analysis_main.py',
+                    'compass_flow.yaml',
                 )
-                if os.path.isfile(script_candidate):
-                    webapp.ensure_flow_from_structured_analysis(name, parameters or {})
+                dockerfile_path = os.path.join(
+                    webapp.extract_main_folder(),
+                    name,
+                    'Dockerfile',
+                )
+                if not (os.path.isfile(compass_flow_path) and os.path.isfile(dockerfile_path)):
+                    msg = f"Scheduled flow '{name}' has no compass_flow.yaml + Dockerfile."
+                    flask_app.logger.error(msg)
+                    logger.error(msg)
+                    return None
 
             execution = webapp.launch_flow_run(
                 flow_name=name,
@@ -1475,7 +1500,7 @@ def execute_scheduled_flow(
                 )
             return execution
         except Exception as exc:
-            msg = f"Scheduled execution failed for flow={name!r} chain={chain_name!r}: {exc}"
+            msg = f"Scheduled execution failed for flow={name!r}: {exc}"
             flask_app.logger.error(msg)
             logger.error(msg)
             return None
@@ -1486,7 +1511,7 @@ def execute_scheduled_flow(
     if resolved_app is not None:
         with resolved_app.app_context():
             return _run_in_ctx(resolved_app)
-    logger.error(f"Cannot execute scheduled flow '{name or chain_name}': no Flask application context available.")
+    logger.error(f"Cannot execute scheduled flow '{name}': no Flask application context available.")
     return None
 
 
@@ -1602,12 +1627,15 @@ def schedules_page():
         return jsonify({'schedules': jobs})
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
     flows = webapp.list_flows()
-    chains = webapp.list_chains() if hasattr(webapp, 'list_chains') else []
+    all_analyses = webapp.read_multiple_analysis()
+    executable_analyses = [
+        {"name": name} for name, info in all_analyses.items()
+        if info.get("is_flow") or info.get("structured_analysis") == "y"
+    ]
     return render_template('schedules.html',
                            title='Scheduled Analyses',
                            jobs=jobs,
-                           flows=flows,
-                           chains=chains,
+                           flows=executable_analyses,
                            head=html_part['head'],
                            top_container=html_part['top_container'],
                            sidebar_menu=html_part['sidebar_menu'],
@@ -1716,7 +1744,7 @@ def restore_version(name, version_id):
     version = PipelineVersion.query.get_or_404(version_id)
 
     # Write the script_text back to the analysis file
-    script_path = f"{webapp.extract_main_folder()}/{name}/analysis/structured_analysis_main.py"
+    script_path = f"{webapp.extract_main_folder()}/{name}/analysis/pipeline_main.py"
     with open(script_path, 'w') as f:
         f.write(version.script_text)
 

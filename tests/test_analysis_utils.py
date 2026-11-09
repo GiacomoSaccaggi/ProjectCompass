@@ -47,9 +47,10 @@ def analysis_dir(tmp_path):
     with open(analysis / "readme.md", 'w') as f:
         f.write("# Test Analysis\n")
 
-    # structured analysis
-    (analysis / "analysis" / "structured_analysis_main.py").write_text("def run(inputs, output_path): return {}")
-    (analysis / "analysis" / "metadata_automatic_report.yaml").write_text("title: Test\ninputs: {}\n")
+    # executable flow
+    (analysis / "flow.py").write_text("def run(inputs, output_path): return {}")
+    (analysis / "compass_flow.yaml").write_text("description: Test\ninputs: {}\n")
+    (analysis / "Dockerfile").write_text("FROM python:3.12-slim\nENTRYPOINT [\"python\", \"flow.py\"]\n")
 
     # A physical output file
     (analysis / "physical_output" / "main" / "output.csv").write_text("col1,col2\n1,2\n")
@@ -167,10 +168,10 @@ def test_read_single_analysis_none_values_become_empty(analysis_utils, analysis_
 
 
 def test_read_single_analysis_no_structured(analysis_utils, analysis_dir):
-    """Analysis without structured_analysis_main.py marks structured_analysis='n'."""
-    # Remove the structured files
-    sa_dir = analysis_dir / "Analyses" / "Test Analysis" / "analysis"
-    os.remove(sa_dir / "structured_analysis_main.py")
+    """Analysis without compass_flow.yaml + Dockerfile marks structured_analysis='n'."""
+    sa_dir = analysis_dir / "Analyses" / "Test Analysis"
+    (sa_dir / "compass_flow.yaml").unlink(missing_ok=True)
+    (sa_dir / "Dockerfile").unlink(missing_ok=True)
 
     main_folder = analysis_utils.extract_main_folder()
     result = analysis_utils.read_single_analysis(main_folder, "Test Analysis")
@@ -421,3 +422,27 @@ def test_modify_analysis(client, app):
 
         # Cleanup
         shutil.rmtree(analysis_path, ignore_errors=True)
+
+
+def test_read_flow_and_demo_analyses_unified(app):
+    """Verify all 4 executable demo analyses have compass_flow.yaml + Dockerfile + flow.py."""
+    with app.app_context():
+        webapp = app.config['WEBAPP']
+        main_folder = webapp.extract_main_folder()
+        expected_demos = [
+            'ScompLink Advanced ML',
+            'ScompLink Wine Quality Prediction',
+            'Sales Performance Report',
+            'Test Builder',
+        ]
+        for demo_name in expected_demos:
+            single = webapp.read_single_analysis(main_folder, demo_name)
+            assert single['is_flow'] is True, f"{demo_name} should have is_flow=True"
+            assert single['structured_analysis'] == 'y', f"{demo_name} should have structured_analysis='y'"
+            flow_info = webapp.read_flow(demo_name)
+            assert flow_info is not None
+            assert flow_info['is_flow'] is True
+            assert flow_info['has_flow_py'] is True
+            assert len(flow_info['code']) > 0
+            assert isinstance(flow_info['parameters'], dict)
+            assert len(flow_info['parameters']) >= 1

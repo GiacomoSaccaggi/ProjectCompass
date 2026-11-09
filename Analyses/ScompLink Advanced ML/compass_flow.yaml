@@ -1,5 +1,4 @@
-title: ScompLink Advanced ML
-description: Run scomp-link v2.x advanced pipeline with DSL, feature engineering, explainability, drift detection, and rich report
+description: Advanced ML pipeline using scomp-link v2.x
 inputs:
   target_col:
     type: text
@@ -31,6 +30,3 @@ inputs:
       - 'true'
       - 'false'
     description: Generate SHAP explainability analysis
-output:
-  type: csv
-  description: Model metrics and rich HTML report

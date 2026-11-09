@@ -1,10 +1,6 @@
-description: ''
+description: Auto-generated pipeline by ProjectCompass Pipeline Builder
 inputs:
   target_col:
     default: ''
     description: Target column (optional override)
     type: text
-output:
-  description: Pipeline output
-  type: csv
-title: Test Builder

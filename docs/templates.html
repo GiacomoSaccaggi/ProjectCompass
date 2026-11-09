@@ -169,7 +169,7 @@
           <tr>
             <td><code>analysis.html</code></td>
             <td><code>GET /analysis/</code></td>
-            <td>Full catalog view with instant client-side + FTS5 filtering, favorites toggle, star ratings, comments modal, and RAG index status badges.</td>
+            <td>Full catalog view with instant client-side + FTS5 filtering, favorites toggle, star ratings, comments modal, RAG index status badges, and ⚡ Flow badges with "Edit Code" buttons for analyses that have <code>compass_flow.yaml</code> + <code>Dockerfile</code>.</td>
           </tr>
           <tr>
             <td><code>create_analysis.html</code></td>
@@ -189,7 +189,7 @@
           <tr>
             <td><code>investigations.html</code></td>
             <td><code>GET /investigations/</code></td>
-            <td>Dynamic parameter input form generated from <code>metadata_automatic_report.yaml</code> to execute Structured Analyses.</td>
+            <td>Dynamic parameter input form generated from <code>compass_flow.yaml</code> to execute flows.</td>
           </tr>
           <tr>
             <td><code>versions_single_analysis.html</code>, <code>outputs.html</code>, <code>iframetemplate.html</code></td>
@@ -262,9 +262,9 @@
             <td>k0s cluster node console showing `Ready` / `NotReady` / `Removed` status, CPU/Memory capacity, join-token generator, and drain/remove actions.</td>
           </tr>
           <tr>
-            <td><code>flows.html</code>, <code>chains.html</code>, <code>run_detail.html</code></td>
-            <td><code>GET /flows</code>, <code>GET /chains</code>, <code>GET /runs/&lt;id&gt;/view</code></td>
-            <td>Kubernetes Flow editor (code, image, resources, secrets, node selector), multi-step Chain builder, and live Pod log viewer.</td>
+            <td><code>flows.html</code>, <code>run_detail.html</code></td>
+            <td><code>GET /flows/&lt;name&gt;</code> (from catalog), <code>GET /runs/&lt;id&gt;/view</code></td>
+            <td>Flow editor (code, image, resources, secrets, node selector) accessed from catalog links, and live Pod log viewer. <code>GET /flows</code> redirects to the catalog.</td>
           </tr>
           <tr>
             <td><code>login_page.html</code> &amp; <code>setup_wizard.html</code></td>

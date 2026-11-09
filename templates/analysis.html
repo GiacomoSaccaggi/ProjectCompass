@@ -214,15 +214,22 @@ header.analysis-hero p {
 
       <div id="myUL">
       {% if not analysis or analysis|length == 0 %}
-        {% with icon='🧭', title='No analyses yet', message='Create your first analysis to get started. Use the Pipeline Builder for visual workflows or create one manually.', cta_url='/pipeline_builder', cta_icon='fa-plus', cta_text='Create Pipeline' %}
-          {% include 'components/empty_state.html' %}
-        {% endwith %}
+        {% if pc.features.pipeline_builder %}
+          {% with icon='🧭', title='No analyses yet', message='Create your first analysis to get started. Use the Pipeline Builder for visual workflows or create one manually.', cta_url='/pipeline_builder', cta_icon='fa-plus', cta_text='Create Pipeline' %}
+            {% include 'components/empty_state.html' %}
+          {% endwith %}
+        {% else %}
+          {% with icon='🧭', title='No analyses yet', message='Create your first analysis to get started.', cta_url='/load_analysis/', cta_icon='fa-plus', cta_text='New Analysis' %}
+            {% include 'components/empty_state.html' %}
+          {% endwith %}
+        {% endif %}
       {% else %}
       {% for nome, values in analysis.items() %}
         <ul>
           <button class="accordion" type="button">
             <li><a href="#{{ nome }}" onclick="event.preventDefault();">{{ nome }}</a></li>
             <span class="w3-tag w3-tiny" style="background:rgba(2,132,199,0.12);color:var(--mariner-cyan);border:1px solid rgba(2,132,199,0.3);">{{ values['product'] }}</span>
+            {% if values.get('is_flow') %}<span class="w3-tag w3-tiny" style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">⚡ Flow</span>{% endif %}
           </button>
           <div class="panel">
             <h5 class="product" style="margin:4px 0 8px 0;color:var(--mariner-cyan);"><b><i class="fa fa-folder-open-o"></i> {{ values['product'] }}</b></h5>
@@ -265,6 +272,9 @@ header.analysis-hero p {
               {% if values['structured_analysis'] != 'n' %}
               <a href="{{'/create_investigations?name=' + nome.replace(' ','512')}}" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
               {% endif %}
+              {% if values.get('is_flow') or values['structured_analysis'] != 'n' %}
+              <a href="/flows/{{ nome }}" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
+              {% endif %}
               {% if values['dashboard link'] != '' %}
               <a href="{{'/iframe?name=' + nome.replace(' ','512') if values['embedded'] == 'y' else values['dashboard link']}}" target="{{'_blank' if values['embedded'] != 'y' else ''}}" class="pc-act-btn"><i class="fa fa-line-chart"></i> Dashboard</a>
               {% endif %}
@@ -274,11 +284,15 @@ header.analysis-hero p {
               <a href="/open_version?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
               <a href="/load_analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
               <a href="/open_analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              {% if pc.features.ai_chat %}
               <a href="/chat/analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              {% endif %}
+              {% if pc.features.rag %}
               <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
-                <span id="rag-status-{{ loop.index }}" style="font-size:0.78rem;color:var(--mariner-text-muted);">Loading...</span>
+                <span id="rag-status-{{ loop.index }}" data-analysis="{{ nome.replace(' ','512') }}" style="font-size:0.78rem;color:var(--mariner-text-muted);">Loading...</span>
                 <button type="button" onclick="buildRag('{{ nome.replace(' ','512') }}', this, {{ loop.index }})" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
               </span>
+              {% endif %}
               <a href="/delete_analysis?name={{ nome.replace(' ','512') }}" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis {{ nome }}?');"><i class="fa fa-trash"></i> Delete</a>
             </div>
           </div>
@@ -364,6 +378,7 @@ header.analysis-hero p {
     }
     </script>
 
+    {% if pc.features.rag %}
     <script>
     // RAG status check and build
     function buildRag(name, btn, idx) {
@@ -390,13 +405,7 @@ header.analysis-hero p {
 
     // Check RAG status on page load for visible analyses
     document.querySelectorAll('[id^="rag-status-"]').forEach(el => {
-        const idx = el.id.split('-')[2];
-        // Get analysis name from the nearby link
-        const accordion = el.closest('.panel');
-        if (!accordion) return;
-        const chatLink = accordion.querySelector('a[href*="/chat/analysis"]');
-        if (!chatLink) return;
-        const name = chatLink.href.split('name=')[1];
+        const name = el.dataset.analysis;
         if (!name) return;
         fetch('/rag/status/' + name)
             .then(r => r.json())
@@ -410,6 +419,7 @@ header.analysis-hero p {
             .catch(() => { el.innerHTML = '<span style="color:#999;">-</span>'; });
     });
     </script>
+    {% endif %}
 
     {% include 'components/branding_footer.html' %}
 

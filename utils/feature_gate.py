@@ -19,7 +19,7 @@ class FeatureGate:
     PREFIXES: ClassVar[dict[str, tuple[str, ...]]] = {
         'ai_chat': ('/chat',),
         'rag': ('/rag', '/chat/analysis/rag'),
-        'k8s': ('/workers', '/flows', '/chains', '/k8s'),
+        'k8s': ('/workers', '/flows', '/k8s'),
         'pipeline_builder': ('/pipeline_builder', '/save_pipeline'),
         'schedules': ('/schedules', '/schedule_analysis', '/delete_schedule', '/run_schedule_now'),
         'executions': (

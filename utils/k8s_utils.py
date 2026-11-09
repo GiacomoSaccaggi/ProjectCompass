@@ -23,7 +23,7 @@ import httpx
 import yaml
 
 from logging_config import logger
-from models import ChainExecution, Execution, FlowChain, K8sWorkerNode, db, fire_webhooks
+from models import Execution, K8sWorkerNode, db, fire_webhooks
 from utils.worker_provider import (
     DockerWorkerProvider,
     WorkerProvider,
@@ -656,19 +656,19 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             self.data_dir or self.dir_path or "",
             "Analyses",
         )
-        struct_script_path = os.path.join(
-            base_analyses_dir,
-            flow_name,
-            "analysis",
-            "structured_analysis_main.py",
-        )
+        flow_dir = os.path.join(base_analyses_dir, flow_name)
         combined_source = code or ""
-        if os.path.isfile(struct_script_path):
-            try:
-                with open(struct_script_path, encoding="utf-8", errors="ignore") as f_src:
-                    combined_source = combined_source + "\n" + f_src.read()
-            except OSError:
-                pass
+        for scan_dir in (flow_dir, os.path.join(flow_dir, "analysis")):
+            if os.path.isdir(scan_dir):
+                try:
+                    for fname in sorted(os.listdir(scan_dir)):
+                        if fname.endswith(".py"):
+                            fpath = os.path.join(scan_dir, fname)
+                            if os.path.isfile(fpath):
+                                with open(fpath, encoding="utf-8", errors="ignore") as f_src:
+                                    combined_source = combined_source + "\n" + f_src.read()
+                except OSError:
+                    pass
 
         referenced_csvs = {
             f"{ds}.csv"
@@ -800,6 +800,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         namespace: str,
         ttl_seconds: int = 300,
         secret_refs: list[str] | str | None = None,
+        dockerfile_mode: bool = False,
     ) -> dict[str, Any]:
         """Construct the isolated Kubernetes batch/v1 Job manifest with backoffLimit=0."""
         job_name = f"pc-flow-job-{run_id}"
@@ -818,6 +819,18 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             {"name": "FLOW_PARAMS_JSON", "value": json.dumps(parameters)},
             {"name": "FLOW_PARAMS_FILE", "value": "/workspace/params.json"},
         ]
+        if dockerfile_mode:
+            env_list.append({"name": "PC_DATA_DIR", "value": "/app/Saved_data"})
+        # S3 artifact store credentials (MinIO)
+        s3_endpoint = os.environ.get("PC_S3_ENDPOINT", "").strip()
+        if s3_endpoint:
+            env_list.extend([
+                {"name": "PC_S3_ENDPOINT", "value": s3_endpoint},
+                {"name": "PC_S3_ACCESS_KEY", "value": os.environ.get("PC_S3_ACCESS_KEY", "")},
+                {"name": "PC_S3_SECRET_KEY", "value": os.environ.get("PC_S3_SECRET_KEY", "")},
+                {"name": "PC_S3_BUCKET", "value": os.environ.get("PC_S3_BUCKET", "pc-artifacts")},
+                {"name": "PC_OUTPUT_DIR", "value": "/tmp/pc_output"},
+            ])
         for key, val in parameters.items():
             safe_env_key = re.sub(r"[^A-Za-z0-9_]", "_", str(key)).upper()
             if safe_env_key:
@@ -826,21 +839,23 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         container_spec: dict[str, Any] = {
             "name": "flow-runner",
             "image": image,
-            "command": ["/bin/sh", "/workspace/entrypoint.sh"],
-            "workingDir": "/tmp",
             "env": env_list,
             "resources": {
                 "requests": {"cpu": cpu_request, "memory": mem_request},
                 "limits": {"cpu": cpu_limit, "memory": mem_limit},
             },
-            "volumeMounts": [
+        }
+
+        if not dockerfile_mode:
+            container_spec["workingDir"] = "/tmp"
+            container_spec["command"] = ["/bin/sh", "/workspace/entrypoint.sh"]
+            container_spec["volumeMounts"] = [
                 {
                     "name": "flow-workspace",
                     "mountPath": "/workspace",
                     "readOnly": True,
                 }
-            ],
-        }
+            ]
 
         cluster_secret_refs_raw = os.environ.get("K8S_SECRET_REFS", "")
         combined_secret_names: list[str] = []
@@ -895,7 +910,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                         "automountServiceAccountToken": False,
                         "restartPolicy": "Never",
                         "containers": [container_spec],
-                        "volumes": [
+                        **({"volumes": [
                             {
                                 "name": "flow-workspace",
                                 "configMap": {
@@ -903,11 +918,155 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                                     "defaultMode": 365,
                                 },
                             }
-                        ],
+                        ]} if not dockerfile_mode else {}),
                     },
                 },
             },
         }
+
+    def _build_and_push_image(
+        self,
+        analysis_name: str,
+        analysis_dir: str,
+        run_id: int,
+    ) -> str:
+        """Build a Docker image from the analysis Dockerfile and push it to the local registry."""
+        import shutil
+        import subprocess
+
+        registry_host = os.environ.get("PC_REGISTRY_HOST", "localhost:5050")
+        k8s_registry_host = os.environ.get("PC_REGISTRY_K8S_HOST", registry_host)
+        safe_name = re.sub(r"[^a-z0-9_.-]", "-", analysis_name.lower().strip()).strip("-") or "flow"
+        tag = f"{registry_host}/pc/{safe_name}:{run_id}"
+        k8s_tag = f"{k8s_registry_host}/pc/{safe_name}:{run_id}"
+
+        # Inject pc_entrypoint.sh and Saved_data/*.csv into the build context
+        staged_files: list[str] = []
+        created_dirs: list[str] = []
+
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        entrypoint_src = os.path.join(repo_root, "scripts", "pc_entrypoint.sh")
+        scripts_dst_dir = os.path.join(analysis_dir, "scripts")
+        entrypoint_dst = os.path.join(scripts_dst_dir, "pc_entrypoint.sh")
+        if os.path.isfile(entrypoint_src) and not os.path.exists(entrypoint_dst):
+            if not os.path.isdir(scripts_dst_dir):
+                os.makedirs(scripts_dst_dir, exist_ok=True)
+                created_dirs.append(scripts_dst_dir)
+            shutil.copy2(entrypoint_src, entrypoint_dst)
+            staged_files.append(entrypoint_dst)
+
+        save_data_dir = getattr(self, "save_data_path", "") or os.path.join(
+            getattr(self, "data_dir", None) or getattr(self, "dir_path", None) or repo_root,
+            "Saved_data",
+        )
+        if not os.path.isdir(save_data_dir):
+            save_data_dir = os.path.join(repo_root, "Saved_data")
+
+        if os.path.isdir(save_data_dir):
+            combined_source = ""
+            for scan_dir in (analysis_dir, os.path.join(analysis_dir, "analysis")):
+                if os.path.isdir(scan_dir):
+                    try:
+                        for fname in sorted(os.listdir(scan_dir)):
+                            if fname.endswith(".py"):
+                                fpath = os.path.join(scan_dir, fname)
+                                if os.path.isfile(fpath):
+                                    with open(fpath, encoding="utf-8", errors="ignore") as f_src:
+                                        combined_source += "\n" + f_src.read()
+                    except OSError:
+                        pass
+            referenced_csvs = {
+                f"{ds}.csv"
+                for ds in re.findall(r'read_csv\(.*?["\']([^"\'/\\]+)\.csv["\']', combined_source)
+            } | set(re.findall(r'["\']([A-Za-z0-9_.-]+\.csv)["\']', combined_source))
+            stage_all_csvs = (
+                "Saved_data" in combined_source
+                or "PC_DATA_DIR" in combined_source
+                or not referenced_csvs
+            )
+            try:
+                all_csvs = sorted(
+                    f for f in os.listdir(save_data_dir)
+                    if f.endswith(".csv") and not f.startswith(".")
+                )
+            except OSError:
+                all_csvs = []
+
+            csvs_to_stage = [
+                f for f in all_csvs
+                if f in referenced_csvs or stage_all_csvs
+            ]
+            if csvs_to_stage:
+                saved_data_dst_dir = os.path.join(analysis_dir, "Saved_data")
+                if not os.path.isdir(saved_data_dst_dir):
+                    os.makedirs(saved_data_dst_dir, exist_ok=True)
+                    created_dirs.append(saved_data_dst_dir)
+                for csv_name in csvs_to_stage:
+                    src_csv = os.path.join(save_data_dir, csv_name)
+                    dst_csv = os.path.join(saved_data_dst_dir, csv_name)
+                    if os.path.isfile(src_csv) and not os.path.exists(dst_csv):
+                        shutil.copy2(src_csv, dst_csv)
+                        staged_files.append(dst_csv)
+
+        try:
+            build_result = subprocess.run(
+                ["docker", "build", "-t", tag, analysis_dir],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if build_result.returncode != 0:
+                raise K8sApiError(
+                    f"Docker build failed (exit {build_result.returncode}): {build_result.stderr[-500:]}",
+                )
+
+            push_result = subprocess.run(
+                ["docker", "push", tag],
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            if push_result.returncode != 0:
+                raise K8sApiError(
+                    f"Docker push failed (exit {push_result.returncode}): {push_result.stderr[-500:]}",
+                )
+
+            if k8s_tag != tag:
+                tag_result = subprocess.run(
+                    ["docker", "tag", tag, k8s_tag],
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                if tag_result.returncode != 0:
+                    logger.debug(f"docker tag {tag} -> {k8s_tag} failed: {tag_result.stderr[:200]}")
+
+            # Import image into k0s containerd for single-node setups using the K8s Job image reference
+            import_cmd = f"docker save {k8s_tag} | docker exec -i k0s k0s ctr images import --all-platforms -"
+            import_result = subprocess.run(  # noqa: S602
+                import_cmd, shell=True, capture_output=True, text=True, timeout=120,
+            )
+            if import_result.returncode != 0:
+                logger.debug(f"k0s ctr import skipped or failed: {import_result.stderr[:200]}")
+        except subprocess.TimeoutExpired as exc:
+            raise K8sApiError(f"Docker build/push timed out for '{analysis_name}'") from exc
+        except FileNotFoundError as exc:
+            raise K8sApiError("Docker CLI not found — ensure docker is available in the container") from exc
+        finally:
+            for fpath in staged_files:
+                try:
+                    if os.path.isfile(fpath):
+                        os.remove(fpath)
+                except OSError:
+                    pass
+            for dpath in reversed(created_dirs):
+                try:
+                    if os.path.isdir(dpath) and not os.listdir(dpath):
+                        os.rmdir(dpath)
+                except OSError:
+                    pass
+
+        return k8s_tag
 
     def launch_flow_run(
         self,
@@ -985,73 +1144,128 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         exe.job_name = job_name
         db.session.commit()
 
-        skipped_data_warnings: list[str] = []
-        cm_manifest = self.build_configmap_manifest(
-            run_id=run_id,
-            flow_name=flow_data["name"],
-            code=flow_data["code"],
-            parameters=merged_params,
-            pip_requirements=resolved_reqs,
-            namespace=namespace,
-            skipped_warnings=skipped_data_warnings,
+        # --- Detect Dockerfile-based flow ---
+        analyses_base = (
+            getattr(self, "save_folder_path", "")
+            or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
         )
-        warning_log = "".join(f"{warning}\n" for warning in skipped_data_warnings)
-        job_manifest = self.build_job_manifest(
-            run_id=run_id,
-            flow_name=flow_data["name"],
-            image=resolved_image,
-            parameters=merged_params,
-            has_secret=bool(parsed_env),
-            namespace=namespace,
-            ttl_seconds=ttl_seconds,
-            secret_refs=resolved_secret_refs,
-        )
+        analysis_dir = os.path.join(analyses_base, flow_data["name"])
+        dockerfile_path = os.path.join(analysis_dir, "Dockerfile")
+        use_dockerfile = os.path.isfile(dockerfile_path)
 
-        created_cm = False
-        created_secret = False
-        try:
-            if self._should_manage_workers() and self._count_ready_workers() == 0:
-                self.worker_provider.reset_tracking()
-                self.worker_provider.ensure_workers(1, require_ready=True)
+        if use_dockerfile:
+            # Dockerfile mode: build image, no ConfigMap
+            try:
+                exe.log_text = f"[ProjectCompass] Building Docker image for '{flow_data['name']}'...\n"
+                db.session.commit()
 
-            self._k8s_post(f"/api/v1/namespaces/{namespace}/configmaps", cm_manifest)
-            created_cm = True
-            if parsed_env:
-                sec_manifest = self.build_secret_manifest(
+                if self._should_manage_workers() and self._count_ready_workers() == 0:
+                    self.worker_provider.reset_tracking()
+                    self.worker_provider.ensure_workers(1, require_ready=True)
+
+                built_image = self._build_and_push_image(flow_data["name"], analysis_dir, run_id)
+                job_manifest = self.build_job_manifest(
                     run_id=run_id,
                     flow_name=flow_data["name"],
-                    env_vars=parsed_env,
+                    image=built_image,
+                    parameters=merged_params,
+                    has_secret=bool(parsed_env),
                     namespace=namespace,
+                    ttl_seconds=ttl_seconds,
+                    secret_refs=resolved_secret_refs,
+                    dockerfile_mode=True,
                 )
-                self._k8s_post(f"/api/v1/namespaces/{namespace}/secrets", sec_manifest)
-                created_secret = True
+                if parsed_env:
+                    sec_manifest = self.build_secret_manifest(
+                        run_id=run_id, flow_name=flow_data["name"],
+                        env_vars=parsed_env, namespace=namespace,
+                    )
+                    self._k8s_post(f"/api/v1/namespaces/{namespace}/secrets", sec_manifest)
 
-            self._k8s_post(f"/apis/batch/v1/namespaces/{namespace}/jobs", job_manifest)
-            exe.log_text = warning_log + (
-                f"[ProjectCompass] Submitted Kubernetes Job '{job_name}' (image: {resolved_image}).\n"
+                self._k8s_post(f"/apis/batch/v1/namespaces/{namespace}/jobs", job_manifest)
+                exe.log_text = (
+                    f"[ProjectCompass] Built image '{built_image}'.\n"
+                    f"[ProjectCompass] Submitted Kubernetes Job '{job_name}'.\n"
+                )
+                db.session.commit()
+            except (K8sClientError, WorkerProviderError) as exc:
+                if parsed_env:
+                    self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/pc-flow-sec-{run_id}")
+                exe.status = "failed"
+                exe.finished_at = datetime.utcnow()
+                exe.error_message = str(exc)
+                exe.log_text = (exe.log_text or "") + f"[ProjectCompass] ERROR: {exc}\n"
+                db.session.commit()
+                return exe
+        else:
+            # Legacy ConfigMap mode
+            skipped_data_warnings: list[str] = []
+            cm_manifest = self.build_configmap_manifest(
+                run_id=run_id,
+                flow_name=flow_data["name"],
+                code=flow_data["code"],
+                parameters=merged_params,
+                pip_requirements=resolved_reqs,
+                namespace=namespace,
+                skipped_warnings=skipped_data_warnings,
             )
-            db.session.commit()
-        except WorkerProviderError as exc:
-            exe.status = "failed"
-            exe.finished_at = datetime.utcnow()
-            exe.error_message = str(exc)
-            exe.log_text = warning_log + f"[ProjectCompass] ERROR provisioning worker: {exc}\n"
-            db.session.commit()
-            return exe
-        except K8sClientError as exc:
-            if created_secret and sec_name:
-                self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/{sec_name}")
-            if created_cm:
-                self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/configmaps/{cm_name}")
+            warning_log = "".join(f"{warning}\n" for warning in skipped_data_warnings)
+            job_manifest = self.build_job_manifest(
+                run_id=run_id,
+                flow_name=flow_data["name"],
+                image=resolved_image,
+                parameters=merged_params,
+                has_secret=bool(parsed_env),
+                namespace=namespace,
+                ttl_seconds=ttl_seconds,
+                secret_refs=resolved_secret_refs,
+            )
 
-            exe.status = "failed"
-            exe.finished_at = datetime.utcnow()
-            exe.error_message = str(exc)
-            exe.log_text = warning_log + (exe.log_text or "") + (
-                f"[ProjectCompass] ERROR launching Kubernetes Job: {exc}\n"
-            )
-            db.session.commit()
-            return exe
+            created_cm = False
+            created_secret = False
+            try:
+                if self._should_manage_workers() and self._count_ready_workers() == 0:
+                    self.worker_provider.reset_tracking()
+                    self.worker_provider.ensure_workers(1, require_ready=True)
+
+                self._k8s_post(f"/api/v1/namespaces/{namespace}/configmaps", cm_manifest)
+                created_cm = True
+                if parsed_env:
+                    sec_manifest = self.build_secret_manifest(
+                        run_id=run_id,
+                        flow_name=flow_data["name"],
+                        env_vars=parsed_env,
+                        namespace=namespace,
+                    )
+                    self._k8s_post(f"/api/v1/namespaces/{namespace}/secrets", sec_manifest)
+                    created_secret = True
+
+                self._k8s_post(f"/apis/batch/v1/namespaces/{namespace}/jobs", job_manifest)
+                exe.log_text = warning_log + (
+                    f"[ProjectCompass] Submitted Kubernetes Job '{job_name}' (image: {resolved_image}).\n"
+                )
+                db.session.commit()
+            except WorkerProviderError as exc:
+                exe.status = "failed"
+                exe.finished_at = datetime.utcnow()
+                exe.error_message = str(exc)
+                exe.log_text = warning_log + f"[ProjectCompass] ERROR provisioning worker: {exc}\n"
+                db.session.commit()
+                return exe
+            except K8sClientError as exc:
+                if created_secret and sec_name:
+                    self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/secrets/{sec_name}")
+                if created_cm:
+                    self._cleanup_k8s_resource(f"/api/v1/namespaces/{namespace}/configmaps/{cm_name}")
+
+                exe.status = "failed"
+                exe.finished_at = datetime.utcnow()
+                exe.error_message = str(exc)
+                exe.log_text = warning_log + (exe.log_text or "") + (
+                    f"[ProjectCompass] ERROR launching Kubernetes Job: {exc}\n"
+                )
+                db.session.commit()
+                return exe
 
         flask_app = app
         if flask_app is None:
@@ -1106,6 +1320,73 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             self._k8s_delete(path, params=params)
         except K8sClientError as exc:
             logger.debug(f"Cleanup of Kubernetes resource {path} skipped or failed: {exc}")
+
+    def _download_s3_artifacts(
+        self,
+        flow_name: str,
+        run_id: int,
+        run_timestamp: str | None = None,
+    ) -> list[str]:
+        """Download output artifacts from MinIO/S3 into Analyses/<flow>/physical_output/."""
+        endpoint = os.environ.get("PC_S3_ENDPOINT", "").strip()
+        access_key = os.environ.get("PC_S3_ACCESS_KEY", "").strip()
+        secret_key = os.environ.get("PC_S3_SECRET_KEY", "").strip()
+        bucket = os.environ.get("PC_S3_BUCKET", "pc-artifacts").strip()
+        if not endpoint or not access_key:
+            return []
+
+        try:
+            import boto3
+            from botocore.config import Config as BotoConfig
+        except ImportError:
+            logger.warning("boto3 not installed — cannot download S3 artifacts")
+            return []
+
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            config=BotoConfig(signature_version="s3v4"),
+            region_name="us-east-1",
+        )
+
+        prefix = f"{run_id}/"
+        try:
+            response = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+        except Exception as exc:
+            logger.warning(f"Failed to list S3 artifacts for run {run_id}: {exc}")
+            return []
+
+        base_analyses_dir = (
+            getattr(self, "save_folder_path", "")
+            or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
+        )
+        phys_dir = os.path.join(base_analyses_dir, flow_name, "physical_output")
+        main_dir = os.path.join(phys_dir, "main")
+        os.makedirs(main_dir, exist_ok=True)
+        ts = run_timestamp or datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+        downloaded: list[str] = []
+        for obj in response.get("Contents", []):
+            s3_key = obj["Key"]
+            filename = s3_key[len(prefix):]
+            if not filename or filename.startswith("."):
+                continue
+
+            local_main = os.path.join(main_dir, os.path.basename(filename))
+            try:
+                os.makedirs(os.path.dirname(local_main), exist_ok=True)
+                s3.download_file(bucket, s3_key, local_main)
+                downloaded.append(os.path.basename(filename))
+
+                stem, ext = os.path.splitext(os.path.basename(filename))
+                versioned = os.path.join(phys_dir, f"{ts}_{stem}{ext}")
+                s3.download_file(bucket, s3_key, versioned)
+            except Exception as exc:
+                logger.warning(f"Failed to download {s3_key}: {exc}")
+
+        return downloaded
 
     def _extract_and_persist_artifacts(
         self,
@@ -1394,6 +1675,22 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                             if assigned_node
                             else ""
                         )
+                        # Download artifacts from S3 if available
+                        s3_files = self._download_s3_artifacts(
+                            exe.analysis_name, run_id, run_timestamp,
+                        )
+                        if s3_files:
+                            base_analyses_dir = (
+                                getattr(self, "save_folder_path", "")
+                                or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
+                            )
+                            main_out_dir = os.path.join(
+                                base_analyses_dir, exe.analysis_name, "physical_output", "main",
+                            )
+                            preferred = "output.csv" if "output.csv" in s3_files else sorted(s3_files)[0]
+                            exe.output_path = os.path.join(main_out_dir, preferred)
+                            exe.outputs_json = json.dumps(sorted(s3_files))
+                            captured_pod_logs += f"[ProjectCompass] Downloaded {len(s3_files)} artifact(s) from S3.\n"
                         exe.status = "success"
                         exe.exit_code = 0 if exit_code is None else exit_code
                         exe.finished_at = datetime.utcnow()
@@ -1461,8 +1758,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 Execution.status == "running",
                 Execution.id != finished_run_id,
             ).count()
-            active_chains = ChainExecution.query.filter_by(status="running").count()
-            if active_runs == 0 and active_chains == 0:
+            if active_runs == 0:
                 self.worker_provider.release_workers()
         except Exception as exc:
             logger.warning(f"Failed releasing idle workers after run {finished_run_id}: {exc}")
@@ -1487,285 +1783,3 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             exe.log_text = (exe.log_text or "") + "\n[ProjectCompass] Run aborted by user.\n"
             db.session.commit()
         return exe
-
-
-class K8sChainRunnerUtils(K8sFlowRunnerUtils):
-    """Child class orchestrating sequential linear chains of Flows (A -> B -> C).
-
-    Each step in a FlowChain executes as a separate Kubernetes batch/v1 Job via
-    `launch_flow_run(..., wait_for_watcher=True)`. If any step finishes with a
-    status other than `success`, the chain stops immediately and records `failed`.
-    """
-
-    def __init__(self, dir_path: str = "", **kwargs: Any) -> None:
-        """Initialize sequential FlowChain runner state."""
-        self._active_chain_threads: dict[int, threading.Thread] = {}
-        super().__init__(dir_path=dir_path, **kwargs)
-
-    @staticmethod
-    def parse_chain_flow_names(raw_flows: list[str] | str | None) -> list[str]:
-        """Parse an ordered sequence of flow names from a list, JSON array, or delimited string."""
-        if raw_flows is None:
-            return []
-        if isinstance(raw_flows, list):
-            return [str(item).strip() for item in raw_flows if str(item).strip()]
-        text = str(raw_flows).strip()
-        if not text:
-            return []
-        if text.startswith("["):
-            try:
-                parsed = json.loads(text)
-                if isinstance(parsed, list):
-                    return [str(item).strip() for item in parsed if str(item).strip()]
-            except ValueError:
-                pass
-        normalized = text.replace("->", ",").replace("→", ",")
-        return [tok.strip() for tok in re.split(r"[\r\n,]+", normalized) if tok.strip()]
-
-    @staticmethod
-    def _serialize_chain(chain: FlowChain) -> dict[str, Any]:
-        """Convert a FlowChain SQLAlchemy record into a dictionary representation."""
-        try:
-            flow_names = json.loads(chain.flow_names_json or "[]")
-            if not isinstance(flow_names, list):
-                flow_names = []
-        except ValueError:
-            flow_names = []
-        return {
-            "id": chain.id,
-            "name": chain.name,
-            "description": chain.description or "",
-            "flow_names": [str(f) for f in flow_names],
-            "flow_names_text": ", ".join(str(f) for f in flow_names),
-            "flow_names_arrow": " -> ".join(str(f) for f in flow_names),
-            "owner": chain.owner or "flow-author",
-            "created_at": chain.created_at,
-        }
-
-    def save_chain(
-        self,
-        name: str,
-        flow_names: list[str] | str,
-        description: str = "",
-        owner: str = "flow-author",
-    ) -> dict[str, Any]:
-        """Create or update a linear FlowChain in SQLite after validating each step."""
-        chain_name = (name or "").strip()
-        if not chain_name or "/" in chain_name or "\\" in chain_name or ".." in chain_name:
-            raise ValueError(f"Invalid chain name: {name!r}")
-
-        ordered_flows = self.parse_chain_flow_names(flow_names)
-        if not ordered_flows:
-            raise ValueError("A flow chain must include at least one flow.")
-
-        for step_flow in ordered_flows:
-            if self.read_flow(step_flow) is None:  # type: ignore[attr-defined]
-                raise ValueError(f"Flow '{step_flow}' does not exist.")
-
-        chain = FlowChain.query.filter_by(name=chain_name).first()
-        if chain is None:
-            chain = FlowChain(
-                name=chain_name,
-                description=(description or "").strip(),
-                flow_names_json=json.dumps(ordered_flows),
-                owner=owner or "flow-author",
-            )
-            db.session.add(chain)
-        else:
-            chain.description = (description or "").strip()
-            chain.flow_names_json = json.dumps(ordered_flows)
-            chain.owner = owner or chain.owner or "flow-author"
-
-        db.session.commit()
-        return self._serialize_chain(chain)
-
-    def read_chain(self, name: str) -> dict[str, Any] | None:
-        """Return a FlowChain dictionary by name, or None if not found."""
-        chain_name = (name or "").strip()
-        if not chain_name:
-            return None
-        chain = FlowChain.query.filter_by(name=chain_name).first()
-        if chain is None:
-            return None
-        return self._serialize_chain(chain)
-
-    def list_chains(self) -> list[dict[str, Any]]:
-        """Return all configured FlowChains ordered by name."""
-        chains = FlowChain.query.order_by(FlowChain.name.asc()).all()
-        return [self._serialize_chain(c) for c in chains]
-
-    def delete_chain(self, name: str) -> bool:
-        """Delete a FlowChain by name."""
-        chain_name = (name or "").strip()
-        if not chain_name:
-            return False
-        chain = FlowChain.query.filter_by(name=chain_name).first()
-        if chain is None:
-            return False
-        db.session.delete(chain)
-        db.session.commit()
-        return True
-
-    def launch_chain_run(
-        self,
-        chain_name: str,
-        parameters: dict[str, Any] | str | None = None,
-        user_id: int | None = None,
-        trigger_type: str = "manual",
-        app: Any | None = None,
-        wait_for_completion: bool = False,
-    ) -> ChainExecution:
-        """Launch a sequential execution of all flows in a FlowChain."""
-        chain = FlowChain.query.filter_by(name=(chain_name or "").strip()).first()
-        if chain is None:
-            raise ValueError(f"Flow chain '{chain_name}' does not exist.")
-
-        flow_names = self.parse_chain_flow_names(chain.flow_names_json)
-        if not flow_names:
-            raise ValueError(f"Flow chain '{chain_name}' has no configured steps.")
-
-        chain_exe = ChainExecution(
-            chain_id=chain.id,
-            chain_name=chain.name,
-            status="running",
-            current_step=0,
-            execution_ids_json="[]",
-            trigger_type=trigger_type,
-        )
-        db.session.add(chain_exe)
-        db.session.commit()
-
-        chain_run_id = int(chain_exe.id)
-        flask_app = app
-        if flask_app is None:
-            from flask import current_app
-
-            try:
-                flask_app = current_app._get_current_object()  # type: ignore[attr-defined]
-            except RuntimeError:
-                flask_app = None
-
-        if wait_for_completion:
-            self._execute_chain_steps(
-                app=flask_app,
-                chain_run_id=chain_run_id,
-                flow_names=flow_names,
-                parameters=parameters,
-                user_id=user_id,
-                trigger_type=trigger_type,
-            )
-            db.session.refresh(chain_exe)
-        else:
-            worker = threading.Thread(
-                target=self._execute_chain_steps,
-                kwargs={
-                    "app": flask_app,
-                    "chain_run_id": chain_run_id,
-                    "flow_names": flow_names,
-                    "parameters": parameters,
-                    "user_id": user_id,
-                    "trigger_type": trigger_type,
-                },
-                daemon=True,
-                name=f"k8s-chain-run-{chain_run_id}",
-            )
-            self._active_chain_threads[chain_run_id] = worker
-            worker.start()
-
-        return chain_exe
-
-    def _execute_chain_steps(
-        self,
-        app: Any | None,
-        chain_run_id: int,
-        flow_names: list[str],
-        parameters: dict[str, Any] | str | None,
-        user_id: int | None,
-        trigger_type: str,
-    ) -> None:
-        """Background worker that runs each flow in sequence and halts immediately on failure."""
-        from flask import has_app_context
-
-        if has_app_context() or app is None:
-            self._execute_chain_steps_in_context(
-                app=app,
-                chain_run_id=chain_run_id,
-                flow_names=flow_names,
-                parameters=parameters,
-                user_id=user_id,
-                trigger_type=trigger_type,
-            )
-        else:
-            with app.app_context():
-                self._execute_chain_steps_in_context(
-                    app=app,
-                    chain_run_id=chain_run_id,
-                    flow_names=flow_names,
-                    parameters=parameters,
-                    user_id=user_id,
-                    trigger_type=trigger_type,
-                )
-
-    def _execute_chain_steps_in_context(
-        self,
-        app: Any | None,
-        chain_run_id: int,
-        flow_names: list[str],
-        parameters: dict[str, Any] | str | None,
-        user_id: int | None,
-        trigger_type: str,
-    ) -> None:
-        """Execute sequential flow steps inside an active Flask application context."""
-        execution_ids: list[int] = []
-        try:
-            for step_idx, flow_name in enumerate(flow_names):
-                chain_exe = db.session.get(ChainExecution, chain_run_id)
-                if chain_exe is None or chain_exe.status == "aborted":
-                    return
-
-                chain_exe.current_step = step_idx
-                db.session.commit()
-
-                step_exe = self.launch_flow_run(
-                    flow_name=flow_name,
-                    parameters=parameters,
-                    user_id=user_id,
-                    trigger_type=trigger_type,
-                    app=app,
-                    wait_for_watcher=True,
-                )
-                execution_ids.append(int(step_exe.id))
-
-                chain_exe = db.session.get(ChainExecution, chain_run_id)
-                if chain_exe is None:
-                    return
-                chain_exe.execution_ids_json = json.dumps(execution_ids)
-
-                if step_exe.status != "success":
-                    chain_exe.status = "failed"
-                    chain_exe.finished_at = datetime.utcnow()
-                    err_detail = step_exe.error_message or f"status={step_exe.status}"
-                    chain_exe.error_message = (
-                        f"Step {step_idx + 1} ('{flow_name}', run #{step_exe.id}) failed: {err_detail}"
-                    )
-                    db.session.commit()
-                    return
-
-                db.session.commit()
-
-            chain_exe = db.session.get(ChainExecution, chain_run_id)
-            if chain_exe and chain_exe.status != "aborted":
-                chain_exe.current_step = len(flow_names)
-                chain_exe.status = "success"
-                chain_exe.finished_at = datetime.utcnow()
-                db.session.commit()
-        except Exception as exc:
-            chain_exe = db.session.get(ChainExecution, chain_run_id)
-            if chain_exe:
-                chain_exe.status = "failed"
-                chain_exe.finished_at = datetime.utcnow()
-                chain_exe.error_message = str(exc)
-                db.session.commit()
-        finally:
-            self._active_chain_threads.pop(chain_run_id, None)
-            self._release_workers_if_idle(-1)

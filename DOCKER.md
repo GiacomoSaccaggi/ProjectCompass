@@ -54,19 +54,16 @@ docker compose build --no-cache
 | File | Purpose |
 |------|---------|
 | `docker-compose.public.yml` | End users — pulls pre-built image from ghcr.io |
-| `docker-compose.yml` | Developers — builds from local source |
-| `docker-compose.k0s.yml` | k0s controller host — mounts kubeconfig, Docker socket and worker join token |
+| `docker-compose.yml` | Full stack — builds from local source with k0s, local registry, and MinIO |
+| `docker-compose.demo.yml` | Demo overlay — enables demo analyses, datasets, and optional features |
 
 ### k0s Docker workers
 
-To run isolated Flow Jobs with auto-provisioned Docker workers, generate a worker token on the k0s controller and start the application with the k0s overlay:
+To run isolated Flow Jobs with auto-provisioned Docker workers, run the bootstrap script or start the unified stack:
 
 ```bash
-mkdir -p data
-sudo k0s token create --role=worker > ./data/k0s-worker.token
-chmod 600 ./data/k0s-worker.token
-K0S_WORKER_TOKEN_FILE=./data/k0s-worker.token \
-  docker compose -f docker-compose.yml -f docker-compose.k0s.yml up -d
+bash scripts/k0s_setup.sh
+docker compose up -d
 ```
 
 The overlay mounts `/var/run/docker.sock` for the Docker-based `WorkerProvider` and mounts the token read-only at `/run/secrets/k0s-worker.token`, setting `PC_K0S_TOKEN_FILE` for the app. A Docker socket grants powerful host control; only enable this overlay for a trusted deployment. Ensure the API endpoint encoded in the token is reachable from the worker container network.

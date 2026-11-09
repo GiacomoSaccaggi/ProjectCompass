@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kubernetes Console, Flows, Jobs &amp; Chains — ProjectCompass Docs</title>
+  <title>Kubernetes Console, Workers &amp; Jobs — ProjectCompass Docs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -57,11 +57,11 @@
       <span>/</span>
       <span>Pillar III: The k0s Flotilla &amp; Regatta Fleet</span>
       <span>/</span>
-      <span>Kubernetes Console, Flows &amp; Chains</span>
+      <span>Kubernetes Console, Workers &amp; Jobs</span>
     </div>
-    <h1>Kubernetes Console, Flows, Jobs &amp; Chains</h1>
+    <h1>Kubernetes Console, Workers &amp; Jobs</h1>
     <p class="lead">
-      Operational guide to the ProjectCompass Kubernetes Flotilla Console (<code>/workers</code>, <code>/flows</code>, <code>/runs</code>, <code>/chains</code>), isolated <code>batch/v1</code> Job execution, PVC persistence, Kustomize manifests (<code>k8s/</code>), and security boundaries.
+      Operational guide to the ProjectCompass Kubernetes Flotilla Console (<code>/workers</code>, <code>/runs</code>), Dockerfile-based image builds with the local registry, isolated <code>batch/v1</code> Job execution, PVC persistence, Kustomize manifests (<code>k8s/</code>), and security boundaries. Flows are managed from the Analysis catalog at <code>/analysis</code> — any analysis with <code>compass_flow.yaml</code> + <code>Dockerfile</code> is an executable flow.
     </p>
     <div class="page-meta-badges">
       <span class="badge badge-gold">07 • Regatta Dispatch</span>
@@ -76,7 +76,7 @@
 
     <h2 id="console-overview">1. Kubernetes Console Overview</h2>
     <p>
-      ProjectCompass provides four integrated views in <code>blueprints/k8s.py</code> backed by the 4-tier Kubernetes MRO hierarchy in <code>utils/k8s_utils.py</code>:
+      ProjectCompass provides three integrated views in <code>blueprints/k8s.py</code> backed by the 4-tier Kubernetes MRO hierarchy in <code>utils/k8s_utils.py</code>. Flows are no longer a separate console view — they live in the Analysis catalog (<code>/analysis</code>) where analyses with <code>compass_flow.yaml</code> + <code>Dockerfile</code> appear with a ⚡ Flow badge:
     </p>
     <div class="table-wrap">
       <table>
@@ -94,20 +94,11 @@
             <td>Reconciles live Kubernetes nodes with SQLite (`k8s_workers`), generates join tokens, and drains or removes worker nodes.</td>
           </tr>
           <tr>
-            <td><strong>Flows Studio</strong></td>
-            <td><code>GET /flows</code></td>
-            <td>Creates and versions reusable Python workloads (`Analyses/&lt;name&gt;/flow.py`) with per-flow Docker images, CPU/memory limits, pip packages, secret refs, and node selectors.</td>
-          </tr>
-          <tr>
             <td><strong>Flow Runs &amp; Live Logs</strong></td>
             <td><code>GET /runs</code>, <code>GET /runs/&lt;id&gt;/view</code></td>
             <td>Tracks every `batch/v1` Job execution (`ExecutionRun`) and streams real-time Pod logs over Server-Sent Events (`/runs/&lt;id&gt;/stream`).</td>
           </tr>
-          <tr>
-            <td><strong>Linear Flow Chains</strong></td>
-            <td><code>GET /chains</code></td>
-            <td>Chains multiple Flows sequentially (`Flow A &rarr; Flow B &rarr; Flow C`) with configurable `stop_on_failure` semantics.</td>
-          </tr>
+          
         </tbody>
       </table>
     </div>
@@ -124,7 +115,7 @@
 
     <h2 id="isolated-job-execution">3. Isolated Flow Execution Lifecycle (<code>batch/v1</code> Jobs)</h2>
     <p>
-      Unlike in-process Python threads, every Kubernetes Flow run (`POST /flows/&lt;name&gt;/run`) executes inside a dedicated, ephemeral Kubernetes Pod in the <code>kube-compass</code> namespace:
+      Every Kubernetes Flow run executes inside a dedicated, ephemeral Kubernetes Pod in the <code>kube-compass</code> namespace. Execution supports two modes: <strong>Dockerfile-based</strong> (the flow's <code>Dockerfile</code> is built, pushed to the local registry at <code>registry:2</code> on port 5050, and launched as a K8s Job) and <strong>legacy ConfigMap injection</strong> (code and params injected via ConfigMap for backward compatibility).
     </p>
 
     <div class="mermaid-card">
@@ -226,10 +217,9 @@ sequenceDiagram
       </table>
     </div>
 
-    <h2 id="chains-and-scheduler">5. Linear Flow Chains &amp; Cron Scheduling</h2>
+    <h2 id="cron-scheduler">5. Cron Scheduling</h2>
     <ul>
-      <li><strong>Flow Chains (<code>/chains</code>)</strong> — A <code>FlowChain</code> defines an ordered list of steps (`[{"flow_name": "ingest", "parameters": {...}}, {"flow_name": "train", "parameters": {...}}]`). When triggered (`POST /chains/&lt;name&gt;/run`), `_execute_chain_worker` runs Step 1, polls until its Kubernetes Job completes, and only launches Step 2 if Step 1 succeeded (or if `stop_on_failure=False`).</li>
-      <li><strong>Unified Cron Schedules (<code>/schedules/</code>)</strong> — A <code>Schedule</code> can target <code>target_type="analysis"</code>, <code>"flow"</code>, or <code>"chain"</code>. Multi-worker Gunicorn deployments use <code>acquire_scheduler_lock()</code> (`fcntl.flock` on <code>DATA_DIR/tmp/scheduler.lock</code>) so only the leader worker fires cron triggers.</li>
+      <li><strong>Unified Cron Schedules (<code>/schedules/</code>)</strong> — A schedule targets an executable flow from the catalog. Multi-worker Gunicorn deployments use <code>acquire_scheduler_lock()</code> so only the leader worker fires cron triggers.</li>
     </ul>
 
     <h2 id="kubernetes-deployment">6. Deploying ProjectCompass Inside Kubernetes (<code>k8s/</code>)</h2>
@@ -251,12 +241,12 @@ sudo k0s kubectl -n kube-compass get pods,svc,pvc</code></pre>
     <div class="callout callout-kraken">
       <div class="callout-title">🦑 Kraken Warning — Mandatory Production Security &amp; Recovery Notes</div>
       <ul>
-        <li><strong>RBAC &amp; Code Execution Trust Boundary</strong>: Creating or running a Flow (`POST /flows`, `POST /flows/&lt;name&gt;/run`) executes arbitrary Python code inside the target Kubernetes namespace and can attach Secrets via `secret_refs`. Only grant `admin` or `editor` roles and API tokens to trusted engineers.</li>
-        <li><strong>Authentication Exemptions on Legacy Routes</strong>: While `/api/*`, `/workers`, `/flows`, `/runs`, `/chains`, and `/schedules` enforce session/token authentication when users exist in SQLite, always place ProjectCompass behind a TLS reverse proxy or VPN in production and create an Admin account immediately via `/setup`.</li>
-        <li><strong>In-Process Watcher &amp; Chain Threads Across Master Restarts</strong>: Each Flow run spawns a daemon thread (`_watch_flow_job`) and each Chain run spawns `_execute_chain_worker` inside the Flask process. If the ProjectCompass Master container restarts mid-run:
+        <li><strong>RBAC &amp; Code Execution Trust Boundary</strong>: Running a Flow executes arbitrary code inside the target Kubernetes namespace and can attach Secrets via `secret_refs`. The Dockerfile-based build pipeline also requires Docker socket access to build and push images to the local registry. Only grant `admin` or `editor` roles and API tokens to trusted engineers.</li>
+        <li><strong>Authentication Exemptions on Legacy Routes</strong>: While <code>/api/*</code>, <code>/workers</code>, <code>/runs</code>, and <code>/schedules</code> enforce session/token authentication when users exist in SQLite, always place ProjectCompass behind a TLS reverse proxy or VPN in production and create an Admin account immediately via <code>/setup</code>.</li>
+        <li><strong>In-Process Watcher Threads Across Master Restarts</strong>: Each Flow run spawns a daemon thread (<code>_watch_flow_job</code>) inside the Flask process. If the ProjectCompass Master container restarts mid-run:
           <ul>
             <li>Single-flow Jobs continue running inside Kubernetes; calling <code>GET /runs/&lt;id&gt;</code> or <code>POST /runs/&lt;id&gt;/sync</code> reconciles the final Pod status and logs from Kubernetes (`ttlSecondsAfterFinished=3600`). Note that any inline ephemeral secret `pc-flow-sec-&lt;id&gt;` from an interrupted watcher should be cleaned up if the master died mid-run.</li>
-            <li>In-flight multi-step Chains (`status="running"`) will not automatically advance to the next step after a master restart and must be re-triggered.</li>
+            <li></li>
           </ul>
         </li>
         <li><strong>Host-Local Scheduler Lock (`fcntl.flock`)</strong>: Leader election across Gunicorn workers uses an OS file lock on `DATA_DIR/tmp/scheduler.lock`. Keep the Master Deployment at `replicas: 1` (as configured in `k8s/deployment.yaml`).</li>

@@ -120,29 +120,6 @@ class FlowVersion(db.Model):
     message = db.Column(db.String(500), default='')
 
 
-class FlowChain(db.Model):
-    __tablename__ = 'flow_chains'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), unique=True, nullable=False)
-    description = db.Column(db.Text, default='')
-    flow_names_json = db.Column(db.Text, nullable=False)  # JSON list of ordered flow names
-    owner = db.Column(db.String(100), default='flow-author')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-class ChainExecution(db.Model):
-    __tablename__ = 'chain_executions'
-    id = db.Column(db.Integer, primary_key=True)
-    chain_id = db.Column(db.Integer, db.ForeignKey('flow_chains.id'), nullable=False)
-    chain_name = db.Column(db.String(200), nullable=False)
-    status = db.Column(db.String(20), default='running')  # running, success, failed, aborted
-    started_at = db.Column(db.DateTime, default=datetime.utcnow)
-    finished_at = db.Column(db.DateTime, nullable=True)
-    current_step = db.Column(db.Integer, default=0)
-    execution_ids_json = db.Column(db.Text, default='[]')  # JSON list of Execution IDs
-    trigger_type = db.Column(db.String(20), default='manual')  # manual, scheduled
-    error_message = db.Column(db.Text, nullable=True)
-
 
 class AuditLog(db.Model):
     __tablename__ = 'audit_log'
@@ -259,8 +236,6 @@ def _salvage_and_reset_corrupt_sqlite(db_path: str) -> dict[str, tuple[list[str]
         'k8s_worker_nodes',
         'pipeline_versions',
         'flow_versions',
-        'flow_chains',
-        'chain_executions',
         'audit_log',
         'comments',
         'webhooks',
