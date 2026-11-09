@@ -362,6 +362,52 @@
     } catch (_) {}
   }
 
+  /* ── 6. Mobile Navigation Drawer Toggle ─────────────────────────────────── */
+  function initMobileNav() {
+    var toggle = document.getElementById("nav-toggle");
+    var links = document.getElementById("nav-links");
+    var overlay = document.getElementById("nav-overlay");
+    if (!toggle || !links) return;
+
+    function openNav() {
+      toggle.classList.add("is-open");
+      links.classList.add("is-open");
+      if (overlay) overlay.classList.add("is-visible");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeNav() {
+      toggle.classList.remove("is-open");
+      links.classList.remove("is-open");
+      if (overlay) overlay.classList.remove("is-visible");
+      document.body.style.overflow = "";
+    }
+
+    toggle.addEventListener("click", function () {
+      if (links.classList.contains("is-open")) {
+        closeNav();
+      } else {
+        openNav();
+      }
+    });
+
+    if (overlay) {
+      overlay.addEventListener("click", closeNav);
+    }
+
+    links.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () {
+        if (window.innerWidth <= 960) closeNav();
+      });
+    });
+
+    window.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && links.classList.contains("is-open")) {
+        closeNav();
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initOceanWavesAndEmblems();
     initTheme();
@@ -370,5 +416,6 @@
     initCopyButtons();
     initTableOfContents();
     initDiagramsAndSyntax();
+    initMobileNav();
   });
 })();

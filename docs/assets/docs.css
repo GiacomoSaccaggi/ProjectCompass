@@ -203,10 +203,10 @@ hr {
   top: 0;
   z-index: 100;
   background: var(--bg-nav);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 0.65rem 1.5rem;
+  padding: 0;
 }
 
 .top-nav-inner {
@@ -215,8 +215,8 @@ hr {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0;
+  padding: 0.55rem 1.5rem;
 }
 
 .brand-link {
@@ -228,6 +228,7 @@ hr {
   color: var(--text-primary);
   text-decoration: none !important;
   letter-spacing: -0.02em;
+  flex-shrink: 0;
 }
 
 .brand-link .compass-mini {
@@ -242,51 +243,90 @@ hr {
 }
 
 .brand-tag {
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.66rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: var(--bg-inline-code);
   color: var(--accent-cyan);
   border: 1px solid var(--border-strong);
 }
 
+/* ── Desktop Nav Links ───────────────────────────────────────────────────── */
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  flex-wrap: wrap;
+  gap: 2px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
+.nav-links::-webkit-scrollbar { display: none; }
+
 .nav-links a {
-  font-size: 0.84rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  padding: 0.38rem 0.68rem;
-  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
   text-decoration: none;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   white-space: nowrap;
+  position: relative;
 }
 
 .nav-links a:hover {
   color: var(--text-primary);
-  background: var(--bg-inline-code);
+  background: var(--bg-card);
 }
 
 .nav-links a.active {
   color: var(--accent-cyan);
   background: var(--bg-inline-code);
-  border: 1px solid var(--border-strong);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.nav-links a.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-teal));
+}
+
+.nav-links .nav-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--border-subtle);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.nav-links .nav-demo {
+  background: linear-gradient(135deg, rgba(2,132,199,0.18), rgba(13,148,136,0.18));
+  color: var(--accent-gold) !important;
+  border: 1px solid var(--border-gold);
+  font-weight: 700 !important;
+}
+
+.nav-links .nav-demo:hover {
+  background: linear-gradient(135deg, rgba(2,132,199,0.28), rgba(13,148,136,0.28));
+  transform: translateY(-1px);
 }
 
 .nav-actions {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  flex-shrink: 0;
 }
 
 .theme-toggle-btn {
@@ -307,6 +347,183 @@ hr {
 .theme-toggle-btn:hover {
   border-color: var(--accent-cyan);
   box-shadow: var(--shadow-glow);
+}
+
+/* ── Mobile Hamburger Toggle ─────────────────────────────────────────────── */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  color: var(--text-primary);
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.nav-toggle:hover {
+  background: var(--bg-card);
+}
+
+.nav-toggle svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.nav-toggle .icon-close { display: none; }
+.nav-toggle.is-open .icon-menu { display: none; }
+.nav-toggle.is-open .icon-close { display: block; }
+
+/* ── Mobile Nav Overlay & Drawer ─────────────────────────────────────────── */
+.nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 98;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.nav-overlay.is-visible {
+  display: block;
+  opacity: 1;
+}
+
+@media (max-width: 960px) {
+  .nav-toggle { display: flex; }
+
+  .top-nav-inner {
+    flex-wrap: nowrap;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(320px, 85vw);
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-subtle);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 4.5rem 1.2rem 2rem;
+    gap: 2px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 99;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: -12px 0 40px rgba(0,0,0,0.3);
+  }
+
+  .nav-links.is-open {
+    transform: translateX(0);
+  }
+
+  .nav-links a {
+    font-size: 0.92rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+  }
+
+  .nav-links a.active::after { display: none; }
+
+  .nav-links a.active {
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 0 10px 10px 0;
+  }
+
+  .nav-links .nav-separator {
+    width: auto;
+    height: 1px;
+    margin: 8px 0;
+  }
+
+  .nav-links .nav-group-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 0.8rem 0.9rem 0.3rem;
+    pointer-events: none;
+  }
+
+  .nav-actions .badge { display: none; }
+
+  .hero-deck { padding: 2rem 1rem 3.5rem; }
+
+  .hero-deck-inner {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .hero-compass-figure {
+    margin: 1rem auto 0;
+    width: 200px;
+    height: 200px;
+  }
+
+  .hero-eyebrow {
+    justify-content: center;
+    font-size: 0.7rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-title { font-size: clamp(1.7rem, 5vw, 2.4rem); }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
+    margin: 0 auto 1.2rem;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .stat-chip .stat-value { font-size: 1rem; }
+
+  .bridge-telemetry-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .bridge-instruments { justify-content: center; }
+  .bridge-waypoints { justify-content: center; }
+
+  .search-bar-wrap { max-width: 100%; }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-nav-inner { padding: 0.5rem 0.8rem; }
+  .brand-tag { display: none; }
+
+  .hero-deck { padding: 1.5rem 0.8rem 3rem; }
+  .hero-title { font-size: 1.5rem; }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-chip { padding: 0.55rem 0.8rem; }
+
+  .waypoint-btn { font-size: 0.68rem; padding: 0.22rem 0.5rem; }
+
+  .pillar-title { font-size: 1.1rem; }
+
+  .doc-card { padding: 1.1rem; }
+  .doc-card h3 { font-size: 1.02rem; }
+
+  .site-footer-inner { flex-direction: column; text-align: center; }
 }
 
 /* ── Hero Section (Sailboat & Compass Command Deck) ──────────────────────── */
@@ -1246,22 +1463,10 @@ tr:last-child td {
     order: -1;
     max-height: none;
   }
-  .hero-deck-inner {
-    grid-template-columns: 1fr;
-    text-align: left;
-  }
-  .hero-compass-figure {
-    margin: 0.5rem auto 0;
-    width: 240px;
-    height: 240px;
-  }
 }
 
 @media (max-width: 640px) {
   .docs-content {
     padding: 1.35rem 1.15rem;
-  }
-  .top-nav {
-    padding: 0.55rem 1rem;
   }
 }

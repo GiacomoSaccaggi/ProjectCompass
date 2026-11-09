@@ -27,20 +27,40 @@
       <span class="brand-tag">⛵ Regatta Docs</span>
     </a>
 
-    <nav class="nav-links" aria-label="Primary Documentation Navigation">
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+
+    <nav class="nav-links" id="nav-links" aria-label="Primary Documentation Navigation">
+      <span class="nav-group-label">Getting Started</span>
       <a href="../index.html">Hub</a>
       <a href="overview.html">Overview</a>
       <a href="user_guide.html">User Guide</a>
+      <span class="nav-separator"></span>
+      <span class="nav-group-label">Architecture</span>
       <a href="architecture.html">Architecture</a>
       <a href="core_classes.html">Core Classes</a>
       <a href="templates.html" class="active">Templates</a>
+      <a href="routes.html">API &amp; CLI</a>
+      <span class="nav-separator"></span>
+      <span class="nav-group-label">Infrastructure</span>
       <a href="k0s_setup.html">k0s Setup</a>
       <a href="kubernetes_console.html">K8s Console</a>
       <a href="worker_library.html">Worker Library</a>
-      <a href="routes.html">API &amp; CLI</a>
+      <span class="nav-separator"></span>
+      <span class="nav-group-label">Operations</span>
       <a href="configuration.html">Config</a>
       <a href="docker.html">Docker</a>
+      <a href="demo/index.html" class="nav-demo">🚀 Demo</a>
     </nav>
+    <div class="nav-overlay" id="nav-overlay"></div>
+    <div class="nav-overlay" id="nav-overlay"></div>
 
     <div class="nav-actions">
       <button type="button" id="theme-toggle" class="theme-toggle-btn">
