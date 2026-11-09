@@ -445,9 +445,12 @@ header.query-hero p { margin: 4px 0 0 0; font-size: 0.88rem; color: #cbd5e1; }
   display:flex;align-items:center;justify-content:center;gap:12px;
 ">
   <span>⛵ This is a static demo snapshot — interactive features are disabled</span>
-  <a href="../index.html" style="color:#fbbf24;text-decoration:underline;font-weight:700;">← Back to Docs</a>
+  <a href="../../index.html" style="color:#fbbf24;text-decoration:underline;font-weight:700;">← Back to Docs</a>
 </div>
 <div style="height:44px;"></div>
+<style>
+  [data-demo-disabled] { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; }
+</style>
 
 
 
@@ -474,7 +477,7 @@ header.query-hero p { margin: 4px 0 0 0; font-size: 0.88rem; color: #cbd5e1; }
     <!-- Global Search -->
       <div class="topbar-search-wrap" style="position:relative;display:inline-flex;align-items:center;margin-left:12px;">
         <input type="text" id="global-search" placeholder="Search analyses..." 
-          hx-get="/api/search_html" hx-trigger="keyup changed delay:300ms" hx-target="#search-dropdown" hx-indicator="#search-spinner"
+          hx-get="#" hx-trigger="none" hx-target="#search-dropdown" hx-indicator="#search-spinner"
           name="q" style="padding:6px 14px;border-radius:999px;border:1px solid rgba(56,189,248,0.38);font-size:.84rem;width:220px;">
         <span id="search-spinner" class="htmx-indicator" style="margin-left:6px;"><i class="fa fa-spinner fa-spin" style="color:var(--pc-accent);"></i></span>
         <div id="search-dropdown" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:280px;background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);z-index:1000;display:none;"></div>
@@ -607,17 +610,17 @@ header.query-hero p { margin: 4px 0 0 0; font-size: 0.88rem; color: #cbd5e1; }
 
         <a id="myBtn3" onclick="myFuncdownbar('analyses')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-map-signs fa-fw w3-margin-right"></i>Analyses <i id="analyses_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
         <div id="analyses" class="w3-hide w3-show sidebar-subnav">
-          <a href="/analysis" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="catalog.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-folder-open-o fa-fw"></i> <span>Catalog Explorer</span>
           </a>
-          <a href="/load_analysis?=" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="catalog.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-plus-circle fa-fw"></i> <span>New / Upload</span>
           </a>
         </div>
 
         <a id="myBtn2" onclick="myFuncdownbar('datatools')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-database fa-fw w3-margin-right"></i>Data Tools <i id="datatools_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
         <div id="datatools" class="w3-hide w3-show sidebar-subnav">
-          <a href="/all_data" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="data_list.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-table fa-fw"></i> <span>Data Explorer</span>
           </a>
           <a href="query_runner.html" class="w3-bar-item w3-button test w3-hover-light-grey">
@@ -731,7 +734,7 @@ header.query-hero p { margin: 4px 0 0 0; font-size: 0.88rem; color: #cbd5e1; }
       <h1><b><i class="fa fa-terminal"></i>SQL Query Runner </b></h1>
       <p>Execute interactive SQL queries on local DuckDB tables or saved ConnectorX database connections</p>
     </div>
-    <a href="/all_data/" class="w3-button w3-small w3-blue" style="border-radius:8px;"><i class="fa fa-table"></i> Datasets</a>
+    <a href="data_list.html" class="w3-button w3-small w3-blue" style="border-radius:8px;"><i class="fa fa-table"></i> Datasets</a>
   </header>
 
   <div class="query-page-wrap">

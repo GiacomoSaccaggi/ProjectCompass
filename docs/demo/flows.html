@@ -481,9 +481,12 @@ header.analysis-hero p {
   display:flex;align-items:center;justify-content:center;gap:12px;
 ">
   <span>⛵ This is a static demo snapshot — interactive features are disabled</span>
-  <a href="../index.html" style="color:#fbbf24;text-decoration:underline;font-weight:700;">← Back to Docs</a>
+  <a href="../../index.html" style="color:#fbbf24;text-decoration:underline;font-weight:700;">← Back to Docs</a>
 </div>
 <div style="height:44px;"></div>
+<style>
+  [data-demo-disabled] { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; }
+</style>
 
 
   
@@ -510,7 +513,7 @@ header.analysis-hero p {
     <!-- Global Search -->
       <div class="topbar-search-wrap" style="position:relative;display:inline-flex;align-items:center;margin-left:12px;">
         <input type="text" id="global-search" placeholder="Search analyses..." 
-          hx-get="/api/search_html" hx-trigger="keyup changed delay:300ms" hx-target="#search-dropdown" hx-indicator="#search-spinner"
+          hx-get="#" hx-trigger="none" hx-target="#search-dropdown" hx-indicator="#search-spinner"
           name="q" style="padding:6px 14px;border-radius:999px;border:1px solid rgba(56,189,248,0.38);font-size:.84rem;width:220px;">
         <span id="search-spinner" class="htmx-indicator" style="margin-left:6px;"><i class="fa fa-spinner fa-spin" style="color:var(--pc-accent);"></i></span>
         <div id="search-dropdown" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:280px;background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);z-index:1000;display:none;"></div>
@@ -643,17 +646,17 @@ header.analysis-hero p {
 
         <a id="myBtn3" onclick="myFuncdownbar('analyses')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-map-signs fa-fw w3-margin-right"></i>Analyses <i id="analyses_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
         <div id="analyses" class="w3-hide w3-show sidebar-subnav">
-          <a href="/analysis" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="catalog.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-folder-open-o fa-fw"></i> <span>Catalog Explorer</span>
           </a>
-          <a href="/load_analysis?=" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="catalog.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-plus-circle fa-fw"></i> <span>New / Upload</span>
           </a>
         </div>
 
         <a id="myBtn2" onclick="myFuncdownbar('datatools')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-database fa-fw w3-margin-right"></i>Data Tools <i id="datatools_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
         <div id="datatools" class="w3-hide w3-show sidebar-subnav">
-          <a href="/all_data" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="data_list.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-table fa-fw"></i> <span>Data Explorer</span>
           </a>
           <a href="query_runner.html" class="w3-bar-item w3-button test w3-hover-light-grey">
@@ -855,20 +858,20 @@ header.analysis-hero p {
 
             <div class="analysis-actions-bar">
               
-              <a href="/create_investigations?name=Test512Builder" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
               
               
-              <a href="/flows/Test Builder" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
               
               
               
-              <a href="/physical_output?name=Test512Builder" class="pc-act-btn"><i class="fa fa-bar-chart"></i> Outputs</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-bar-chart"></i> Outputs</a>
               
-              <a href="/open_version?name=Test512Builder" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
-              <a href="/load_analysis?name=Test512Builder" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
-              <a href="/open_analysis?name=Test512Builder" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
+              <a href="catalog.html" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
               
-              <a href="/chat/analysis?name=Test512Builder" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
               
               
               <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
@@ -876,7 +879,7 @@ header.analysis-hero p {
                 <button type="button" onclick="buildRag('Test512Builder', this, 1)" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
               </span>
               
-              <a href="/delete_analysis?name=Test512Builder" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Test Builder?');"><i class="fa fa-trash"></i> Delete</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Test Builder?');"><i class="fa fa-trash"></i> Delete</a>
             </div>
           </div>
         </ul>
@@ -919,20 +922,20 @@ header.analysis-hero p {
 
             <div class="analysis-actions-bar">
               
-              <a href="/create_investigations?name=ScompLink512Wine512Quality512Prediction" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
               
               
-              <a href="/flows/ScompLink Wine Quality Prediction" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
               
               
               
-              <a href="/physical_output?name=ScompLink512Wine512Quality512Prediction" class="pc-act-btn"><i class="fa fa-bar-chart"></i> Outputs</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-bar-chart"></i> Outputs</a>
               
-              <a href="/open_version?name=ScompLink512Wine512Quality512Prediction" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
-              <a href="/load_analysis?name=ScompLink512Wine512Quality512Prediction" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
-              <a href="/open_analysis?name=ScompLink512Wine512Quality512Prediction" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
+              <a href="catalog.html" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
               
-              <a href="/chat/analysis?name=ScompLink512Wine512Quality512Prediction" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
               
               
               <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
@@ -940,7 +943,7 @@ header.analysis-hero p {
                 <button type="button" onclick="buildRag('ScompLink512Wine512Quality512Prediction', this, 2)" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
               </span>
               
-              <a href="/delete_analysis?name=ScompLink512Wine512Quality512Prediction" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis ScompLink Wine Quality Prediction?');"><i class="fa fa-trash"></i> Delete</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis ScompLink Wine Quality Prediction?');"><i class="fa fa-trash"></i> Delete</a>
             </div>
           </div>
         </ul>
@@ -983,18 +986,18 @@ header.analysis-hero p {
 
             <div class="analysis-actions-bar">
               
-              <a href="/create_investigations?name=ScompLink512Advanced512ML" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
               
               
-              <a href="/flows/ScompLink Advanced ML" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
               
               
               
-              <a href="/open_version?name=ScompLink512Advanced512ML" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
-              <a href="/load_analysis?name=ScompLink512Advanced512ML" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
-              <a href="/open_analysis?name=ScompLink512Advanced512ML" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
+              <a href="catalog.html" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
               
-              <a href="/chat/analysis?name=ScompLink512Advanced512ML" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
               
               
               <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
@@ -1002,7 +1005,7 @@ header.analysis-hero p {
                 <button type="button" onclick="buildRag('ScompLink512Advanced512ML', this, 3)" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
               </span>
               
-              <a href="/delete_analysis?name=ScompLink512Advanced512ML" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis ScompLink Advanced ML?');"><i class="fa fa-trash"></i> Delete</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis ScompLink Advanced ML?');"><i class="fa fa-trash"></i> Delete</a>
             </div>
           </div>
         </ul>
@@ -1046,11 +1049,11 @@ header.analysis-hero p {
               
               
               
-              <a href="/open_version?name=Website512Traffic512Analysis" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
-              <a href="/load_analysis?name=Website512Traffic512Analysis" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
-              <a href="/open_analysis?name=Website512Traffic512Analysis" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
+              <a href="catalog.html" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
               
-              <a href="/chat/analysis?name=Website512Traffic512Analysis" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
               
               
               <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
@@ -1058,7 +1061,7 @@ header.analysis-hero p {
                 <button type="button" onclick="buildRag('Website512Traffic512Analysis', this, 4)" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
               </span>
               
-              <a href="/delete_analysis?name=Website512Traffic512Analysis" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Website Traffic Analysis?');"><i class="fa fa-trash"></i> Delete</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Website Traffic Analysis?');"><i class="fa fa-trash"></i> Delete</a>
             </div>
           </div>
         </ul>
@@ -1102,11 +1105,11 @@ header.analysis-hero p {
               
               
               
-              <a href="/open_version?name=Employee512Satisfaction512Survey" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
-              <a href="/load_analysis?name=Employee512Satisfaction512Survey" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
-              <a href="/open_analysis?name=Employee512Satisfaction512Survey" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
+              <a href="catalog.html" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
               
-              <a href="/chat/analysis?name=Employee512Satisfaction512Survey" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
               
               
               <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
@@ -1114,7 +1117,7 @@ header.analysis-hero p {
                 <button type="button" onclick="buildRag('Employee512Satisfaction512Survey', this, 5)" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
               </span>
               
-              <a href="/delete_analysis?name=Employee512Satisfaction512Survey" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Employee Satisfaction Survey?');"><i class="fa fa-trash"></i> Delete</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Employee Satisfaction Survey?');"><i class="fa fa-trash"></i> Delete</a>
             </div>
           </div>
         </ul>
@@ -1155,18 +1158,18 @@ header.analysis-hero p {
 
             <div class="analysis-actions-bar">
               
-              <a href="/create_investigations?name=Sales512Performance512Report" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-primary"><i class="fa fa-play"></i> Run Analysis</a>
               
               
-              <a href="/flows/Sales Performance Report" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-code"></i> Edit Code</a>
               
               
               
-              <a href="/open_version?name=Sales512Performance512Report" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
-              <a href="/load_analysis?name=Sales512Performance512Report" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
-              <a href="/open_analysis?name=Sales512Performance512Report" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-history"></i> Details &amp; Versions</a>
+              <a href="catalog.html" class="pc-act-btn"><i class="fa fa-edit"></i> Edit</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-download"></i> Download ZIP</a>
               
-              <a href="/chat/analysis?name=Sales512Performance512Report" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn"><i class="fa fa-comments"></i> AI Chat</a>
               
               
               <span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
@@ -1174,7 +1177,7 @@ header.analysis-hero p {
                 <button type="button" onclick="buildRag('Sales512Performance512Report', this, 6)" class="pc-act-btn" style="padding:5px 11px;">🧠 Build RAG</button>
               </span>
               
-              <a href="/delete_analysis?name=Sales512Performance512Report" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Sales Performance Report?');"><i class="fa fa-trash"></i> Delete</a>
+              <a href="#" onclick="return false" data-demo-disabled="true" class="pc-act-btn pc-act-danger" onclick="return confirm('Delete analysis Sales Performance Report?');"><i class="fa fa-trash"></i> Delete</a>
             </div>
           </div>
         </ul>

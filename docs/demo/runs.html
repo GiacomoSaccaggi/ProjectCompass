@@ -324,9 +324,12 @@
   display:flex;align-items:center;justify-content:center;gap:12px;
 ">
   <span>⛵ This is a static demo snapshot — interactive features are disabled</span>
-  <a href="../index.html" style="color:#fbbf24;text-decoration:underline;font-weight:700;">← Back to Docs</a>
+  <a href="../../index.html" style="color:#fbbf24;text-decoration:underline;font-weight:700;">← Back to Docs</a>
 </div>
 <div style="height:44px;"></div>
+<style>
+  [data-demo-disabled] { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; }
+</style>
 
 
     <!-- Toast container for notifications -->
@@ -352,7 +355,7 @@
     <!-- Global Search -->
       <div class="topbar-search-wrap" style="position:relative;display:inline-flex;align-items:center;margin-left:12px;">
         <input type="text" id="global-search" placeholder="Search analyses..." 
-          hx-get="/api/search_html" hx-trigger="keyup changed delay:300ms" hx-target="#search-dropdown" hx-indicator="#search-spinner"
+          hx-get="#" hx-trigger="none" hx-target="#search-dropdown" hx-indicator="#search-spinner"
           name="q" style="padding:6px 14px;border-radius:999px;border:1px solid rgba(56,189,248,0.38);font-size:.84rem;width:220px;">
         <span id="search-spinner" class="htmx-indicator" style="margin-left:6px;"><i class="fa fa-spinner fa-spin" style="color:var(--pc-accent);"></i></span>
         <div id="search-dropdown" style="position:absolute;top:calc(100% + 6px);left:0;width:100%;min-width:280px;background:#fff;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.22);z-index:1000;display:none;"></div>
@@ -484,17 +487,17 @@
 
         <a id="myBtn3" onclick="myFuncdownbar('analyses')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-map-signs fa-fw w3-margin-right"></i>Analyses <i id="analyses_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
         <div id="analyses" class="w3-hide w3-show sidebar-subnav">
-          <a href="/analysis" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="catalog.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-folder-open-o fa-fw"></i> <span>Catalog Explorer</span>
           </a>
-          <a href="/load_analysis?=" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="catalog.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-plus-circle fa-fw"></i> <span>New / Upload</span>
           </a>
         </div>
 
         <a id="myBtn2" onclick="myFuncdownbar('datatools')" href="javascript:void(0)" class="w3-bar-item w3-button"><h5><i class="fa fa-database fa-fw w3-margin-right"></i>Data Tools <i id="datatools_arrow" style="display:none;" class="fa fa-caret-down w3-margin-left"></i></h5></a>
         <div id="datatools" class="w3-hide w3-show sidebar-subnav">
-          <a href="/all_data" class="w3-bar-item w3-button test w3-hover-light-grey">
+          <a href="data_list.html" class="w3-bar-item w3-button test w3-hover-light-grey">
             <i class="fa fa-table fa-fw"></i> <span>Data Explorer</span>
           </a>
           <a href="query_runner.html" class="w3-bar-item w3-button test w3-hover-light-grey">
@@ -609,19 +612,19 @@
   <!-- Filter buttons -->
   <div class="w3-padding w3-container" style="display:flex;gap:8px;flex-wrap:wrap;padding-left:0 !important;">
     <a href="executions.html" class="w3-button w3-round w3-blue">All</a>
-    <a href="/executions?status=running" class="w3-button w3-round w3-light-grey">
+    <a href="executions.html" class="w3-button w3-round w3-light-grey">
       <i class="fa fa-spinner fa-spin"></i> Running
     </a>
-    <a href="/executions?status=success" class="w3-button w3-round w3-light-grey">
+    <a href="executions.html" class="w3-button w3-round w3-light-grey">
       <i class="fa fa-check"></i> Success
     </a>
-    <a href="/executions?status=failed" class="w3-button w3-round w3-light-grey">
+    <a href="executions.html" class="w3-button w3-round w3-light-grey">
       <i class="fa fa-times"></i> Failed
     </a>
   </div>
 
   <div class="w3-padding w3-container" id="exec-wrapper" style="padding-left:0 !important;padding-right:0 !important;"
-       hx-get="/executions?status=" hx-trigger="every 5s" hx-select="#exec-table" hx-target="#exec-table">
+       hx-get="#" hx-trigger="none" hx-select="#exec-table" hx-target="#exec-table">
     
     <div id="exec-table">
       <table class="w3-table w3-bordered w3-hoverable w3-white">
@@ -638,9 +641,9 @@
         </tr>
         
         <tr>
-          <td><a href="/runs/122"><b>#122</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#122</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -663,16 +666,16 @@
             
           </td>
           <td>
-            <a href="/runs/122" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/121"><b>#121</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#121</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -695,16 +698,16 @@
             
           </td>
           <td>
-            <a href="/runs/121" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/120"><b>#120</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#120</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -727,16 +730,16 @@
             
           </td>
           <td>
-            <a href="/runs/120" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/119"><b>#119</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#119</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -759,16 +762,16 @@
             
           </td>
           <td>
-            <a href="/runs/119" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/118"><b>#118</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#118</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -791,16 +794,16 @@
             
           </td>
           <td>
-            <a href="/runs/118" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/117"><b>#117</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#117</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -823,16 +826,16 @@
             
           </td>
           <td>
-            <a href="/runs/117" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/116"><b>#116</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#116</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -855,16 +858,16 @@
             
           </td>
           <td>
-            <a href="/runs/116" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/115"><b>#115</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#115</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -887,16 +890,16 @@
             
           </td>
           <td>
-            <a href="/runs/115" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/114"><b>#114</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#114</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -919,16 +922,16 @@
             
           </td>
           <td>
-            <a href="/runs/114" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/113"><b>#113</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#113</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -951,16 +954,16 @@
             
           </td>
           <td>
-            <a href="/runs/113" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/112"><b>#112</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#112</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -983,16 +986,16 @@
             
           </td>
           <td>
-            <a href="/runs/112" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/111"><b>#111</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#111</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1015,16 +1018,16 @@
             
           </td>
           <td>
-            <a href="/runs/111" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/110"><b>#110</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#110</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1047,16 +1050,16 @@
             
           </td>
           <td>
-            <a href="/runs/110" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/109"><b>#109</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#109</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1079,16 +1082,16 @@
             
           </td>
           <td>
-            <a href="/runs/109" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/108"><b>#108</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#108</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1111,16 +1114,16 @@
             
           </td>
           <td>
-            <a href="/runs/108" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/107"><b>#107</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#107</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1143,16 +1146,16 @@
             
           </td>
           <td>
-            <a href="/runs/107" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/106"><b>#106</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#106</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1175,16 +1178,16 @@
             
           </td>
           <td>
-            <a href="/runs/106" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/105"><b>#105</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#105</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1207,16 +1210,16 @@
             
           </td>
           <td>
-            <a href="/runs/105" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/104"><b>#104</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#104</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1239,16 +1242,16 @@
             
           </td>
           <td>
-            <a href="/runs/104" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
         </tr>
         
         <tr>
-          <td><a href="/runs/103"><b>#103</b></a></td>
+          <td><a href="#" onclick="return false" data-demo-disabled="true"><b>#103</b></a></td>
           <td>
-            <a href="/flows/test_analysis">
+            <a href="#" onclick="return false" data-demo-disabled="true">
               <b>test_analysis</b>
             </a>
           </td>
@@ -1271,7 +1274,7 @@
             
           </td>
           <td>
-            <a href="/runs/103" class="w3-button w3-tiny w3-blue">
+            <a href="#" onclick="return false" data-demo-disabled="true" class="w3-button w3-tiny w3-blue">
               <i class="fa fa-terminal"></i> Logs
             </a>
           </td>
@@ -1286,7 +1289,7 @@
       
       <span class="w3-bar-item">Page 1 of 7</span>
       
-      <a href="/executions?page=2" class="w3-button">Next &raquo;</a>
+      <a href="executions.html" class="w3-button">Next &raquo;</a>
       
     </div>
     
