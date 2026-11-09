@@ -72,8 +72,6 @@ services:
     restart: unless-stopped
     container_name: projectcompass_app
     depends_on:
-      mithril:
-        condition: service_healthy
       k0s:
         condition: service_healthy
       registry:
@@ -84,6 +82,7 @@ services:
   # ──────────────────── LLM Backend ────────────────────
   mithril:
     image: ghcr.io/giacomosaccaggi/mithril:latest
+    profiles: ["llm"]
     ports:
       - "${MITHRIL_PORT:-16180}:16180"
     environment:
@@ -103,6 +102,7 @@ services:
 
   mithril-init:
     image: curlimages/curl
+    profiles: ["llm"]
     container_name: mithril-init
     depends_on:
       mithril:

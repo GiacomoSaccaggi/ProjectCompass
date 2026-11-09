@@ -91,6 +91,25 @@ def create_app(config_class: type = Config) -> Flask:
         active = app.config.get('PC_SETTINGS')
         return {'pc': active.for_templates() if hasattr(active, 'for_templates') else template_settings}
 
+    # Probe Mithril: if unreachable, force AI features off regardless of config
+    if settings.features.ai_chat or settings.features.rag:
+        import dataclasses
+        import httpx
+        mithril_url = app.config.get('MITHRIL_HOST', os.environ.get('MITHRIL_HOST', ''))
+        mithril_live = False
+        if mithril_url:
+            try:
+                resp = httpx.get(f'{mithril_url.rstrip("/")}/health', timeout=3)
+                mithril_live = resp.status_code == 200
+            except Exception:
+                pass
+        if not mithril_live:
+            patched_features = dataclasses.replace(settings.features, ai_chat=False, rag=False)
+            settings = dataclasses.replace(settings, features=patched_features)
+            app.config['PC_SETTINGS'] = settings
+            template_settings = settings.for_templates()
+            app.logger.info('Mithril not reachable at %s — AI Chat and RAG disabled.', mithril_url)
+
     FeatureGate(settings.features).install(app)
 
     # Security: restrict CORS
