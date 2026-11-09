@@ -56,9 +56,9 @@ services:
       - path: .env.k0s
         required: false
     volumes:
-      - ./Analyses:/app/Analyses
-      - ./Saved_data:/app/Saved_data
-      - ./Saved_queries:/app/Saved_queries
+      - ./Analyses:/app/data/Analyses
+      - ./Saved_data:/app/data/Saved_data
+      - ./Saved_queries:/app/data/Saved_queries
       - ./data/tmp:/app/tmp
       - ./static:/app/static
       - ./templates:/app/templates
