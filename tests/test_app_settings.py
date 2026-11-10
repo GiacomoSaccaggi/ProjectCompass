@@ -34,7 +34,7 @@ class TestSettingsLoader:
         assert isinstance(settings, AppSettings)
         assert settings.branding.app_name == 'ProjectCompass'
         assert settings.branding.page_title == 'ProjectCompass'
-        assert settings.branding.logo_icon_url == '/static/img/logo_icon.png'
+        assert settings.branding.logo_icon_url == '/static/img/logo.svg'
         assert settings.theme.primary_color == '#222831'
         assert settings.demo.enabled is False
         assert settings.features.is_enabled('ai_chat') is False

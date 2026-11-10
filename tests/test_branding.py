@@ -19,9 +19,9 @@ class TestBranding:
         parts = webapp.html_parts
 
         assert '<title>ProjectCompass</title>' in parts['head']
-        assert 'href = "/static/img/logo.png"' in parts['head']
+        assert 'href = "/static/img/logo.svg"' in parts['head']
         assert '--pc-primary: #222831' in parts['head']
-        assert '/static/img/logo_icon.png' in parts['top_container']
+        assert '/static/img/logo.svg' in parts['top_container']
         assert '<div id="cmd-palette"' in parts['top_container']
         assert 'var CMD_ITEMS=' in parts['top_container']
         assert 'var defaultDarkMode=false' in parts['top_container']

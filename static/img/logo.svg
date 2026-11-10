@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 260" fill="none">
+  <defs>
+    <linearGradient id="ms" x1="130" y1="48" x2="196" y2="165" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.88"/>
+      <stop offset="60%" stop-color="#2dd4bf" stop-opacity="0.52"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="gn" x1="72" y1="64" x2="125" y2="164" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="hl" x1="76" y1="168" x2="188" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer bezel rings -->
+  <circle cx="130" cy="130" r="120" stroke="#38bdf8" stroke-width="1.3" stroke-dasharray="3 5" opacity="0.6"/>
+  <circle cx="130" cy="130" r="110" stroke="#fbbf24" stroke-width="1" stroke-dasharray="1 7" opacity="0.45"/>
+
+  <!-- 8 Azimuth tick marks -->
+  <line x1="130" y1="6" x2="130" y2="16" stroke="#fbbf24" stroke-width="2"/>
+  <line x1="254" y1="130" x2="244" y2="130" stroke="#38bdf8" stroke-width="2"/>
+  <line x1="130" y1="254" x2="130" y2="244" stroke="#38bdf8" stroke-width="2"/>
+  <line x1="6" y1="130" x2="16" y2="130" stroke="#38bdf8" stroke-width="2"/>
+  <line x1="217" y1="43" x2="210" y2="50" stroke="#fbbf24" stroke-width="1.5"/>
+  <line x1="217" y1="217" x2="210" y2="210" stroke="#fbbf24" stroke-width="1.5"/>
+  <line x1="43" y1="217" x2="50" y2="210" stroke="#fbbf24" stroke-width="1.5"/>
+  <line x1="43" y1="43" x2="50" y2="50" stroke="#fbbf24" stroke-width="1.5"/>
+
+  <!-- Inner compass rings & crosshairs -->
+  <circle cx="130" cy="130" r="98" stroke="#fbbf24" stroke-width="1.4" opacity="0.5"/>
+  <circle cx="130" cy="130" r="76" stroke="#38bdf8" stroke-width="1" opacity="0.3"/>
+  <line x1="32" y1="130" x2="228" y2="130" stroke="#38bdf8" stroke-width="0.7" opacity="0.25"/>
+  <line x1="130" y1="32" x2="130" y2="228" stroke="#38bdf8" stroke-width="0.7" opacity="0.25"/>
+  <line x1="60" y1="60" x2="200" y2="200" stroke="#fbbf24" stroke-width="0.6" opacity="0.2"/>
+  <line x1="200" y1="60" x2="60" y2="200" stroke="#fbbf24" stroke-width="0.6" opacity="0.2"/>
+
+  <!-- 16-point compass rose star -->
+  <polygon points="130,38 140,116 222,130 140,144 130,222 120,144 38,130 120,116"
+           fill="#fbbf24" fill-opacity="0.14" stroke="#fbbf24" stroke-width="1.1"
+           transform="rotate(45 130 130)"/>
+  <polygon points="130,20 143,115 240,130 143,145 130,240 117,145 20,130 117,115"
+           fill="#38bdf8" fill-opacity="0.14" stroke="#38bdf8" stroke-width="1.4"/>
+
+  <!-- Cardinal labels -->
+  <text x="130" y="15" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="800" font-family="monospace">N</text>
+  <text x="248" y="134" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700" font-family="monospace">E</text>
+  <text x="130" y="253" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700" font-family="monospace">S</text>
+  <text x="12" y="134" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700" font-family="monospace">W</text>
+
+  <!-- Rigging cables -->
+  <line x1="130" y1="46" x2="64" y2="170" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/>
+  <line x1="130" y1="46" x2="196" y2="168" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/>
+
+  <!-- Mainsail -->
+  <path d="M133 48 C164 78,186 118,192 158 L133 158 Z" fill="url(#ms)" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M133 86 Q156 89 170 96" stroke="#e0f2fe" stroke-width="1" opacity="0.45"/>
+  <path d="M133 116 Q162 120 182 128" stroke="#e0f2fe" stroke-width="1" opacity="0.45"/>
+  <path d="M133 142 Q165 144 189 149" stroke="#e0f2fe" stroke-width="1" opacity="0.45"/>
+
+  <!-- Genoa jib -->
+  <path d="M126 56 C100 88,84 124,72 158 C94 154,112 155,126 158 Z" fill="url(#gn)" stroke="#fbbf24" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M126 98 Q106 104 92 112" stroke="#fef3c7" stroke-width="1" opacity="0.45"/>
+  <path d="M126 130 Q100 134 82 142" stroke="#fef3c7" stroke-width="1" opacity="0.45"/>
+
+  <!-- Mast & boom -->
+  <line x1="130" y1="42" x2="130" y2="170" stroke="#f8fafc" stroke-width="2.8" stroke-linecap="round"/>
+  <line x1="130" y1="159" x2="194" y2="159" stroke="#fbbf24" stroke-width="2.4" stroke-linecap="round"/>
+
+  <!-- Burgee pennant -->
+  <path d="M130 42 L156 47 L130 53 Z" fill="#f87171" stroke="#fbbf24" stroke-width="1"/>
+
+  <!-- Hull, bowsprit & sheer stripe -->
+  <line x1="76" y1="168" x2="58" y2="163" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M70 167 L192 167 L176 186 C148 190,108 190,84 185 Z" fill="url(#hl)" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round"/>
+  <line x1="76" y1="173" x2="185" y2="173" stroke="#fbbf24" stroke-width="1.5" opacity="0.9"/>
+
+  <!-- Portholes -->
+  <circle cx="115" cy="179" r="2.2" fill="#38bdf8"/>
+  <circle cx="130" cy="179" r="2.2" fill="#fbbf24"/>
+  <circle cx="145" cy="179" r="2.2" fill="#38bdf8"/>
+
+  <!-- Wake waves -->
+  <path d="M48 186 Q72 178 96 186 T144 186 T192 186 T216 186" stroke="#38bdf8" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  <path d="M58 195 Q84 188 110 195 T162 195 T206 195" stroke="#2dd4bf" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.75"/>
+  <path d="M74 203 Q104 198 134 203 T190 203" stroke="#fbbf24" stroke-width="1.3" stroke-linecap="round" fill="none" opacity="0.55"/>
+</svg>

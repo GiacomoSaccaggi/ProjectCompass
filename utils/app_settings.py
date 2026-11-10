@@ -271,9 +271,9 @@ class DefaultsSource(BaseSettingsSource):
                 'page_title': None,
                 'sidebar_title': 'Analysis',
                 'logo_url': None,
-                'logo_icon_url': '/static/img/logo_icon.png',
+                'logo_icon_url': '/static/img/logo.svg',
                 'logo_text_url': '/static/img/logo_text.png',
-                'favicon_url': '/static/img/logo.png',
+                'favicon_url': '/static/img/logo.svg',
                 'backgrounds': {
                     'data': '/static/img/background1.PNG',
                     'analysis': '/static/img/background2.PNG',
