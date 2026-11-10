@@ -801,8 +801,16 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         ttl_seconds: int = 300,
         secret_refs: list[str] | str | None = None,
         dockerfile_mode: bool = False,
+        total_pods: int = 1,
+        workers: int = 1,
+        pods_per_worker: int = 1,
     ) -> dict[str, Any]:
-        """Construct the isolated Kubernetes batch/v1 Job manifest with backoffLimit=0."""
+        """Construct the isolated Kubernetes batch/v1 Job manifest with backoffLimit=0.
+
+        When *total_pods* > 1 the Job uses ``completionMode: Indexed`` so
+        each Pod receives a unique ``JOB_COMPLETION_INDEX`` (0 … total_pods-1)
+        set automatically by the Kubernetes API.
+        """
         job_name = f"pc-flow-job-{run_id}"
         cm_name = f"pc-flow-cfg-{run_id}"
         sec_name = f"pc-flow-sec-{run_id}"
@@ -818,6 +826,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             {"name": "FLOW_RUN_ID", "value": str(run_id)},
             {"name": "FLOW_PARAMS_JSON", "value": json.dumps(parameters)},
             {"name": "FLOW_PARAMS_FILE", "value": "/workspace/params.json"},
+            {"name": "PC_TOTAL_PODS", "value": str(total_pods)},
+            {"name": "PC_WORKERS", "value": str(workers)},
+            {"name": "PC_PODS_PER_WORKER", "value": str(pods_per_worker)},
         ]
         if dockerfile_mode:
             env_list.append({"name": "PC_DATA_DIR", "value": "/app/Saved_data"})
@@ -882,6 +893,15 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         if env_from:
             container_spec["envFrom"] = env_from
 
+        job_spec: dict[str, Any] = {
+                "backoffLimit": 0,
+                "ttlSecondsAfterFinished": ttl_seconds,
+            }
+        if total_pods > 1:
+            job_spec["completions"] = total_pods
+            job_spec["parallelism"] = total_pods
+            job_spec["completionMode"] = "Indexed"
+
         return {
             "apiVersion": "batch/v1",
             "kind": "Job",
@@ -895,8 +915,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 },
             },
             "spec": {
-                "backoffLimit": 0,
-                "ttlSecondsAfterFinished": ttl_seconds,
+                **job_spec,
                 "template": {
                     "metadata": {
                         "labels": {
@@ -909,6 +928,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     "spec": {
                         "automountServiceAccountToken": False,
                         "restartPolicy": "Never",
+                        "dnsPolicy": "Default",
                         "containers": [container_spec],
                         **({"volumes": [
                             {
@@ -1083,9 +1103,17 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         triggered_by: str | None = None,
         poll_interval: float | None = None,
         max_wait_seconds: float | None = None,
+        workers: int = 1,
+        pods_per_worker: int = 1,
         **kwargs: Any,
     ) -> Execution:
-        """Create a unique Execution record, submit a Kubernetes Job, and start log watching."""
+        """Create a unique Execution record, submit a Kubernetes Job, and start log watching.
+
+        *workers* controls how many physical nodes the ExternalWorkerProvider
+        should provision.  *pods_per_worker* is multiplied with *workers* to
+        set the Job's ``completions`` / ``parallelism`` for Indexed mode.
+        """
+        total_pods = max(1, workers) * max(1, pods_per_worker)
         flow_data = self.read_flow(flow_name)  # type: ignore[attr-defined]
         if flow_data is None:
             raise ValueError(f"Flow '{flow_name}' does not exist.")
@@ -1120,6 +1148,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             "secret_keys": sorted(parsed_env.keys()),
             "secret_refs": resolved_secret_refs,
             "trigger_type": trigger_type,
+            "workers": workers,
+            "pods_per_worker": pods_per_worker,
+            "total_pods": total_pods,
         }
         if triggered_by:
             safe_inputs_metadata["triggered_by"] = triggered_by
@@ -1159,9 +1190,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 exe.log_text = f"[ProjectCompass] Building Docker image for '{flow_data['name']}'...\n"
                 db.session.commit()
 
-                if self._should_manage_workers() and self._count_ready_workers() == 0:
+                if self._should_manage_workers() and self._count_ready_workers() < workers:
                     self.worker_provider.reset_tracking()
-                    self.worker_provider.ensure_workers(1, require_ready=True)
+                    self.worker_provider.ensure_workers(workers, email=triggered_by or "")
 
                 built_image = self._build_and_push_image(flow_data["name"], analysis_dir, run_id)
                 job_manifest = self.build_job_manifest(
@@ -1174,6 +1205,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     ttl_seconds=ttl_seconds,
                     secret_refs=resolved_secret_refs,
                     dockerfile_mode=True,
+                    total_pods=total_pods,
+                    workers=workers,
+                    pods_per_worker=pods_per_worker,
                 )
                 if parsed_env:
                     sec_manifest = self.build_secret_manifest(
@@ -1219,14 +1253,17 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 namespace=namespace,
                 ttl_seconds=ttl_seconds,
                 secret_refs=resolved_secret_refs,
+                total_pods=total_pods,
+                workers=workers,
+                pods_per_worker=pods_per_worker,
             )
 
             created_cm = False
             created_secret = False
             try:
-                if self._should_manage_workers() and self._count_ready_workers() == 0:
+                if self._should_manage_workers() and self._count_ready_workers() < workers:
                     self.worker_provider.reset_tracking()
-                    self.worker_provider.ensure_workers(1, require_ready=True)
+                    self.worker_provider.ensure_workers(workers, email=triggered_by or "")
 
                 self._k8s_post(f"/api/v1/namespaces/{namespace}/configmaps", cm_manifest)
                 created_cm = True
@@ -1552,6 +1589,56 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 exit_code: int | None = None
                 term_error: str | None = None
 
+                # --- Multi-pod support for indexed Jobs ---
+                all_pods_logs: list[str] = []
+                any_pod_running = False
+                any_pod_failed = False
+                worst_exit_code: int | None = None
+
+                for p_item in pod_items:
+                    p_meta = p_item.get("metadata", {})
+                    p_name = str(p_meta.get("name", ""))
+                    p_labels = p_meta.get("labels", {})
+                    p_index = p_labels.get("batch.kubernetes.io/job-completion-index", "")
+                    p_status_obj = p_item.get("status") or {}
+                    p_phase = str(p_status_obj.get("phase", ""))
+                    p_node = p_item.get("spec", {}).get("nodeName")
+
+                    if p_phase in ("Running", "Succeeded", "Failed"):
+                        any_pod_running = any_pod_running or (p_phase == "Running")
+                        if p_phase == "Failed":
+                            any_pod_failed = True
+
+                    # Track container exit code
+                    p_cstatuses = p_status_obj.get("containerStatuses") or []
+                    if p_cstatuses:
+                        p_state = p_cstatuses[0].get("state") or {}
+                        p_term = p_state.get("terminated")
+                        if isinstance(p_term, dict) and "exitCode" in p_term:
+                            p_exit = int(p_term["exitCode"])
+                            if p_exit != 0 and worst_exit_code is None:
+                                worst_exit_code = p_exit
+                                reason = p_term.get("reason") or ""
+                                msg = p_term.get("message") or ""
+                                term_error = f"{reason}: {msg}".strip(": ") or f"Container exited with code {p_exit}"
+
+                    # Read logs for this pod
+                    if p_name and p_phase in ("Running", "Succeeded", "Failed"):
+                        try:
+                            p_raw = self._k8s_get_text(
+                                f"/api/v1/namespaces/{namespace}/pods/{p_name}/log"
+                            )
+                            prefix = f"[pod-{p_index}] " if len(pod_items) > 1 and p_index else ""
+                            if p_raw:
+                                prefixed_lines = "".join(
+                                    f"{prefix}{line}\n"
+                                    for line in p_raw.splitlines()
+                                )
+                                all_pods_logs.append(prefixed_lines)
+                        except K8sClientError:
+                            pass
+
+                # Use first pod for backward-compatible fields
                 if pod is not None:
                     pod_name = str(pod.get("metadata", {}).get("name", "")) or pod_name
                     spec_node = pod.get("spec", {}).get("nodeName")
@@ -1569,51 +1656,49 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                         if isinstance(terminated, dict):
                             if "exitCode" in terminated:
                                 exit_code = int(terminated["exitCode"])
-                            reason = terminated.get("reason") or ""
-                            msg = terminated.get("message") or ""
-                            if exit_code not in (None, 0):
+                            if exit_code not in (None, 0) and not term_error:
+                                reason = terminated.get("reason") or ""
+                                msg = terminated.get("message") or ""
                                 term_error = f"{reason}: {msg}".strip(": ") or f"Container exited with code {exit_code}"
 
-                    if pod_name and pod_phase in ("Running", "Succeeded", "Failed"):
-                        try:
-                            raw_logs = self._k8s_get_text(
-                                f"/api/v1/namespaces/{namespace}/pods/{pod_name}/log"
-                            )
-                            if raw_logs != last_raw_logs:
-                                last_raw_logs = raw_logs
-                                captured_pod_logs = self._extract_and_persist_artifacts(
-                                    flow_name=exe.analysis_name,
-                                    raw_logs=raw_logs,
-                                    persisted_files=persisted_artifacts,
-                                    run_timestamp=run_timestamp,
-                                )
-                                if persisted_artifacts:
-                                    base_analyses_dir = (
-                                        getattr(self, "save_folder_path", "")
-                                        or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
-                                    )
-                                    main_out_dir = os.path.join(
-                                        base_analyses_dir,
-                                        exe.analysis_name,
-                                        "physical_output",
-                                        "main",
-                                    )
-                                    preferred = (
-                                        "output.csv"
-                                        if "output.csv" in persisted_artifacts
-                                        else sorted(persisted_artifacts)[0]
-                                    )
-                                    exe.output_path = os.path.join(main_out_dir, preferred)
-                                    exe.outputs_json = json.dumps(sorted(persisted_artifacts))
-                                node_banner = (
-                                    f"[ProjectCompass] Running on worker node '{assigned_node}' (Pod '{pod_name}').\n"
-                                    if assigned_node
-                                    else f"[ProjectCompass] Running in Pod '{pod_name}'.\n"
-                                )
-                                exe.log_text = header_line + node_banner + captured_pod_logs
-                                db.session.commit()
-                        except K8sClientError:
-                            pass
+                if worst_exit_code is not None:
+                    exit_code = worst_exit_code
+
+                # Aggregate logs from all pods
+                aggregated_raw = "".join(all_pods_logs)
+                if aggregated_raw and aggregated_raw != last_raw_logs:
+                    last_raw_logs = aggregated_raw
+                    captured_pod_logs = self._extract_and_persist_artifacts(
+                        flow_name=exe.analysis_name,
+                        raw_logs=aggregated_raw,
+                        persisted_files=persisted_artifacts,
+                        run_timestamp=run_timestamp,
+                    )
+                    if persisted_artifacts:
+                        base_analyses_dir = (
+                            getattr(self, "save_folder_path", "")
+                            or os.path.join(self.data_dir or self.dir_path or "", "Analyses")
+                        )
+                        main_out_dir = os.path.join(
+                            base_analyses_dir,
+                            exe.analysis_name,
+                            "physical_output",
+                            "main",
+                        )
+                        preferred = (
+                            "output.csv"
+                            if "output.csv" in persisted_artifacts
+                            else sorted(persisted_artifacts)[0]
+                        )
+                        exe.output_path = os.path.join(main_out_dir, preferred)
+                        exe.outputs_json = json.dumps(sorted(persisted_artifacts))
+                    node_banner = (
+                        f"[ProjectCompass] Running on {len(pod_items)} pod(s)"
+                        + (f", worker node '{assigned_node}'" if assigned_node else "")
+                        + ".\n"
+                    ) if pod_items else ""
+                    exe.log_text = header_line + node_banner + captured_pod_logs
+                    db.session.commit()
 
                 job_succeeded = False
                 job_failed = False
@@ -1621,7 +1706,8 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 try:
                     job_obj = self._k8s_get(f"/apis/batch/v1/namespaces/{namespace}/jobs/{job_name}")
                     job_status = job_obj.get("status") or {}
-                    if int(job_status.get("succeeded", 0) or 0) >= 1:
+                    job_completions = int(job_obj.get("spec", {}).get("completions", 1) or 1)
+                    if int(job_status.get("succeeded", 0) or 0) >= job_completions:
                         job_succeeded = True
                     if int(job_status.get("failed", 0) or 0) >= 1:
                         job_failed = True
@@ -1634,15 +1720,32 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 except K8sClientError:
                     pass
 
-                if (job_succeeded or job_failed) and pod_name and last_raw_logs is None:
-                    try:
-                        raw_logs = self._k8s_get_text(
-                            f"/api/v1/namespaces/{namespace}/pods/{pod_name}/log"
+                if (job_succeeded or job_failed) and pod_items and last_raw_logs is None:
+                    # Final attempt to read aggregated logs from all pods
+                    final_logs_parts: list[str] = []
+                    for p_item in pod_items:
+                        p_name = str(p_item.get("metadata", {}).get("name", ""))
+                        p_index = p_item.get("metadata", {}).get("labels", {}).get(
+                            "batch.kubernetes.io/job-completion-index", ""
                         )
-                        last_raw_logs = raw_logs
+                        if not p_name:
+                            continue
+                        try:
+                            p_raw = self._k8s_get_text(
+                                f"/api/v1/namespaces/{namespace}/pods/{p_name}/log"
+                            )
+                            prefix = f"[pod-{p_index}] " if len(pod_items) > 1 and p_index else ""
+                            if p_raw:
+                                final_logs_parts.append(
+                                    "".join(f"{prefix}{line}\n" for line in p_raw.splitlines())
+                                )
+                        except K8sClientError:
+                            pass
+                    if final_logs_parts:
+                        last_raw_logs = "".join(final_logs_parts)
                         captured_pod_logs = self._extract_and_persist_artifacts(
                             flow_name=exe.analysis_name,
-                            raw_logs=raw_logs,
+                            raw_logs=last_raw_logs,
                             persisted_files=persisted_artifacts,
                             run_timestamp=run_timestamp,
                         )
@@ -1664,10 +1767,12 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                             )
                             exe.output_path = os.path.join(main_out_dir, preferred)
                             exe.outputs_json = json.dumps(sorted(persisted_artifacts))
-                    except K8sClientError:
-                        pass
 
                 if pod_phase == "Succeeded" or job_succeeded:
+                    # For indexed jobs, wait for ALL pods — only trust job_succeeded
+                    if not job_succeeded and job_completions > 1:
+                        time.sleep(effective_poll)
+                        continue
                     exe = db.session.get(Execution, run_id)
                     if exe and exe.status != "aborted":
                         node_banner = (

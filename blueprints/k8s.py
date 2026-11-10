@@ -474,6 +474,16 @@ def flow_run_route(name: str) -> Response | tuple[Response, int] | str:
         or current_app.config.get("K8S_SYNC_WATCHER", False)
     )
 
+    # Infrastructure parameters — generic, cloud-agnostic worker provisioning hints
+    workers = int(payload.get("workers", 1)) if payload and "workers" in payload else 1
+    pods_per_worker = int(payload.get("pods_per_worker", 1)) if payload and "pods_per_worker" in payload else 1
+    email = str(payload.get("email", "")).strip() if payload and payload.get("email") else None
+
+    if workers < 1:
+        workers = 1
+    if pods_per_worker < 1:
+        pods_per_worker = 1
+
     exe = webapp.launch_flow_run(
         flow_name=name,
         parameters=parameters,
@@ -485,6 +495,9 @@ def flow_run_route(name: str) -> Response | tuple[Response, int] | str:
         trigger_type="manual",
         app=current_app._get_current_object(),  # type: ignore[attr-defined]
         wait_for_watcher=wait_sync,
+        workers=workers,
+        pods_per_worker=pods_per_worker,
+        triggered_by=email,
     )
     log_action("run_flow", "flow", name, details={"run_id": exe.id, "job_name": exe.job_name})
 
