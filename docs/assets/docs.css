@@ -268,11 +268,13 @@ hr {
 
 .nav-links::-webkit-scrollbar { display: none; }
 
+.nav-links .nav-group-label { display: none; }
+
 .nav-links a {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-muted);
-  padding: 0.4rem 0.65rem;
+  padding: 0.42rem 0.7rem;
   border-radius: 8px;
   text-decoration: none;
   transition: all 0.18s ease;
@@ -283,6 +285,7 @@ hr {
 .nav-links a:hover {
   color: var(--text-primary);
   background: var(--bg-card);
+  text-decoration: none;
 }
 
 .nav-links a.active {
@@ -294,7 +297,7 @@ hr {
 .nav-links a.active::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: 0;
   left: 20%;
   right: 20%;
   height: 2px;
@@ -352,28 +355,39 @@ hr {
 /* ── Mobile Hamburger Toggle ─────────────────────────────────────────────── */
 .nav-toggle {
   display: none;
-  background: none;
-  border: none;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
   cursor: pointer;
-  padding: 6px;
-  color: var(--text-primary);
+  padding: 6px 12px;
+  color: var(--accent-cyan);
   border-radius: 8px;
-  transition: background 0.15s ease;
+  transition: all 0.18s ease;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
 }
 
 .nav-toggle:hover {
-  background: var(--bg-card);
+  background: var(--bg-inline-code);
+  box-shadow: var(--shadow-glow);
 }
 
 .nav-toggle svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: block;
 }
+
+.nav-toggle .nav-toggle-label { font-size: 0.78rem; }
 
 .nav-toggle .icon-close { display: none; }
 .nav-toggle.is-open .icon-menu { display: none; }
 .nav-toggle.is-open .icon-close { display: block; }
+.nav-toggle.is-open .nav-toggle-label-open { display: none; }
+.nav-toggle .nav-toggle-label-close { display: none; }
+.nav-toggle.is-open .nav-toggle-label-close { display: inline; }
 
 /* ── Mobile Nav Overlay & Drawer ─────────────────────────────────────────── */
 .nav-overlay {
@@ -454,7 +468,8 @@ hr {
 
   .nav-actions .badge { display: none; }
 
-  .hero-deck { padding: 2rem 1rem 3.5rem; }
+  /* ── Mobile Hero: SVG first, big and proud ── */
+  .hero-deck { padding: 1.2rem 1rem 3.5rem; }
 
   .hero-deck-inner {
     grid-template-columns: 1fr;
@@ -462,22 +477,23 @@ hr {
   }
 
   .hero-compass-figure {
-    margin: 1rem auto 0;
-    width: 200px;
-    height: 200px;
+    order: -1;
+    margin: 0 auto 0.5rem;
+    width: 260px;
+    height: 260px;
   }
 
-  .hero-eyebrow {
-    justify-content: center;
-    font-size: 0.7rem;
-    flex-wrap: wrap;
-  }
+  .hero-eyebrow { display: none; }
 
-  .hero-title { font-size: clamp(1.7rem, 5vw, 2.4rem); }
+  .hero-title {
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    margin-bottom: 0.6rem;
+  }
 
   .hero-subtitle {
-    font-size: 0.95rem;
-    margin: 0 auto 1.2rem;
+    font-size: 0.88rem;
+    margin: 0 auto 1rem;
+    max-width: 500px;
   }
 
   .hero-stats {
@@ -485,7 +501,8 @@ hr {
     gap: 0.6rem;
   }
 
-  .stat-chip .stat-value { font-size: 1rem; }
+  .stat-chip .stat-value { font-size: 0.95rem; }
+  .stat-chip .stat-label { font-size: 0.72rem; }
 
   .bridge-telemetry-bar {
     flex-direction: column;
@@ -497,31 +514,38 @@ hr {
   .bridge-waypoints { justify-content: center; }
 
   .search-bar-wrap { max-width: 100%; }
+  .search-kbd { display: none; }
 
-  .card-grid {
-    grid-template-columns: 1fr;
-  }
+  .card-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
   .top-nav-inner { padding: 0.5rem 0.8rem; }
+  .brand-link span:not(.brand-tag) { font-size: 0.95rem; }
   .brand-tag { display: none; }
 
-  .hero-deck { padding: 1.5rem 0.8rem 3rem; }
-  .hero-title { font-size: 1.5rem; }
+  .hero-deck { padding: 0.8rem 0.6rem 2.5rem; }
 
-  .hero-stats {
-    grid-template-columns: 1fr;
+  .hero-compass-figure {
+    width: 220px;
+    height: 220px;
   }
 
-  .stat-chip { padding: 0.55rem 0.8rem; }
+  .hero-title { font-size: 1.35rem; }
+  .hero-subtitle { font-size: 0.82rem; }
 
-  .waypoint-btn { font-size: 0.68rem; padding: 0.22rem 0.5rem; }
+  .hero-stats { grid-template-columns: 1fr; gap: 0.4rem; }
+  .stat-chip { padding: 0.5rem 0.7rem; }
 
-  .pillar-title { font-size: 1.1rem; }
+  .waypoint-btn { font-size: 0.66rem; padding: 0.2rem 0.45rem; }
 
-  .doc-card { padding: 1.1rem; }
-  .doc-card h3 { font-size: 1.02rem; }
+  .pillar-header { flex-direction: column; }
+  .pillar-title { font-size: 1.05rem; }
+
+  .doc-card { padding: 1rem; }
+  .doc-card h3 { font-size: 1rem; }
+
+  .hub-container { padding: 0 0.8rem; margin-top: 1.5rem; }
 
   .site-footer-inner { flex-direction: column; text-align: center; }
 }
