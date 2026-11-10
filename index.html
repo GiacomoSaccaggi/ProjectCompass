@@ -29,45 +29,45 @@
       <span class="brand-tag">⛵ Regatta Deck v2.6</span>
     </a>
 
-    <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
-      <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
-      <span class="nav-toggle-label-open">Menu</span>
-      <span class="nav-toggle-label-close">Close</span>
-    </button>
-
-    <nav class="nav-links" id="nav-links" aria-label="Primary Documentation Navigation">
-      <span class="nav-group-label">Getting Started</span>
-      <a href="index.html" class="active">Hub</a>
-      <a href="docs/overview.html">Overview</a>
-      <a href="docs/user_guide.html">User Guide</a>
-      <span class="nav-separator"></span>
-      <span class="nav-group-label">Architecture</span>
-      <a href="docs/architecture.html">Architecture</a>
-      <a href="docs/core_classes.html">Core Classes</a>
-      <a href="docs/templates.html">Templates</a>
-      <a href="docs/routes.html">API &amp; CLI</a>
-      <span class="nav-separator"></span>
-      <span class="nav-group-label">Infrastructure</span>
-      <a href="docs/k0s_setup.html">k0s Setup</a>
-      <a href="docs/kubernetes_console.html">K8s Console</a>
-      <a href="docs/worker_library.html">Worker Library</a>
-      <span class="nav-separator"></span>
-      <span class="nav-group-label">Operations</span>
-      <a href="docs/configuration.html">Config</a>
-      <a href="docs/docker.html">Docker</a>
-      <a href="docs/demo/index.html" class="nav-demo">🚀 Demo</a>
-    </nav>
-    <div class="nav-overlay" id="nav-overlay"></div>
-
     <div class="nav-actions">
       <a href="https://giacomosaccaggi.github.io/" target="_blank" rel="noopener" class="badge badge-gold" title="Skipper's Engineering Portfolio">⚓ G. Saccaggi</a>
       <button type="button" id="theme-toggle" class="theme-toggle-btn">
         <span aria-hidden="true">⛵</span> <span>Day Sail</span>
       </button>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        <span class="nav-toggle-label-open">Menu</span>
+        <span class="nav-toggle-label-close">Close</span>
+      </button>
     </div>
   </div>
 </header>
+
+<!-- Nav drawer + overlay (outside header to avoid backdrop-filter stacking context) -->
+<nav class="nav-links" id="nav-links" aria-label="Primary Documentation Navigation">
+  <span class="nav-group-label">Getting Started</span>
+  <a href="index.html" class="active">Hub</a>
+  <a href="docs/overview.html">Overview</a>
+  <a href="docs/user_guide.html">User Guide</a>
+  <span class="nav-separator"></span>
+  <span class="nav-group-label">Architecture</span>
+  <a href="docs/architecture.html">Architecture</a>
+  <a href="docs/core_classes.html">Core Classes</a>
+  <a href="docs/templates.html">Templates</a>
+  <a href="docs/routes.html">API &amp; CLI</a>
+  <span class="nav-separator"></span>
+  <span class="nav-group-label">Infrastructure</span>
+  <a href="docs/k0s_setup.html">k0s Setup</a>
+  <a href="docs/kubernetes_console.html">K8s Console</a>
+  <a href="docs/worker_library.html">Worker Library</a>
+  <span class="nav-separator"></span>
+  <span class="nav-group-label">Operations</span>
+  <a href="docs/configuration.html">Config</a>
+  <a href="docs/docker.html">Docker</a>
+  <a href="docs/demo/index.html" class="nav-demo">🚀 Demo</a>
+</nav>
+<div class="nav-overlay" id="nav-overlay"></div>
 
 <!-- ── Hero Sailboat & Mariner Command Deck ─────────────────────────────── -->
 <section class="hero-deck">
