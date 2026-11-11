@@ -587,7 +587,10 @@ def execute_stream(name: str) -> Response | tuple[Response, int]:
             return jsonify({'error': f"Run #{raw_run_id} not found."}), 404
     else:
         if not has_flow:
-            return jsonify({'error': f"Executable analysis '{clean_name}' not found. Requires compass_flow.yaml + Dockerfile."}), 404
+            return jsonify({
+                'error': f"Executable analysis '{clean_name}' not found."
+                " Requires compass_flow.yaml + Dockerfile.",
+            }), 404
         try:
             wait_sync = bool(
                 request.args.get('wait') == '1'
@@ -626,9 +629,8 @@ def execute_stream(name: str) -> Response | tuple[Response, int]:
             db.session.expire_all()
             current_exe = db.session.get(Execution, run_id)
             if current_exe is None:
-                yield (
-                    f'data: {json.dumps({"line": "Execution record not found", "status": "error", "done": True, "run_id": run_id})}\n\n'
-                )
+                payload = {"line": "Execution record not found", "status": "error", "done": True, "run_id": run_id}
+                yield f'data: {json.dumps(payload)}\n\n'
                 return
 
             full_text = current_exe.log_text or ''
@@ -648,7 +650,8 @@ def execute_stream(name: str) -> Response | tuple[Response, int]:
                 else:
                     final_status = 'error'
                 final_line = (current_exe.error_message or '') if final_status == 'error' else ''
-                yield f'data: {json.dumps({"line": final_line, "status": final_status, "done": True, "run_id": run_id})}\n\n'
+                payload = {"line": final_line, "status": final_status, "done": True, "run_id": run_id}
+                yield f'data: {json.dumps(payload)}\n\n'
                 return
 
             time.sleep(poll_interval)
@@ -898,10 +901,16 @@ def _order_nodes(nodes, edges=None):
             if not isinstance(item, dict):
                 continue
             nid = str(item.get('id', idx + 1))
-            step_type = str(item.get('type') or item.get('connector') or item.get('class') or item.get('name') or 'python_script')
+            step_type = str(
+                item.get('type') or item.get('connector')
+                or item.get('class') or item.get('name') or 'python_script'
+            )
             raw_cfg = item.get('config')
             if not isinstance(raw_cfg, dict):
-                raw_cfg = item.get('parameters') if isinstance(item.get('parameters'), dict) else item.get('data', {}).get('config', {})
+                raw_cfg = (
+                    item.get('parameters') if isinstance(item.get('parameters'), dict)
+                    else item.get('data', {}).get('config', {})
+                )
             node_map[nid] = {'id': nid, 'type': step_type, 'config': dict(raw_cfg or {})}
             order_keys.append(nid)
 
@@ -955,7 +964,11 @@ def _order_nodes(nodes, edges=None):
         nid = queue.pop(0)
         if nid in visited:
             continue
-        raw_node = nodes.get(nid) if nid in nodes else nodes.get(int(nid)) if nid.isdigit() and int(nid) in nodes else None
+        raw_node = (
+            nodes.get(nid) if nid in nodes
+            else nodes.get(int(nid)) if nid.isdigit() and int(nid) in nodes
+            else None
+        )
         if not isinstance(raw_node, dict):
             continue
         visited.add(nid)
@@ -1244,7 +1257,10 @@ def _generate_pipeline_script(steps, data_path):
         elif t == 'python_script':
             code_val = str(cfg.get('code', ''))
             lines.append(f'    _user_code = inputs.get("code", {code_val!r})')
-            lines.append('    _exec_ns = {"inputs": inputs, "df": df, "results": results, "output_path": output_path, "pd": pd, "os": os}')
+            lines.append(
+                '    _exec_ns = {"inputs": inputs, "df": df, "results": results,'
+                ' "output_path": output_path, "pd": pd, "os": os}'
+            )
             lines.append('    if _user_code:')
             lines.append('        exec(compile(_user_code, "<python_script>", "exec"), _exec_ns)')
             lines.append('    df = _exec_ns.get("df", df)')
@@ -1626,7 +1642,7 @@ def schedules_page():
     if wants_json:
         return jsonify({'schedules': jobs})
     html_part = webapp.substitute_html(port=webapp.constants["port"], project_folder=webapp.project_folder)
-    flows = webapp.list_flows()
+    webapp.list_flows()
     all_analyses = webapp.read_multiple_analysis()
     executable_analyses = [
         {"name": name} for name, info in all_analyses.items()

@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-import base64
 import datetime
 import json
 import os
@@ -963,7 +962,7 @@ class AnalysisUtils(GitSyncUtils):
                 if has_app_context():
                     settings_obj = current_app.config.get("PC_SETTINGS")
             if settings_obj is not None and hasattr(settings_obj, "connectors"):
-                for conn_item in getattr(settings_obj, "connectors") or ():
+                for conn_item in settings_obj.connectors or ():
                     if getattr(conn_item, "name", None) == clean_type:
                         candidate = conn_item
                         break

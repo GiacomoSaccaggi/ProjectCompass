@@ -550,6 +550,7 @@ def test_run_investigation_creates_k8s_flow_and_extracts_artifacts(client, app, 
     """Verify POST /run_investigation/ creates a Flow, runs a K8s Job, and extracts physical_output artifacts."""
     import base64
     from unittest.mock import patch
+
     from models import Execution, db
 
     webapp = app.config['WEBAPP']
@@ -679,7 +680,8 @@ def test_catalog_run_returns_failed_run_when_worker_provisioning_fails(
     analysis_dir = analyses_dir / 'Provision Failure Analysis'
     (analysis_dir / 'analysis').mkdir(parents=True)
     (analysis_dir / 'compass_flow.yaml').write_text('description: test\ninputs: {}\n', encoding='utf-8')
-    (analysis_dir / 'Dockerfile').write_text('FROM python:3.12-slim\nENTRYPOINT ["python", "flow.py"]\n', encoding='utf-8')
+    dockerfile_content = 'FROM python:3.12-slim\nENTRYPOINT ["python", "flow.py"]\n'
+    (analysis_dir / 'Dockerfile').write_text(dockerfile_content, encoding='utf-8')
     monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
     webapp.save_flow(name='Provision Failure Analysis', code='print("not run")')
     provider = webapp.worker_provider
@@ -718,6 +720,7 @@ def test_execute_stream_and_abort_via_k8s_job(client, app, tmp_path, monkeypatch
     """Verify GET /execute_stream/<name> and POST /execute_abort/<name> operate via K8s Jobs without subprocess."""
     import json
     from unittest.mock import patch
+
     from models import Execution, db
 
     webapp = app.config['WEBAPP']
@@ -801,7 +804,7 @@ def test_execute_stream_and_abort_via_k8s_job(client, app, tmp_path, monkeypatch
 def test_pipeline_builder_renders_connectors_and_compiles_steps(client, app, tmp_path, monkeypatch):
     """Verify /pipeline_builder renders connectors and /save_pipeline/ compiles per-step Flows."""
     from dataclasses import replace
-    from unittest.mock import patch
+
     from models import DbConnection, Execution, db
     from utils.app_settings import ConnectorParameterSpec, ConnectorSettings
 
@@ -911,8 +914,11 @@ def test_pipeline_builder_renders_connectors_and_compiles_steps(client, app, tmp
             db.session.commit()
 
 
-def test_static_catalog_entries_and_no_in_process_execution_in_catalog(client, app, tmp_path, monkeypatch):
-    """Verify static catalog entries without compass_flow.yaml + Dockerfile remain structured_analysis == 'n' and catalog.py has no local execution."""
+def test_static_catalog_entries_and_no_in_process_execution_in_catalog(
+    client, app, tmp_path, monkeypatch,
+):
+    """Verify static catalog entries without compass_flow.yaml + Dockerfile
+    remain structured_analysis == 'n' and catalog.py has no local execution."""
     from pathlib import Path
 
     webapp = app.config['WEBAPP']

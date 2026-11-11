@@ -21,7 +21,9 @@ def get_webapp():
 def _get_data_lineage():
     """Get which analyses use each dataset based on execution history and analysis scripts."""
     import os
+
     from sqlalchemy.exc import SQLAlchemyError
+
     from blueprints.catalog import _extract_lineage_from_script
 
     lineage: dict[str, set[str]] = {}

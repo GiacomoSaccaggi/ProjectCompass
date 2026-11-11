@@ -413,7 +413,8 @@ def test_extract_and_persist_artifacts_and_structured_analysis_flow_run(
         "description: StructuredArtifactFlow\ninputs:\n  threshold:\n    type: text\n    default: \"10\"\n",
         encoding="utf-8",
     )
-    (sa_dir / "Dockerfile").write_text("FROM python:3.12-slim\nENTRYPOINT [\"python\", \"flow.py\"]\n", encoding="utf-8")
+    dockerfile_content = "FROM python:3.12-slim\nENTRYPOINT [\"python\", \"flow.py\"]\n"
+    (sa_dir / "Dockerfile").write_text(dockerfile_content, encoding="utf-8")
     (sa_dir / "flow.py").write_text(
         "def run(inputs, output_path):\n"
         "    with open(output_path, 'w') as fh:\n"

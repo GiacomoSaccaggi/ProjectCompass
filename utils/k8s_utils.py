@@ -701,7 +701,9 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         max_total_bytes = 800 * 1024
 
         for csv_name in ordered_candidates:
-            if csv_name not in referenced_csvs and not ("Saved_data" in combined_source or "STRUCTURED_SCRIPT_B64" in combined_source):
+            if csv_name not in referenced_csvs and not (
+            "Saved_data" in combined_source or "STRUCTURED_SCRIPT_B64" in combined_source
+        ):
                 continue
             full_csv_path = os.path.join(save_data_dir, csv_name)
             if not os.path.isfile(full_csv_path):
@@ -1078,7 +1080,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     logger.debug(f"k0s ctr import succeeded via: {import_cmd.split('|')[1].strip()}")
                     break
             if not imported:
-                logger.debug(f"k0s ctr import skipped (all methods failed)")
+                logger.debug("k0s ctr import skipped (all methods failed)")
         except subprocess.TimeoutExpired as exc:
             raise K8sApiError(f"Docker build/push timed out for '{analysis_name}'") from exc
         except FileNotFoundError as exc:
@@ -1603,7 +1605,6 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                 # --- Multi-pod support for indexed Jobs ---
                 all_pods_logs: list[str] = []
                 any_pod_running = False
-                any_pod_failed = False
                 worst_exit_code: int | None = None
 
                 for p_item in pod_items:
@@ -1613,12 +1614,12 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     p_index = p_labels.get("batch.kubernetes.io/job-completion-index", "")
                     p_status_obj = p_item.get("status") or {}
                     p_phase = str(p_status_obj.get("phase", ""))
-                    p_node = p_item.get("spec", {}).get("nodeName")
+                    p_item.get("spec", {}).get("nodeName")
 
                     if p_phase in ("Running", "Succeeded", "Failed"):
                         any_pod_running = any_pod_running or (p_phase == "Running")
                         if p_phase == "Failed":
-                            any_pod_failed = True
+                            pass
 
                     # Track container exit code
                     p_cstatuses = p_status_obj.get("containerStatuses") or []

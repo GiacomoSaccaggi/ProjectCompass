@@ -9,7 +9,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 import stat
 import subprocess
@@ -26,7 +25,6 @@ from utils.worker_provider import (
     DockerWorkerProvider,
     ExternalWorkerProvider,
     WorkerProvider,
-    WorkerProviderError,
     WorkerProvisioningError,
     WorkerReleaseError,
 )
@@ -401,7 +399,8 @@ class TestExternalWorkerProvider:
         status_script = tmp_path / "status_workers.sh"
         status_script.write_text(
             "#!/bin/sh\n"
-            'echo \'{"nodes": ["ext-worker-1", "ext-worker-2"], "capacity": {"count": 2, "cpus": "8"}, "healthy": true}\'\n',
+            'echo \'{"nodes": ["ext-worker-1", "ext-worker-2"],'
+            ' "capacity": {"count": 2, "cpus": "8"}, "healthy": true}\'\n',
             encoding="utf-8",
         )
         status_script.chmod(status_script.stat().st_mode | stat.S_IEXEC)
