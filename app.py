@@ -92,7 +92,8 @@ def create_app(config_class: type = Config) -> Flask:
         return {'pc': active.for_templates() if hasattr(active, 'for_templates') else template_settings}
 
     # Probe Mithril: if unreachable, force AI features off regardless of config
-    if settings.features.ai_chat or settings.features.rag:
+    # Skip probe in test mode so tests can control features explicitly
+    if not app.config.get('TESTING') and (settings.features.ai_chat or settings.features.rag):
         import dataclasses
 
         import httpx
