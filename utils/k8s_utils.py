@@ -850,6 +850,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         container_spec: dict[str, Any] = {
             "name": "flow-runner",
             "image": image,
+            "imagePullPolicy": "IfNotPresent",
             "env": env_list,
             "resources": {
                 "requests": {"cpu": cpu_request, "memory": mem_request},
@@ -1062,12 +1063,22 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     logger.debug(f"docker tag {tag} -> {k8s_tag} failed: {tag_result.stderr[:200]}")
 
             # Import image into k0s containerd for single-node setups using the K8s Job image reference
-            import_cmd = f"docker save {k8s_tag} | docker exec -i k0s k0s ctr images import --all-platforms -"
-            import_result = subprocess.run(  # noqa: S602
-                import_cmd, shell=True, capture_output=True, text=True, timeout=120,
-            )
-            if import_result.returncode != 0:
-                logger.debug(f"k0s ctr import skipped or failed: {import_result.stderr[:200]}")
+            # Try containerized k0s first (docker-compose mode), then native k0s (EC2 deploy mode)
+            imported = False
+            for import_cmd in [
+                f"docker save {k8s_tag} | docker exec -i k0s k0s ctr images import --all-platforms -",
+                f"docker save {k8s_tag} | k0s ctr images import --all-platforms -",
+                f"docker save {k8s_tag} | sudo k0s ctr images import --all-platforms -",
+            ]:
+                import_result = subprocess.run(  # noqa: S602
+                    import_cmd, shell=True, capture_output=True, text=True, timeout=120,
+                )
+                if import_result.returncode == 0:
+                    imported = True
+                    logger.debug(f"k0s ctr import succeeded via: {import_cmd.split('|')[1].strip()}")
+                    break
+            if not imported:
+                logger.debug(f"k0s ctr import skipped (all methods failed)")
         except subprocess.TimeoutExpired as exc:
             raise K8sApiError(f"Docker build/push timed out for '{analysis_name}'") from exc
         except FileNotFoundError as exc:
