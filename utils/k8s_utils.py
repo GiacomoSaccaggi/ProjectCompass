@@ -595,6 +595,77 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         r"\[PC_ARTIFACT_BEGIN:[^\]]*\].*\Z",
         re.DOTALL,
     )
+    PC_ENTRYPOINT_SCRIPT: str = (
+        "#!/bin/sh\n"
+        "# ProjectCompass Job entrypoint wrapper.\n"
+        "# Runs the main script, then uploads outputs to S3 if configured.\n"
+        "set -e\n"
+        "\n"
+        'mkdir -p "${PC_OUTPUT_DIR:-/tmp/pc_output}/main"\n'
+        "\n"
+        "# Run the user's command\n"
+        '"$@"\n'
+        "\n"
+        "# Upload outputs to S3\n"
+        'if [ -n "$PC_S3_ENDPOINT" ] && python -c "import boto3" 2>/dev/null; then\n'
+        '    python -c "\n'
+        "import os, sys, boto3\n"
+        "from botocore.config import Config\n"
+        "endpoint = os.environ.get('PC_S3_ENDPOINT','')\n"
+        "s3 = boto3.client('s3', endpoint_url=endpoint,\n"
+        "    aws_access_key_id=os.environ.get('PC_S3_ACCESS_KEY',''),\n"
+        "    aws_secret_access_key=os.environ.get('PC_S3_SECRET_KEY',''),\n"
+        "    config=Config(signature_version='s3v4'), region_name='us-east-1')\n"
+        "bucket = os.environ.get('PC_S3_BUCKET','pc-artifacts')\n"
+        "run_id = os.environ.get('FLOW_RUN_ID','0')\n"
+        "out_dir = os.environ.get('PC_OUTPUT_DIR','/tmp/pc_output')\n"
+        "n = 0\n"
+        "for root, dirs, files in os.walk(out_dir):\n"
+        "    for f in sorted(files):\n"
+        "        if f.startswith('.') or '.ini' in f: continue\n"
+        "        local = os.path.join(root, f)\n"
+        "        key = f'{run_id}/{os.path.relpath(local, out_dir)}'\n"
+        "        s3.upload_file(local, bucket, key)\n"
+        "        print(f'[pc_s3] Uploaded {f} -> s3://{bucket}/{key}')\n"
+        "        n += 1\n"
+        "print(f'[pc_s3] {n} file(s) uploaded.')\n"
+        '"\n'
+        "fi\n"
+    )
+
+    @classmethod
+    def _resolve_pc_entrypoint_content(cls, repo_root: str | None = None) -> str:
+        """Return LF-normalized pc_entrypoint.sh content from disk or embedded fallback."""
+        resolved_root = repo_root or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        entrypoint_src = os.path.join(resolved_root, "scripts", "pc_entrypoint.sh")
+        content = cls.PC_ENTRYPOINT_SCRIPT
+        if os.path.isfile(entrypoint_src):
+            try:
+                with open(entrypoint_src, encoding="utf-8") as f_ep:
+                    disk_content = f_ep.read()
+                if disk_content.strip():
+                    content = disk_content
+            except OSError:
+                content = cls.PC_ENTRYPOINT_SCRIPT
+        normalized = content.replace("\r\n", "\n").replace("\r", "\n")
+        if not normalized.endswith("\n"):
+            normalized += "\n"
+        return normalized
+
+    @classmethod
+    def _write_pc_entrypoint_file(cls, flow_dir: str, repo_root: str | None = None) -> str:
+        """Persist scripts/pc_entrypoint.sh with 0o755 permissions inside a flow folder."""
+        scripts_dir = os.path.join(flow_dir, "scripts")
+        os.makedirs(scripts_dir, exist_ok=True)
+        entrypoint_dst = os.path.join(scripts_dir, "pc_entrypoint.sh")
+        content = cls._resolve_pc_entrypoint_content(repo_root=repo_root)
+        with open(entrypoint_dst, "w", encoding="utf-8", newline="\n") as f_ep:
+            f_ep.write(content)
+        try:
+            os.chmod(entrypoint_dst, 0o755)  # noqa: S103
+        except OSError:
+            pass
+        return entrypoint_dst
 
     def __init__(self, dir_path: str = "", **kwargs: Any) -> None:
         """Initialize Flow runner state and watcher synchronization Settings."""
@@ -952,6 +1023,7 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         analysis_name: str,
         analysis_dir: str,
         run_id: int,
+        pip_requirements: list[str] | str | None = None,
     ) -> str:
         """Build a Docker image from the analysis Dockerfile and push it to the local registry."""
         import shutil
@@ -963,20 +1035,47 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         tag = f"{registry_host}/pc/{safe_name}:{run_id}"
         k8s_tag = f"{k8s_registry_host}/pc/{safe_name}:{run_id}"
 
-        # Inject pc_entrypoint.sh and Saved_data/*.csv into the build context
+        # Inject pc_entrypoint.sh, runtime pip_requirements, and Saved_data/*.csv into the build context
         staged_files: list[str] = []
         created_dirs: list[str] = []
+        req_dst = os.path.join(analysis_dir, "requirements.txt")
+        original_req_bytes: bytes | None = None
 
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        entrypoint_src = os.path.join(repo_root, "scripts", "pc_entrypoint.sh")
         scripts_dst_dir = os.path.join(analysis_dir, "scripts")
         entrypoint_dst = os.path.join(scripts_dst_dir, "pc_entrypoint.sh")
-        if os.path.isfile(entrypoint_src) and not os.path.exists(entrypoint_dst):
+        if not os.path.exists(entrypoint_dst):
             if not os.path.isdir(scripts_dst_dir):
                 os.makedirs(scripts_dst_dir, exist_ok=True)
                 created_dirs.append(scripts_dst_dir)
-            shutil.copy2(entrypoint_src, entrypoint_dst)
+            entrypoint_content = self._resolve_pc_entrypoint_content(repo_root=repo_root)
+            with open(entrypoint_dst, "w", encoding="utf-8", newline="\n") as f_ep:
+                f_ep.write(entrypoint_content)
             staged_files.append(entrypoint_dst)
+        try:
+            os.chmod(entrypoint_dst, 0o755)  # noqa: S103
+        except OSError:
+            pass
+
+        if pip_requirements is not None:
+            if hasattr(self, "parse_pip_requirements"):
+                normalized_reqs: list[str] = self.parse_pip_requirements(pip_requirements)  # type: ignore[attr-defined]
+            elif isinstance(pip_requirements, list):
+                normalized_reqs = [str(r).strip() for r in pip_requirements if str(r).strip()]
+            else:
+                normalized_reqs = [
+                    line.strip()
+                    for line in str(pip_requirements).splitlines()
+                    if line.strip() and not line.strip().startswith("#")
+                ]
+            if os.path.isfile(req_dst):
+                with open(req_dst, "rb") as f_req_orig:
+                    original_req_bytes = f_req_orig.read()
+            else:
+                staged_files.append(req_dst)
+            with open(req_dst, "w", encoding="utf-8", newline="\n") as f_req_new:
+                for pkg in normalized_reqs:
+                    f_req_new.write(f"{pkg}\n")
 
         save_data_dir = getattr(self, "save_data_path", "") or os.path.join(
             getattr(self, "data_dir", None) or getattr(self, "dir_path", None) or repo_root,
@@ -987,17 +1086,39 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
 
         if os.path.isdir(save_data_dir):
             combined_source = ""
-            for scan_dir in (analysis_dir, os.path.join(analysis_dir, "analysis")):
-                if os.path.isdir(scan_dir):
-                    try:
-                        for fname in sorted(os.listdir(scan_dir)):
-                            if fname.endswith(".py"):
-                                fpath = os.path.join(scan_dir, fname)
-                                if os.path.isfile(fpath):
+            if os.path.isdir(analysis_dir):
+                try:
+                    for fname in sorted(os.listdir(analysis_dir)):
+                        if fname.endswith(".py"):
+                            fpath = os.path.join(analysis_dir, fname)
+                            if os.path.isfile(fpath):
+                                with open(fpath, encoding="utf-8", errors="ignore") as f_src:
+                                    combined_source += "\n" + f_src.read()
+                except OSError:
+                    pass
+            analysis_subdir = os.path.join(analysis_dir, "analysis")
+            if os.path.isdir(analysis_subdir):
+                excluded_scan_dirs = {
+                    ".git",
+                    ".venv",
+                    "venv",
+                    "__pycache__",
+                    ".pytest_cache",
+                    ".ruff_cache",
+                    ".mypy_cache",
+                    "node_modules",
+                }
+                for walk_root, walk_dirs, walk_files in os.walk(analysis_subdir):
+                    walk_dirs[:] = [d for d in sorted(walk_dirs) if d not in excluded_scan_dirs]
+                    for fname in sorted(walk_files):
+                        if fname.endswith(".py"):
+                            fpath = os.path.join(walk_root, fname)
+                            if os.path.isfile(fpath):
+                                try:
                                     with open(fpath, encoding="utf-8", errors="ignore") as f_src:
                                         combined_source += "\n" + f_src.read()
-                    except OSError:
-                        pass
+                                except OSError:
+                                    pass
             referenced_csvs = {
                 f"{ds}.csv"
                 for ds in re.findall(r'read_csv\(.*?["\']([^"\'/\\]+)\.csv["\']', combined_source)
@@ -1086,6 +1207,12 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
         except FileNotFoundError as exc:
             raise K8sApiError("Docker CLI not found — ensure docker is available in the container") from exc
         finally:
+            if original_req_bytes is not None:
+                try:
+                    with open(req_dst, "wb") as f_req_restore:
+                        f_req_restore.write(original_req_bytes)
+                except OSError:
+                    pass
             for fpath in staged_files:
                 try:
                     if os.path.isfile(fpath):
@@ -1137,7 +1264,10 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             if override_params or isinstance(parameters, dict):
                 merged_params.update(override_params)
 
-        if pip_requirements is not None and str(pip_requirements).strip() != "":
+        has_pip_override = pip_requirements is not None and (
+            isinstance(pip_requirements, list) or str(pip_requirements).strip() != ""
+        )
+        if has_pip_override:
             resolved_reqs: list[str] = self.parse_pip_requirements(pip_requirements)  # type: ignore[attr-defined]
         else:
             resolved_reqs = list(flow_data.get("pip_requirements") or [])
@@ -1207,7 +1337,16 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
                     self.worker_provider.reset_tracking()
                     self.worker_provider.ensure_workers(workers, email=triggered_by or "")
 
-                built_image = self._build_and_push_image(flow_data["name"], analysis_dir, run_id)
+                saved_reqs = list(flow_data.get("pip_requirements") or [])
+                if has_pip_override and resolved_reqs != saved_reqs:
+                    built_image = self._build_and_push_image(
+                        flow_data["name"],
+                        analysis_dir,
+                        run_id,
+                        pip_requirements=resolved_reqs,
+                    )
+                else:
+                    built_image = self._build_and_push_image(flow_data["name"], analysis_dir, run_id)
                 job_manifest = self.build_job_manifest(
                     run_id=run_id,
                     flow_name=flow_data["name"],
@@ -1900,3 +2039,6 @@ class K8sFlowRunnerUtils(K8sClusterUtils):
             exe.log_text = (exe.log_text or "") + "\n[ProjectCompass] Run aborted by user.\n"
             db.session.commit()
         return exe
+
+
+PC_ENTRYPOINT_SCRIPT: str = K8sFlowRunnerUtils.PC_ENTRYPOINT_SCRIPT

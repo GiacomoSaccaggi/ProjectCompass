@@ -539,3 +539,171 @@ def test_build_and_push_image_tags_k8s_host_and_stages_saved_data(
     # Temporary staged files are cleaned up after build
     assert not (sa_dir / "scripts" / "pc_entrypoint.sh").exists()
     assert not (sa_dir / "Saved_data" / "sales_data.csv").exists()
+
+
+def test_build_and_push_image_injects_embedded_entrypoint_when_disk_script_missing(
+    app: Any,
+    isolated_analyses_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify pc_entrypoint.sh is still written with 0o755 via embedded fallback when missing on disk."""
+    import os
+    import stat
+    import subprocess
+
+    import utils.k8s_utils as k8s_utils_mod
+
+    webapp = app.config["WEBAPP"]
+    sa_dir = isolated_analyses_dir / "FallbackEntrypointFlow"
+    sa_dir.mkdir(parents=True, exist_ok=True)
+    (sa_dir / "flow.py").write_text('print("ok")\n', encoding="utf-8")
+    (sa_dir / "Dockerfile").write_text("FROM python:3.11-slim\n", encoding="utf-8")
+
+    # Point k8s_utils.__file__ inside tmp_path where scripts/pc_entrypoint.sh does NOT exist
+    fake_pkg_dir = isolated_analyses_dir / "_missing_repo" / "utils"
+    fake_pkg_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(k8s_utils_mod, "__file__", str(fake_pkg_dir / "k8s_utils.py"))
+
+    captured: dict[str, Any] = {}
+
+    class DummyCompleted:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd: Any, *args: Any, **kwargs: Any) -> DummyCompleted:
+        if isinstance(cmd, list) and cmd[:2] == ["docker", "build"]:
+            ep_path = sa_dir / "scripts" / "pc_entrypoint.sh"
+            captured["exists"] = ep_path.is_file()
+            captured["content"] = ep_path.read_text(encoding="utf-8") if ep_path.is_file() else ""
+            captured["executable"] = bool(os.stat(ep_path).st_mode & stat.S_IXUSR) if ep_path.is_file() else False
+        return DummyCompleted()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    webapp._build_and_push_image("FallbackEntrypointFlow", str(sa_dir), 7)
+    assert captured["exists"] is True
+    assert captured["executable"] is True
+    assert "\r" not in captured["content"]
+    assert 'mkdir -p "${PC_OUTPUT_DIR:-/tmp/pc_output}/main"' in captured["content"]
+    assert '"$@"' in captured["content"]
+    assert not (sa_dir / "scripts" / "pc_entrypoint.sh").exists()
+
+
+def test_launch_flow_run_dockerfile_stages_runtime_pip_requirements_override(
+    app: Any,
+    isolated_analyses_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify runtime pip_requirements override updates requirements.txt during docker build and restores it."""
+    import subprocess
+
+    webapp = app.config["WEBAPP"]
+    app.config["K8S_SYNC_WATCHER"] = True
+
+    webapp.save_flow(
+        name="RuntimeReqsFlow",
+        code='print("override test")',
+        pip_requirements=["requests==2.31.0"],
+    )
+    flow_dir = isolated_analyses_dir / "RuntimeReqsFlow"
+    req_path = flow_dir / "requirements.txt"
+    ep_path = flow_dir / "scripts" / "pc_entrypoint.sh"
+    assert ep_path.is_file()
+    assert req_path.read_text(encoding="utf-8") == "requests==2.31.0\n"
+
+    seen_reqs_during_build: list[str] = []
+
+    class DummyCompleted:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd: Any, *args: Any, **kwargs: Any) -> DummyCompleted:
+        if isinstance(cmd, list) and cmd[:2] == ["docker", "build"]:
+            seen_reqs_during_build.append(req_path.read_text(encoding="utf-8"))
+        return DummyCompleted()
+
+    def fake_get(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        if path.endswith("/pods"):
+            return {
+                "items": [
+                    {
+                        "metadata": {"name": "pc-flow-job-pod"},
+                        "spec": {"nodeName": "worker-node-1"},
+                        "status": {
+                            "phase": "Succeeded",
+                            "containerStatuses": [
+                                {"state": {"terminated": {"exitCode": 0, "reason": "Completed"}}}
+                            ],
+                        },
+                    }
+                ]
+            }
+        if "/jobs/" in path:
+            return {"status": {"succeeded": 1, "failed": 0}}
+        return {}
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with (
+        patch.object(webapp, "_k8s_post", side_effect=lambda p, m: m),
+        patch.object(webapp, "_k8s_get", side_effect=fake_get),
+        patch.object(webapp, "_k8s_get_text", return_value="override test\n"),
+        patch.object(webapp, "_k8s_delete", return_value={}),
+    ):
+        exe = webapp.launch_flow_run(
+            flow_name="RuntimeReqsFlow",
+            pip_requirements=[" extra-pkg==1.0 ", "httpx==0.27.0"],
+            app=app,
+            wait_for_watcher=True,
+        )
+        assert exe.status == "success"
+
+    assert seen_reqs_during_build == ["extra-pkg==1.0\nhttpx==0.27.0\n"]
+    # Original requirements.txt and pre-existing pc_entrypoint.sh are preserved after build
+    assert req_path.read_text(encoding="utf-8") == "requests==2.31.0\n"
+    assert ep_path.is_file()
+
+
+def test_build_and_push_image_recursively_scans_nested_analysis_packages_for_csv(
+    app: Any,
+    isolated_analyses_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify pd.read_csv('sales_data.csv') inside analysis/tagline/loader.py stages Saved_data/sales_data.csv."""
+    import subprocess
+
+    webapp = app.config["WEBAPP"]
+    sa_dir = isolated_analyses_dir / "NestedCsvFlow"
+    nested_pkg = sa_dir / "analysis" / "tagline"
+    nested_pkg.mkdir(parents=True, exist_ok=True)
+    # Reference a non-existent CSV in flow.py so stage_all_csvs fallback is False
+    (sa_dir / "flow.py").write_text(
+        'from tagline.loader import load\nOTHER = "nonexistent_dataset.csv"\nload()\n',
+        encoding="utf-8",
+    )
+    (nested_pkg / "loader.py").write_text(
+        'import pandas as pd\ndef load():\n    return pd.read_csv("sales_data.csv")\n',
+        encoding="utf-8",
+    )
+    (sa_dir / "Dockerfile").write_text("FROM python:3.11-slim\n", encoding="utf-8")
+
+    staged_sales_csv = False
+
+    class DummyCompleted:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd: Any, *args: Any, **kwargs: Any) -> DummyCompleted:
+        nonlocal staged_sales_csv
+        if isinstance(cmd, list) and cmd[:2] == ["docker", "build"]:
+            staged_sales_csv = (sa_dir / "Saved_data" / "sales_data.csv").is_file()
+        return DummyCompleted()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    webapp._build_and_push_image("NestedCsvFlow", str(sa_dir), 99)
+    assert staged_sales_csv is True
+    assert not (sa_dir / "Saved_data" / "sales_data.csv").exists()

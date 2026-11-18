@@ -45,10 +45,56 @@ def _check_write_permission() -> Response | tuple[Response, int] | None:
     """Return a 403 Response if the current authenticated user has a read-only viewer role."""
     if session.get("role") == "viewer":
         msg = "Forbidden: viewer role cannot create, modify, or execute flows."
-        if _wants_json():
+        if _wants_json() or request.path == "/flows/save":
             return jsonify({"error": msg}), 403
         return Response(msg, status=403)
     return None
+
+
+def _extract_flow_bundle_inputs(
+    payload: dict[str, Any] | None,
+) -> tuple[str | bytes | None, dict[str, str] | None]:
+    """Extract optional analysis archive bundle and inline analysis_files from JSON or multipart requests."""
+    bundle_input: str | bytes | None = None
+    for file_key in ("bundle", "analysis_bundle", "archive"):
+        if file_key in request.files:
+            uploaded = request.files[file_key]
+            if uploaded is not None and (uploaded.filename or "") != "":
+                raw_bytes = uploaded.read()
+                if not raw_bytes:
+                    raise ValueError(f"Uploaded '{file_key}' archive is empty.")
+                bundle_input = raw_bytes
+                break
+
+    if bundle_input is None:
+        if payload:
+            raw_b64 = payload.get("analysis_bundle_b64")
+            if raw_b64 is None:
+                raw_b64 = payload.get("archive_b64")
+            if raw_b64 is not None:
+                bundle_input = raw_b64
+        else:
+            form_b64 = request.form.get("analysis_bundle_b64") or request.form.get("archive_b64")
+            if form_b64:
+                bundle_input = form_b64
+
+    files_input: dict[str, str] | None = None
+    if payload:
+        raw_files = payload.get("analysis_files") if "analysis_files" in payload else payload.get("files")
+        if raw_files is not None:
+            if not isinstance(raw_files, dict):
+                raise ValueError("analysis_files must be a JSON object mapping relative paths to contents.")
+            files_input = raw_files
+    elif "analysis_files" in request.form and (request.form.get("analysis_files") or "").strip():
+        try:
+            parsed_files = json.loads(request.form["analysis_files"])
+        except ValueError as exc:
+            raise ValueError(f"Invalid JSON in analysis_files: {exc}") from exc
+        if not isinstance(parsed_files, dict):
+            raise ValueError("analysis_files must be a JSON object mapping relative paths to contents.")
+        files_input = parsed_files
+
+    return bundle_input, files_input
 
 
 def _serialize_flow(flow: dict[str, Any]) -> dict[str, Any]:
@@ -287,7 +333,9 @@ def flow_create_route() -> Response | tuple[Response, int] | str:
     ).strip()
     owner = session.get("username") or "flow-author"
 
+    has_multipart_bundle = any(k in request.files for k in ("bundle", "analysis_bundle", "archive"))
     try:
+        analysis_bundle_b64, analysis_files = _extract_flow_bundle_inputs(payload)
         saved = webapp.save_flow(
             name=flow_name,
             code=code,
@@ -300,14 +348,16 @@ def flow_create_route() -> Response | tuple[Response, int] | str:
             owner=owner,
             user_id=session.get("user_id"),
             version_message=version_message,
+            analysis_bundle_b64=analysis_bundle_b64,
+            analysis_files=analysis_files,
         )
         log_action("save_flow", "flow", saved["name"])
     except ValueError as exc:
-        if _wants_json():
+        if _wants_json() or request.path == "/flows/save" or has_multipart_bundle:
             return jsonify({"error": str(exc)}), 400
         return _render_flows_view(error=str(exc))
 
-    if _wants_json():
+    if _wants_json() or request.path == "/flows/save" or has_multipart_bundle:
         return jsonify(_serialize_flow(saved))
 
     return redirect(url_for("k8s.flow_detail_page", name=saved["name"], msg="Flow saved."))
@@ -351,7 +401,9 @@ def flow_save_route(name: str) -> Response | tuple[Response, int] | str:
     ).strip()
     owner = session.get("username") or "flow-author"
 
+    has_multipart_bundle = any(k in request.files for k in ("bundle", "analysis_bundle", "archive"))
     try:
+        analysis_bundle_b64, analysis_files = _extract_flow_bundle_inputs(payload)
         saved = webapp.save_flow(
             name=target_name,
             code=code,
@@ -364,14 +416,16 @@ def flow_save_route(name: str) -> Response | tuple[Response, int] | str:
             owner=owner,
             user_id=session.get("user_id"),
             version_message=version_message,
+            analysis_bundle_b64=analysis_bundle_b64,
+            analysis_files=analysis_files,
         )
         log_action("save_flow", "flow", saved["name"])
     except ValueError as exc:
-        if _wants_json():
+        if _wants_json() or has_multipart_bundle:
             return jsonify({"error": str(exc)}), 400
         return _render_flows_view(selected_name=name, error=str(exc))
 
-    if _wants_json():
+    if _wants_json() or has_multipart_bundle:
         return jsonify(_serialize_flow(saved))
 
     return redirect(url_for("k8s.flow_detail_page", name=saved["name"], msg="Flow saved."))

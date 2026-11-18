@@ -807,13 +807,16 @@ def save_pipeline():
     with open(f"{analysis_dir}/compass_flow.yaml", 'w', encoding='utf-8') as f:
         yaml.dump(compass_flow, f, default_flow_style=False)
 
-    # Generate Dockerfile
+    # Generate scripts/pc_entrypoint.sh and Dockerfile
+    webapp._write_pc_entrypoint_file(analysis_dir)
     dockerfile_content = (
         "FROM python:3.12-slim\n"
         "WORKDIR /app\n"
         "COPY . .\n"
-        "RUN pip install --no-cache-dir scomp-link pandas || true\n"
-        'ENTRYPOINT ["/bin/sh", "scripts/pc_entrypoint.sh", "python", "analysis/pipeline_main.py"]\n'
+        "COPY scripts/pc_entrypoint.sh /app/scripts/pc_entrypoint.sh\n"
+        "RUN chmod +x /app/scripts/pc_entrypoint.sh \\\n"
+        "    && (pip install --no-cache-dir scomp-link pandas || true)\n"
+        'ENTRYPOINT ["/bin/sh", "/app/scripts/pc_entrypoint.sh", "python", "analysis/pipeline_main.py"]\n'
     )
     with open(f"{analysis_dir}/Dockerfile", 'w', encoding='utf-8') as f:
         f.write(dockerfile_content)

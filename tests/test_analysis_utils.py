@@ -446,3 +446,107 @@ def test_read_flow_and_demo_analyses_unified(app):
             assert len(flow_info['code']) > 0
             assert isinstance(flow_info['parameters'], dict)
             assert len(flow_info['parameters']) >= 1
+
+
+def test_save_flow_rejects_zip_slip_tar_slip_and_external_symlinks(app, tmp_path, monkeypatch):
+    """Verify malicious tar/zip entries and symlinks raise ValueError without writing outside analysis/."""
+    import base64
+    import io
+    import stat
+    import tarfile
+    import zipfile
+
+    with app.app_context():
+        webapp = app.config['WEBAPP']
+        analyses_dir = tmp_path / "IsolatedAnalyses"
+        analyses_dir.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setattr(webapp, 'save_folder_path', str(analyses_dir))
+
+        # 1. Tar-Slip with ../
+        tar_traversal = io.BytesIO()
+        with tarfile.open(fileobj=tar_traversal, mode="w:gz") as tf:
+            payload = b"pwned = True\n"
+            info = tarfile.TarInfo(name="../../evil_tar.py")
+            info.size = len(payload)
+            tf.addfile(info, io.BytesIO(payload))
+        with pytest.raises(ValueError, match="Path traversal"):
+            webapp.save_flow(
+                name="SafeFlowTar",
+                code="print(1)",
+                analysis_bundle_b64=base64.b64encode(tar_traversal.getvalue()).decode("ascii"),
+            )
+        assert not (tmp_path / "evil_tar.py").exists()
+        assert not (analyses_dir / "evil_tar.py").exists()
+
+        # 2. Tar absolute path (/etc/passwd)
+        tar_abs = io.BytesIO()
+        with tarfile.open(fileobj=tar_abs, mode="w:gz") as tf:
+            payload = b"root:x:0:0\n"
+            info = tarfile.TarInfo(name="/etc/passwd")
+            info.size = len(payload)
+            tf.addfile(info, io.BytesIO(payload))
+        with pytest.raises(ValueError, match="Absolute path"):
+            webapp.save_flow(
+                name="SafeFlowAbs",
+                code="print(1)",
+                analysis_bundle_b64=base64.b64encode(tar_abs.getvalue()).decode("ascii"),
+            )
+
+        # 3. Tar external symlink
+        tar_sym = io.BytesIO()
+        with tarfile.open(fileobj=tar_sym, mode="w:gz") as tf:
+            info = tarfile.TarInfo(name="pkg/leak.py")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "../../../etc/passwd"
+            tf.addfile(info)
+        with pytest.raises(ValueError, match="escapes analysis directory"):
+            webapp.save_flow(
+                name="SafeFlowSym",
+                code="print(1)",
+                analysis_bundle_b64=base64.b64encode(tar_sym.getvalue()).decode("ascii"),
+            )
+
+        # 4. Zip-Slip with ../ and external symlink in zip
+        zip_traversal = io.BytesIO()
+        with zipfile.ZipFile(zip_traversal, mode="w") as zf:
+            zf.writestr("../../evil_zip.py", "pwned = True\n")
+        with pytest.raises(ValueError, match="Path traversal"):
+            webapp.save_flow(
+                name="SafeFlowZip",
+                code="print(1)",
+                analysis_bundle_b64=zip_traversal.getvalue(),
+            )
+        assert not (tmp_path / "evil_zip.py").exists()
+
+        zip_sym = io.BytesIO()
+        with zipfile.ZipFile(zip_sym, mode="w") as zf:
+            sym_info = zipfile.ZipInfo("pkg/ext_link.py")
+            sym_info.create_system = 3
+            sym_info.external_attr = (stat.S_IFLNK | 0o777) << 16
+            zf.writestr(sym_info, "/etc/hosts")
+        with pytest.raises(ValueError, match="External symlink"):
+            webapp.save_flow(
+                name="SafeFlowZipSym",
+                code="print(1)",
+                analysis_bundle_b64=zip_sym.getvalue(),
+            )
+
+        # 5. Trusted analysis_source_dir copies modules and ignores excluded dirs & external symlinks
+        src_project = tmp_path / "src_project"
+        (src_project / "tagline").mkdir(parents=True)
+        (src_project / "tagline" / "__init__.py").write_text("OK = True\n", encoding="utf-8")
+        (src_project / ".venv").mkdir()
+        (src_project / ".venv" / "ignored.py").write_text("NO = 1\n", encoding="utf-8")
+        outside_secret = tmp_path / "outside_secret.txt"
+        outside_secret.write_text("top-secret", encoding="utf-8")
+        os.symlink(outside_secret, src_project / "tagline" / "secret_link.txt")
+
+        webapp.save_flow(
+            name="SourceDirFlow",
+            code="import tagline\n",
+            analysis_source_dir=str(src_project),
+        )
+        extracted_root = analyses_dir / "SourceDirFlow" / "analysis"
+        assert (extracted_root / "tagline" / "__init__.py").is_file()
+        assert not (extracted_root / ".venv").exists()
+        assert not (extracted_root / "tagline" / "secret_link.txt").exists()

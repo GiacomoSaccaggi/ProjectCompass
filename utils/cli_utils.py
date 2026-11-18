@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import argparse
 import base64
+import io
 import json
 import os
+import tarfile
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
@@ -191,6 +193,51 @@ class CompassCliRunner(BaseCompassCliClient):
             return [str(x).strip() for x in raw if str(x).strip()]
         return [part.strip() for part in str(raw).replace("\n", ",").split(",") if part.strip()]
 
+    EXCLUDED_BUNDLE_DIRS: frozenset[str] = frozenset(
+        {
+            ".git",
+            ".venv",
+            "venv",
+            "__pycache__",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".mypy_cache",
+            "node_modules",
+        }
+    )
+    EXCLUDED_BUNDLE_FILES: frozenset[str] = frozenset({".DS_Store"})
+    EXCLUDED_BUNDLE_SUFFIXES: tuple[str, ...] = (".pyc", ".pyo")
+
+    @classmethod
+    def _pack_analysis_dir(cls, analysis_dir: str | Path) -> str:
+        """Compress a local project directory into a filtered base64 .tar.gz bundle."""
+        root_path = Path(analysis_dir).expanduser().resolve()
+        if not root_path.exists() or not root_path.is_dir():
+            raise CompassCliError(f"Analysis directory does not exist or is not a directory: {analysis_dir}")
+
+        root_real = str(root_path)
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+            for walk_root, dirs, files in os.walk(root_real, followlinks=False):
+                dirs[:] = [
+                    d
+                    for d in sorted(dirs)
+                    if d not in cls.EXCLUDED_BUNDLE_DIRS and not os.path.islink(os.path.join(walk_root, d))
+                ]
+                for fname in sorted(files):
+                    if fname in cls.EXCLUDED_BUNDLE_FILES or fname.endswith(cls.EXCLUDED_BUNDLE_SUFFIXES):
+                        continue
+                    full_path = os.path.join(walk_root, fname)
+                    if os.path.islink(full_path):
+                        real_target = os.path.realpath(full_path)
+                        if os.path.commonpath([root_real, real_target]) != root_real or not os.path.isfile(real_target):
+                            continue
+                    elif not os.path.isfile(full_path):
+                        continue
+                    arcname = Path(full_path).relative_to(root_path).as_posix()
+                    tf.add(full_path, arcname=arcname, recursive=False)
+        return base64.b64encode(buf.getvalue()).decode("ascii")
+
     def create_token(self, name: str = "CLI Token") -> dict[str, Any]:
         """Mint a new Bearer API token using current Basic or session credentials."""
         return self._request("POST", "/api/tokens", json_body={"name": name})
@@ -218,6 +265,7 @@ class CompassCliRunner(BaseCompassCliClient):
         secret_refs: list[str] | str | None = None,
         image: str = "",
         version_message: str = "",
+        analysis_dir: str | Path | None = None,
     ) -> dict[str, Any]:
         """Create or update a flow from a local Python file path or inline script string."""
         candidate_path = Path(code_or_file)
@@ -237,6 +285,8 @@ class CompassCliRunner(BaseCompassCliClient):
             "image": image,
             "version_message": version_message,
         }
+        if analysis_dir is not None and str(analysis_dir).strip() != "":
+            body["analysis_bundle_b64"] = self._pack_analysis_dir(analysis_dir)
         return self._request("POST", "/flows/save", json_body=body)
 
     def run_flow(
@@ -369,6 +419,11 @@ class CompassCliRunner(BaseCompassCliClient):
         flows_push.add_argument("--secret-refs", default="", help="Comma-separated K8s Secret names")
         flows_push.add_argument("--image", default="", help="Container image override")
         flows_push.add_argument("--message", default="", help="Version commit message")
+        flows_push.add_argument(
+            "--analysis-dir",
+            default=None,
+            help="Local project directory to bundle and upload into analysis/ (e.g. .)",
+        )
 
         flows_run = flows_sub.add_parser("run", help="Launch a flow as a Kubernetes Job")
         flows_run.add_argument("name", help="Flow name")
@@ -461,6 +516,7 @@ class CompassCliRunner(BaseCompassCliClient):
                         secret_refs=args.secret_refs,
                         image=args.image,
                         version_message=args.message,
+                        analysis_dir=args.analysis_dir,
                     )
                 elif args.action == "run":
                     res = self.run_flow(

@@ -3,6 +3,8 @@
 # Runs the main script, then uploads outputs to S3 if configured.
 set -e
 
+mkdir -p "${PC_OUTPUT_DIR:-/tmp/pc_output}/main"
+
 # Run the user's command
 "$@"
 
