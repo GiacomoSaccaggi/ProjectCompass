@@ -2,6 +2,17 @@
 
 All notable changes to ProjectCompass will be documented in this file.
 
+## [2.7.3] - 2026-11-18
+
+### Added
+- Source bundle support in `AnalysisUtils.save_flow()` and `/flows/save`, `/flows/new`, `/flows/<name>/save` (`analysis_bundle_b64` `.tar.gz`/`.tgz`/`.zip`, `analysis_files` JSON map, and multipart `bundle` upload) with Zip-Slip/Tar-Slip/symlink traversal protection and automatic exclusion of virtualenvs, caches, and VCS directories.
+- `--analysis-dir` option in `compass_cli flows push` (`CompassCliRunner.push_flow`) to package and upload an entire local project directory alongside `flow.py` in a single request.
+- Embedded `PC_ENTRYPOINT_SCRIPT` fallback in `K8sFlowRunnerUtils` and runtime `pip_requirements` override support during Dockerfile-based flow builds, plus recursive `os.walk` scanning of `analysis/` for `Saved_data/*.csv` staging.
+
+### Fixed
+- Guaranteed injection of executable `/app/scripts/pc_entrypoint.sh` (`0o755`, LF line endings, `/tmp/pc_output/main` initialization) during flow creation, Pipeline Builder generation, and Docker image builds even when `repo_root/scripts/pc_entrypoint.sh` is absent on disk.
+- Updated auto-generated flow `Dockerfile` layout (`COPY analysis/ /app/` followed by `COPY . /app/`, `COPY scripts/pc_entrypoint.sh /app/scripts/pc_entrypoint.sh`, `ENV PYTHONPATH="/app:/app/analysis"`) with automatic upgrade of legacy Compass-generated Dockerfiles while preserving custom user Dockerfiles.
+
 ## [2.5.0] - 2026-11-09
 
 ### Added
